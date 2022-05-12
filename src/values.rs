@@ -1,10 +1,11 @@
 use palette::{Hsva, Srgb, Srgba};
-use stereokit_sys::{color128, color32, vec2, vec3, vec4};
+use stereokit_sys::{color128, color32, matrix, quat, vec2, vec3, vec4};
 
 pub type Vec2 = mint::Vector2<i32>;
 pub type Vec3 = mint::Vector3<i32>;
-pub type Vec4 = mint::Vector4<i32>;
-
+pub type Vec4 = mint::Vector4<f32>;
+pub type Matrix = mint::RowMatrix4<f32>;
+pub type Quat = mint::Quaternion<f32>;
 pub(crate) fn vec2_from(_: Vec2) -> vec2{
 	vec2{x, y}
 }
@@ -38,4 +39,26 @@ pub(crate) fn color128_from(_: Hsva) -> color128 {
 }
 pub(crate) fn color128_to(c: color128) -> Hsva {
 	Hsva::from(c.r, c.g, c.b, c.a)
+}
+
+pub(crate) fn matrix_from(m: Matrix) -> matrix {
+	matrix{
+		row: [
+			vec4_from(m.x),
+			vec4_from(m.y),
+			vec4_from(m.z),
+			vec4_from(m.w)
+		]
+	}
+}
+
+pub(crate) fn matrix_to(m: matrix) -> Matrix {
+	Matrix::from(m.m)
+}
+
+pub(crate) fn quat_from(q: Quat) -> quat {
+	quat{x, y, z, w}
+}
+pub(crate) fn quat_to(q: quat) -> Quat {
+	Quat::from([q.x, q.y, q.z, q.w])
 }

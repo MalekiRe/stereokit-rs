@@ -3,3 +3,8 @@ pub mod enums;
 pub mod functions;
 pub mod structs;
 pub mod values;
+pub mod material;
+pub mod mesh;
+pub mod model;
+pub mod shader;
+pub mod texture;
