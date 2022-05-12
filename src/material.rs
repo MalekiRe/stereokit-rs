@@ -1,6 +1,6 @@
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
-use stereokit_sys::{material_set_float, material_set_queue_offset, material_set_texture, material_t};
+use stereokit_sys::{material_get_shader, material_set_float, material_set_queue_offset, material_set_texture, material_t};
 use crate::shader::Shader;
 use crate::structs::{Cull, DepthTest, MaterialParameter, Transparency};
 use crate::texture::Texture;
@@ -144,6 +144,8 @@ impl Material {
 		unimplemented!()
 	}
 	pub fn get_shader(&self) -> Shader {
-		unimplemented!()
+		Shader{ shader: unsafe {
+			material_get_shader(self.material)
+		}}
 	}
 }

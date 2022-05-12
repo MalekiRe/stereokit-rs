@@ -5,6 +5,7 @@ use stereokit_sys::{model_draw, model_t};
 use crate::enums::RenderLayer;
 use crate::material::Material;
 use crate::mesh::Mesh;
+use crate::shader::Shader;
 use crate::values::{Color128, color128_from, Matrix, matrix_from};
 
 pub struct Model {
@@ -26,10 +27,11 @@ impl Model {
 	pub fn draw(&self, matrix: Matrix, color_linear: Color128, layer: RenderLayer) {
 		unsafe {model_draw(self.model, matrix_from(matrix), color128_from(color_linear), layer as u32)}
 	}
-	pub fn from_file(file_path: &Path) -> Result<Self, Error> {
+	pub fn from_file(file_path: &Path, shader: Shader) -> Result<Self, Error> {
 		let my_str = CString::new(file_path.as_os_str().to_str().unwrap()).unwrap();
+		println!("the path is: {}",my_str.to_str().unwrap());
 		let possible_model = unsafe{
-			stereokit_sys::model_find(my_str.as_ptr())
+			stereokit_sys::model_create_file(my_str.as_ptr(), shader.shader)
 		};
 		if possible_model.is_null() { return Err(Error); }
 		Ok(Model{model: possible_model})
