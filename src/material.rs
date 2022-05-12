@@ -1,8 +1,10 @@
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
 use stereokit_sys::{material_set_float, material_set_queue_offset, material_set_texture, material_t};
-use crate::structs::{Cull, DepthTest, MaterialParameter, Matrix, Shader, Texture, Transparency};
-use crate::values::{Vec2, Vec3, Vec4};
+use crate::shader::Shader;
+use crate::structs::{Cull, DepthTest, MaterialParameter, Transparency};
+use crate::texture::Texture;
+use crate::values::{Color128, Matrix, Vec2, Vec3, Vec4};
 
 pub struct Material {
 	pub(crate) material: material_t,

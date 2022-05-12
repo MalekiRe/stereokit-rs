@@ -1,4 +1,6 @@
+use std::fmt::Error;
 use stereokit_sys::tex_t;
+use crate::values::{color128_from, color128_to, Color32, color32_from, color32_to};
 
 pub struct Texture {
 	pub(super) tex: tex_t,
@@ -15,10 +17,10 @@ impl Texture {
 		if uses_srgb_data {
 			my_var = 1;
 		}
-		let texture: tex_t = unsafe { stereokit_sys::tex_create_color32(&mut data.to_color32(), width, height, my_var) };
-		if texture.is_null() {
-			return Err(Error);
-		}
+		let texture: tex_t = unsafe {
+			stereokit_sys::tex_create_color32(&mut color32_from(data), width, height, my_var)
+		};
+		if texture.is_null() { return Err(Error);}
 		Ok(Texture { tex: texture })
 	}
 }

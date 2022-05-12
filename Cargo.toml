@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 stereokit-sys = "0.1.0"
 mint = {verions = "0.5.9"}
-palette = "0.6.0"
+prisma = "0.1.1"

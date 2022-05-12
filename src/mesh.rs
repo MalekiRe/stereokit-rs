@@ -9,7 +9,7 @@ pub struct Mesh {
 impl Mesh {
 	pub fn gen_cube(size: Vec3, subdivisions: i32) -> Result<Self, Error>{
 		let possible_cube = unsafe {
-			stereokit_sys::mesh_gen_cube(vec3_from(size()), subdivisions)
+			stereokit_sys::mesh_gen_cube(vec3_from(size), subdivisions)
 		};
 		if possible_cube.is_null() {
 			return Err(Error);
