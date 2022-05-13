@@ -1,7 +1,8 @@
 use std::ffi::{CString, c_void};
 use std::mem;
 use std::sync::Mutex;
-use stereokit_sys::{color32, material_t, sk_settings_t};
+use stereokit_sys::{assets_releaseref_threadsafe, color32, material_t, model_t, sk_settings_t};
+use crate::model::Model;
 
 pub fn sk_init(settings: sk_settings_t) -> bool {
 	unsafe {
@@ -19,4 +20,18 @@ pub fn sk_run_data(on_update: &mut Box<&mut dyn FnMut()>, on_close: &mut Box<&mu
 extern "C" fn private_sk_run_func(context: *mut c_void) {
 	let on_update_func: &mut Box<&mut dyn FnMut()> = unsafe {mem::transmute(context)};
 	on_update_func()
+}
+pub enum Asset {
+	Model(Model),
+	//Font(Font)
+}
+pub fn asset_releaseref(asset: Asset) {
+	match asset {
+		Asset::Model(mut model) => {
+			let my_var = &mut model.model as *mut _ as *mut std::ffi::c_void;
+			unsafe {
+				assets_releaseref_threadsafe(my_var);
+			}
+		}
+	}
 }

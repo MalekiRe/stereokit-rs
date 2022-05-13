@@ -11,14 +11,11 @@ use crate::values::{Vec3, vec3_from};
 
 pub struct MaterialParameter {}
 
-
 pub struct DepthTest {}
 
 pub struct Cull {}
 
-pub struct Transparency {
-
-}
+pub struct Transparency {}
 
 
 #[derive(Debug, Clone)]

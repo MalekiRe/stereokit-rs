@@ -9,7 +9,7 @@ use crate::shader::Shader;
 use crate::values::{Color128, color128_from, Matrix, matrix_from};
 
 pub struct Model {
-	model: model_t
+	pub(crate) model: model_t
 }
 impl Drop for Model {
 	fn drop(&mut self) {
