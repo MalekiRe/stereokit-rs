@@ -8,3 +8,4 @@ pub mod mesh;
 pub mod model;
 pub mod shader;
 pub mod texture;
+pub mod pose;
