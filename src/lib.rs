@@ -9,3 +9,5 @@ pub mod model;
 pub mod shader;
 pub mod texture;
 pub mod pose;
+pub mod text;
+pub mod font;
