@@ -12,3 +12,4 @@ pub mod pose;
 pub mod textstyle;
 pub mod font;
 pub mod ui;
+pub mod richtext;

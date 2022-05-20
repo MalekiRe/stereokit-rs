@@ -1,6 +1,7 @@
 use std::fmt::Pointer;
 use prisma::{FromTuple, Rgba};
-use stereokit_sys::{color128, color32, matrix, quat, vec2, vec3, vec4};
+use stereokit_sys::{color128, color32, matrix, quat, text_style_t, vec2, vec3, vec4};
+use crate::textstyle::TextStyle;
 
 
 pub type Vec2 = mint::Vector2<f32>;
@@ -75,3 +76,4 @@ pub(crate) fn quat_from(q: Quat) -> quat {
 pub(crate) fn quat_to(q: quat) -> Quat {
 	Quat::from([q.x, q.y, q.z, q.w])
 }
+
