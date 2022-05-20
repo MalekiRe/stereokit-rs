@@ -2,6 +2,7 @@ use std::fmt::Pointer;
 use prisma::{FromTuple, Rgba};
 use stereokit_sys::{color128, color32, matrix, quat, vec2, vec3, vec4};
 
+
 pub type Vec2 = mint::Vector2<f32>;
 pub type Vec3 = mint::Vector3<f32>;
 pub type Vec4 = mint::Vector4<f32>;

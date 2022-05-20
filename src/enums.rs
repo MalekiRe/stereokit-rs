@@ -38,3 +38,20 @@ pub enum RenderLayer {
 	LayerAll = 65535,
 	LayerAllRegular = 1023
 }
+pub enum TextAlign {
+	XLeft = 1,
+	YTop = 2,
+	XCenter = 4,
+	YCenter = 8,
+	XRight = 16,
+	YBottom = 32,
+	Center = 12,
+	CenterLeft = 9,
+	CenterRight = 24,
+	TopCenter = 6,
+	TopLeft = 3,
+	TopRight = 18,
+	BottomCenter = 36,
+	BottomLeft = 33,
+	BottomRight = 48
+}
