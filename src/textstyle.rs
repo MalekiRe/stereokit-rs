@@ -2,6 +2,7 @@ use stereokit_sys::{text_make_style, text_style_t};
 use crate::font::Font;
 use crate::values::{Color128, color128_from};
 
+#[derive(Clone, Copy)]
 pub struct TextStyle {
 	pub(crate)text_style: text_style_t
 }
