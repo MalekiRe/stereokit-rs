@@ -2,9 +2,9 @@ use std::ffi::CString;
 use prisma::FromTuple;
 use stereokit_sys::{text_add_at, text_align_, text_size};
 use crate::enums::TextAlign;
+use crate::input::key;
 use crate::textstyle::TextStyle;
 use crate::values::{Color128, color128_from, Matrix, matrix_from};
-
 pub struct RichText {
 	text_modules: Vec<TextModule>,
 	transform: Matrix,
@@ -34,6 +34,13 @@ impl RichText {
 	pub fn remove(&mut self, pos: usize) {
 		self.remove(pos);
 	}
+	pub fn iterator(&mut self) {
+		self.text_modules.iter();
+	}
+	pub fn get_modules(&mut self) -> &Vec<TextModule>{
+		&self.text_modules
+	}
+
 	pub fn draw(&mut self) {
 		let white = Color128::from_tuple(((100., 100., 100.), 100.));
 		let mut last: Option<&TextModule> = None;
