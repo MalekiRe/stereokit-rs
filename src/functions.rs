@@ -4,7 +4,8 @@ use std::sync::Mutex;
 use stereokit_sys::{assets_releaseref_threadsafe, color32, material_t, model_t, sk_settings_t};
 use crate::model::Model;
 
-pub fn sk_init(settings: sk_settings_t) -> bool {
+pub type SKSettings = sk_settings_t;
+pub fn sk_init(settings: SKSettings) -> bool {
 	unsafe {
 		if stereokit_sys::sk_init(settings) != 0 {
 			return true;
