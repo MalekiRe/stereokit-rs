@@ -62,6 +62,9 @@ impl SKSettings {
     }
 }
 
+pub fn sk_quit() {
+    unsafe { stereokit_sys::sk_quit() }
+}
 pub fn sk_shutdown() {
     unsafe {
         stereokit_sys::sk_shutdown();
