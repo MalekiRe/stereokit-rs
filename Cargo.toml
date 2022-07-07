@@ -3,10 +3,12 @@ name = "stereokit-rs"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["physics"]
+physics = ["stereokit-sys/physics"]
+linux-egl = ["stereokit-sys/linux-egl"]
 
 [dependencies]
-stereokit-sys = {path = "../stereokit-sys"}
 mint = {verions = "0.5.9"}
 prisma = "0.1.1"
 num = "0.4.0"
@@ -14,3 +16,7 @@ num-derive = "0.3.3"
 num-traits = "0.2.15"
 derive_is_enum_variant = "0.1.1"
 derive_builder = "0.11.2"
+
+[dependencies.stereokit-sys]
+path = "../stereokit-sys"
+default-features = false
