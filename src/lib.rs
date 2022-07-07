@@ -33,8 +33,13 @@ pub mod values;
 
 #[test]
 fn test() {
-	let settings = functions::SKSettingBuilder::default().build().unwrap();
-	functions::sk_init(settings);
+    let settings = functions::SKSettingBuilder::default().build().unwrap();
+    functions::sk_init(settings);
 
-	// functions::sk_run_data(on_update: &mut Box<&mut dyn FnMut()>, on_close: &mut Box<&mut dyn FnMut()>);
+    functions::sk_run_data(
+        &mut Box::new(&mut move || {}),
+        &mut Box::new(&mut || {
+            println!("Shutting down StereoKit");
+        }),
+    );
 }
