@@ -17,6 +17,8 @@ pub mod model;
 #[allow(unused)]
 pub mod pose;
 #[allow(unused)]
+pub mod render;
+#[allow(unused)]
 pub mod richtext;
 #[allow(unused)]
 pub mod shader;
