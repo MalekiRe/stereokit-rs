@@ -12,80 +12,56 @@ use stereokit_sys::{
 };
 
 #[derive(Builder)]
-#[builder(pattern = "owned", setter(into))]
-pub struct SKSettings {
-    #[builder(default = "String::from(\"StereoKit App\")")]
-    pub app_name: String,
-    #[builder(default = "String::from(\"\")")]
-    pub assets_folder: String,
-    #[builder(default = "DisplayMode::MixedReality")]
-    pub display_preference: DisplayMode,
-    #[builder(default = "DisplayBlend::None")]
-    pub blend_preference: DisplayBlend,
-    #[builder(default = "false")]
-    pub no_flatscreen_fallback: bool,
-    #[builder(default = "DepthMode::Balanced")]
-    pub depth_mode: DepthMode,
-    #[builder(default = "LogFilter::Warning")]
-    pub log_filter: LogFilter,
-    #[builder(default = "false")]
-    pub overlay_app: bool,
-    #[builder(default = "1")]
-    pub overlay_priority: u32,
-    #[builder(default = "0")]
-    pub flatscreen_pos_x: u32,
-    #[builder(default = "0")]
-    pub flatscreen_pos_y: u32,
-    #[builder(default = "1280")]
-    pub flatscreen_width: u32,
-    #[builder(default = "720")]
-    pub flatscreen_height: u32,
-    #[builder(default = "false")]
-    pub disable_flatscreen_mr_sim: bool,
-    #[builder(default = "false")]
-    pub disable_unfocused_sleep: bool,
+#[builder(name = "SKSettings", pattern = "owned", setter(into), build_fn(skip))]
+pub struct SKSettingsBuilt {
+    app_name: String,
+    assets_folder: String,
+    display_preference: DisplayMode,
+    blend_preference: DisplayBlend,
+    no_flatscreen_fallback: bool,
+    depth_mode: DepthMode,
+    log_filter: LogFilter,
+    overlay_app: bool,
+    overlay_priority: u32,
+    flatscreen_pos_x: u32,
+    flatscreen_pos_y: u32,
+    flatscreen_width: u32,
+    flatscreen_height: u32,
+    disable_flatscreen_mr_sim: bool,
+    disable_unfocused_sleep: bool,
 }
 
 impl SKSettings {
-    pub(crate) fn to_sk_settings(self) -> sk_settings_t {
-        sk_settings_t {
-            app_name: CString::new(self.app_name.as_str()).unwrap().into_raw(),
-            assets_folder: CString::new(self.assets_folder.as_str())
+    pub fn init(self) -> bool {
+        let c_settings = sk_settings_t {
+            app_name: CString::new(self.app_name.unwrap_or_default().as_str())
                 .unwrap()
                 .into_raw(),
-            display_preference: self.display_preference as display_mode_,
-            blend_preference: self.blend_preference as display_blend_,
-            no_flatscreen_fallback: self.no_flatscreen_fallback as bool32_t,
-            depth_mode: self.depth_mode as depth_mode_,
-            log_filter: self.log_filter as log_,
-            overlay_app: self.overlay_app as bool32_t,
-            overlay_priority: self.overlay_priority,
-            flatscreen_pos_x: self.flatscreen_pos_x as i32,
-            flatscreen_pos_y: self.flatscreen_pos_y as i32,
-            flatscreen_width: self.flatscreen_width as i32,
-            flatscreen_height: self.flatscreen_height as i32,
-            disable_flatscreen_mr_sim: self.disable_flatscreen_mr_sim as bool32_t,
-            disable_unfocused_sleep: self.disable_unfocused_sleep as bool32_t,
+            assets_folder: CString::new(self.assets_folder.unwrap_or_default().as_str())
+                .unwrap()
+                .into_raw(),
+            display_preference: self.display_preference.unwrap_or(DisplayMode::MixedReality)
+                as display_mode_,
+            blend_preference: self.blend_preference.unwrap_or(DisplayBlend::None) as display_blend_,
+            no_flatscreen_fallback: self.no_flatscreen_fallback.unwrap_or_default() as bool32_t,
+            depth_mode: self.depth_mode.unwrap_or(DepthMode::Balanced) as depth_mode_,
+            log_filter: self.log_filter.unwrap_or(LogFilter::Warning) as log_,
+            overlay_app: self.overlay_app.unwrap_or_default() as bool32_t,
+            overlay_priority: self.overlay_priority.unwrap_or_default(),
+            flatscreen_pos_x: self.flatscreen_pos_x.unwrap_or_default() as i32,
+            flatscreen_pos_y: self.flatscreen_pos_y.unwrap_or_default() as i32,
+            flatscreen_width: self.flatscreen_width.unwrap_or_default() as i32,
+            flatscreen_height: self.flatscreen_height.unwrap_or_default() as i32,
+            disable_flatscreen_mr_sim: self.disable_flatscreen_mr_sim.unwrap_or_default()
+                as bool32_t,
+            disable_unfocused_sleep: self.disable_unfocused_sleep.unwrap_or_default() as bool32_t,
             android_java_vm: ptr::null_mut(),
             android_activity: ptr::null_mut(),
-        }
+        };
+        unsafe { stereokit_sys::sk_init(c_settings) != 0 }
     }
 }
 
-impl SKSettingsBuilder {
-    pub fn init(self) -> bool {
-        sk_init(self.build().unwrap())
-    }
-}
-
-pub fn sk_init(settings: SKSettings) -> bool {
-    unsafe {
-        if stereokit_sys::sk_init(settings.to_sk_settings()) != 0 {
-            return true;
-        }
-        return false;
-    }
-}
 pub fn sk_shutdown() {
     unsafe {
         stereokit_sys::sk_shutdown();
