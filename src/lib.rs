@@ -1,3 +1,5 @@
+pub use stereokit_sys;
+
 #[allow(unused)]
 pub mod constants;
 #[allow(unused)]
@@ -36,11 +38,5 @@ pub mod values;
 #[test]
 fn test() {
     functions::SKSettings::default().init();
-
-    functions::sk_run_data(
-        &mut Box::new(&mut move || {}),
-        &mut Box::new(&mut || {
-            println!("Shutting down StereoKit");
-        }),
-    );
+    functions::sk_run_data(&mut Box::new(&mut move || {}), &mut Box::new(&mut || {}));
 }
