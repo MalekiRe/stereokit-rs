@@ -33,8 +33,7 @@ pub mod values;
 
 #[test]
 fn test() {
-    let settings = functions::SKSettingBuilder::default().build().unwrap();
-    functions::sk_init(settings);
+    functions::SKSettingsBuilder::default().init();
 
     functions::sk_run_data(
         &mut Box::new(&mut move || {}),
