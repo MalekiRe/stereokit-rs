@@ -1,10 +1,10 @@
-use std::ffi::CString;
-use prisma::FromTuple;
-use stereokit_sys::{text_add_at, text_align_, text_size};
 use crate::enums::TextAlign;
 use crate::input::key;
 use crate::textstyle::TextStyle;
-use crate::values::{Color128, color128_from, Matrix, matrix_from};
+use crate::values::{color128_from, matrix_from, Color128, Matrix};
+use prisma::FromTuple;
+use std::ffi::CString;
+use stereokit_sys::{text_add_at, text_align_, text_size};
 pub struct RichText {
 	text_modules: Vec<TextModule>,
 	transform: Matrix,
@@ -12,14 +12,14 @@ pub struct RichText {
 }
 pub struct TextModule {
 	pub text: String,
-	pub text_style: TextStyle
+	pub text_style: TextStyle,
 }
 impl RichText {
 	pub fn new(transform: Matrix, padding: f32) -> Self {
-		RichText{
+		RichText {
 			text_modules: vec![],
 			transform,
-			padding
+			padding,
 		}
 	}
 	pub fn clear(&mut self) {
@@ -29,15 +29,15 @@ impl RichText {
 		self.text_modules.push(text_module);
 	}
 	pub fn pop(&mut self) {
-		self.pop();
+		self.text_modules.pop();
 	}
 	pub fn remove(&mut self, pos: usize) {
-		self.remove(pos);
+		self.text_modules.remove(pos);
 	}
 	pub fn iterator(&mut self) {
 		self.text_modules.iter();
 	}
-	pub fn get_modules(&mut self) -> &Vec<TextModule>{
+	pub fn get_modules(&mut self) -> &Vec<TextModule> {
 		&self.text_modules
 	}
 
@@ -50,7 +50,17 @@ impl RichText {
 				let my_text = text_module.text.clone();
 				let my_string = CString::new(my_text).unwrap();
 				let style = text_module.text_style.text_style;
-				text_add_at(my_string.as_ptr(), &matrix_from(self.transform), style, TextAlign::TopLeft as text_align_, TextAlign::TopLeft as text_align_, -total_offset, 0.0, 0.0, color128_from(white));
+				text_add_at(
+					my_string.as_ptr(),
+					&matrix_from(self.transform),
+					style,
+					TextAlign::TopLeft as text_align_,
+					TextAlign::TopLeft as text_align_,
+					-total_offset,
+					0.0,
+					0.0,
+					color128_from(white),
+				);
 				total_offset += text_size(my_string.as_ptr(), text_module.text_style.text_style).x;
 			}
 		}
