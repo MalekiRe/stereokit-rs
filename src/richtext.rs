@@ -1,10 +1,12 @@
 use crate::enums::TextAlign;
 use crate::input::key;
 use crate::textstyle::TextStyle;
-use crate::values::{color128_from, matrix_from, Color128, Matrix};
+use crate::values::{color128_from, Color128, Matrix};
 use prisma::FromTuple;
 use std::ffi::CString;
 use stereokit_sys::{text_add_at, text_align_, text_size};
+use crate::pose::Pose;
+
 pub struct RichText {
 	text_modules: Vec<TextModule>,
 	transform: Matrix,
@@ -52,7 +54,7 @@ impl RichText {
 				let style = text_module.text_style.text_style;
 				text_add_at(
 					my_string.as_ptr(),
-					&matrix_from(self.transform),
+					&self.transform.matrix,
 					style,
 					TextAlign::TopLeft as text_align_,
 					TextAlign::TopLeft as text_align_,

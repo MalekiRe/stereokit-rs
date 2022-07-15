@@ -32,9 +32,9 @@ pub struct SKSettingsBuilt {
 }
 
 impl SKSettings {
-    pub fn init(self) -> bool {
+    pub fn init(self) {
         let c_settings = sk_settings_t {
-            app_name: CString::new(self.app_name.unwrap_or_default().as_str())
+            app_name: CString::new(self.app_name.unwrap_or("sk_app".to_owned()).as_str())
                 .unwrap()
                 .into_raw(),
             assets_folder: CString::new(self.assets_folder.unwrap_or_default().as_str())
@@ -58,7 +58,7 @@ impl SKSettings {
             android_java_vm: ptr::null_mut(),
             android_activity: ptr::null_mut(),
         };
-        unsafe { stereokit_sys::sk_init(c_settings) != 0 }
+        unsafe { if stereokit_sys::sk_init(c_settings) == 0 { panic!("sk_init failed!") }}
     }
 }
 

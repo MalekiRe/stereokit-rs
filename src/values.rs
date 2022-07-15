@@ -1,13 +1,13 @@
 use std::fmt::Pointer;
 use prisma::{FromTuple, Rgba};
 use stereokit_sys::{color128, color32, matrix, quat, text_style_t, vec2, vec3, vec4};
+use crate::pose::Pose;
 use crate::textstyle::TextStyle;
 
 
 pub type Vec2 = mint::Vector2<f32>;
 pub type Vec3 = mint::Vector3<f32>;
 pub type Vec4 = mint::Vector4<f32>;
-pub type Matrix = mint::RowMatrix4<f32>;
 pub type Quat = mint::Quaternion<f32>;
 pub type Color32 = Rgba<u8>;
 pub type Color128 = Rgba<f32>;
@@ -46,29 +46,33 @@ pub(crate) fn color128_to(c: color128) -> Color128 {
 	Color128::from_tuple(((c.r, c.g, c.b), c.a))
 }
 
-pub(crate) fn matrix_from(m: Matrix) -> matrix {
-	matrix{
-		row: [
-			vec4_from(m.x),
-			vec4_from(m.y),
-			vec4_from(m.z),
-			vec4_from(m.w)
-		]
-	}
+pub struct Matrix {
+	pub(crate) matrix: matrix
 }
 
-pub(crate) fn matrix_to(m: matrix) -> Matrix {
-	unsafe {
-		match m {
-			matrix { m: ma } => {
-				Matrix::from(ma)
-			}
-			matrix { row: r } => {
-				Matrix::from([r[0].x, r[0].y, r[0].z, r[0].w, r[1].x, r[1].y, r[1].z, r[1].w, r[2].x, r[2].y, r[2].z, r[2].w, r[3].x, r[3].y, r[3].z, r[3].w])
-			}
-		}
-	}
-}
+//TODO: Get someone really smart to figure out why this doesn't work
+// pub(crate) fn matrix_from(m: Matrix) -> matrix {
+// 	matrix{
+// 		row: [
+// 			vec4_from(m.x),
+// 			vec4_from(m.y),
+// 			vec4_from(m.z),
+// 			vec4_from(m.w)
+// 		]
+// 	}
+// }
+// pub(crate) fn matrix_to(m: matrix) -> Matrix {
+// 	unsafe {
+// 		match m {
+// 			matrix { m: ma } => {
+// 				Matrix::from(ma)
+// 			}
+// 			matrix { row: r } => {
+// 				Matrix::from([r[0].x, r[0].y, r[0].z, r[0].w, r[1].x, r[1].y, r[1].z, r[1].w, r[2].x, r[2].y, r[2].z, r[2].w, r[3].x, r[3].y, r[3].z, r[3].w])
+// 			}
+// 		}
+// 	}
+// }
 
 pub(crate) fn quat_from(q: Quat) -> quat {
 	quat{x: q.v.x, y: q.v.y, z: q.v.z, w: q.s}

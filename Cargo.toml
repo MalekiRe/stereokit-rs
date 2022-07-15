@@ -4,8 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = ["physics"]
-physics = ["stereokit-sys/physics"]
+default = []
 linux-egl = ["stereokit-sys/linux-egl"]
 
 [dependencies]
@@ -18,5 +17,5 @@ derive_is_enum_variant = "0.1.1"
 derive_builder = "0.11.2"
 
 [dependencies.stereokit-sys]
-path = "../stereokit-sys"
+path = "../stereokit-sys3"
 default-features = false
