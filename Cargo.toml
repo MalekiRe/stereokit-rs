@@ -1,21 +1,27 @@
 [package]
-name = "stereokit-rs"
+name = "stereokit"
 version = "0.1.0"
 edition = "2021"
+description = "Higher-Level wrapper around stereokit-sys bindings for StereoKitC library for XR"
+homepage = "https://stereokit.net/"
+keywords = ["stereokit", "XR", "VR", "AR"]
+license = "MIT"
+repository = "https://github.com/MalekiRe/stereokit-rs"
+
+exclude = [
+    ".idea"
+]
 
 [features]
 default = []
 linux-egl = ["stereokit-sys/linux-egl"]
 
 [dependencies]
-mint = {verions = "0.5.9"}
+mint = "0.5.9"
 prisma = "0.1.1"
 num = "0.4.0"
 num-derive = "0.3.3"
 num-traits = "0.2.15"
 derive_is_enum_variant = "0.1.1"
 derive_builder = "0.11.2"
-
-[dependencies.stereokit-sys]
-path = "../stereokit-sys3"
-default-features = false
+stereokit-sys = "1.0.0"

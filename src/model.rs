@@ -32,7 +32,7 @@ impl Model {
 		Ok(Model{model: possible_model})
 	}
 	pub fn draw(&self, matrix: Matrix, color_linear: Color128, layer: RenderLayer) {
-		unsafe {model_draw(self.model, matrix.matrix, color128_from(color_linear), layer as i32)}
+		unsafe {model_draw(self.model, matrix.matrix, color128_from(color_linear), (layer as u32).into())}
 	}
 	pub fn from_file(file_path: &Path, shader: Shader) -> Result<Self, Error> {
 		let my_str = CString::new(file_path.as_os_str().to_str().unwrap()).unwrap();
