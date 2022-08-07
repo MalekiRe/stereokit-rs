@@ -1,5 +1,3 @@
-pub use stereokit_sys;
-
 #[allow(unused)]
 pub mod constants;
 #[allow(unused)]
@@ -35,8 +33,22 @@ pub mod ui;
 #[allow(unused)]
 pub mod values;
 
+pub use stereokit_sys as sys;
+
 #[test]
 fn test() {
     functions::SKSettings::default().init();
-    functions::sk_run_data(&mut Box::new(&mut move || {}), &mut Box::new(&mut || {}));
+    let window_pose = pose::IDENTITY;
+    functions::sk_run(
+        || {
+            ui::window::begin(
+                "Test",
+                window_pose,
+                mint::Vector2 { x: 0_f32, y: 0_f32 },
+                ui::window::WindowType::WindowNormal,
+                ui::window::MoveType::MoveExact,
+            );
+        },
+        || {},
+    );
 }

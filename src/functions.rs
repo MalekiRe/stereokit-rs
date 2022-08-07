@@ -1,6 +1,8 @@
 use crate::enums::{DepthMode, DisplayBlend, DisplayMode, LogFilter};
 use crate::model::Model;
 use derive_builder::Builder;
+use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::ffi::{c_void, CString};
 use std::path::{Path, PathBuf};
 use std::ptr::null;
@@ -65,22 +67,33 @@ impl SKSettings {
 pub fn sk_quit() {
     unsafe { stereokit_sys::sk_quit() }
 }
+std::thread_local! {
+    static SK_UPDATE_FN: RefCell<Option<Box<dyn FnMut()>>> = RefCell::from(None);
+    static SK_SHUTDOWN_FN: RefCell<Option<Box<dyn FnMut()>>> = RefCell::from(None);
+}
 
-pub fn sk_run(on_update: &mut Box<&mut dyn FnMut()>, on_close: &mut Box<&mut dyn FnMut()>) {
-    let on_update_c_void: *mut c_void = on_update as *mut _ as *mut c_void;
-    let on_close_c_void: *mut c_void = on_close as *mut _ as *mut c_void;
+pub fn sk_run(on_update: impl FnMut() + 'static, on_close: impl FnMut() + 'static) {
+    SK_UPDATE_FN.with(|f| *f.borrow_mut() = Some(Box::new(on_update)));
+    SK_SHUTDOWN_FN.with(|f| *f.borrow_mut() = Some(Box::new(on_close)));
     unsafe {
-        stereokit_sys::sk_run_data(
-            Some(private_sk_run_func),
-            on_update_c_void,
-            Some(private_sk_run_func),
-            on_close_c_void,
-        )
+        stereokit_sys::sk_run(Some(private_sk_run_func), Some(private_sk_close_func));
     }
 }
-extern "C" fn private_sk_run_func(context: *mut c_void) {
-    let on_update_func: &mut Box<&mut dyn FnMut()> = unsafe { mem::transmute(context) };
-    on_update_func()
+extern "C" fn private_sk_run_func() {
+    // let on_update_func: &mut Box<&mut dyn FnMut()> = unsafe { mem::transmute(context) };
+    SK_UPDATE_FN.with(|f| {
+        if let Some(update_fn) = f.borrow_mut().as_mut() {
+            update_fn();
+        }
+    });
+}
+extern "C" fn private_sk_close_func() {
+    // let on_update_func: &mut Box<&mut dyn FnMut()> = unsafe { mem::transmute(context) };
+    SK_SHUTDOWN_FN.with(|f| {
+        if let Some(shutdown_fn) = f.borrow_mut().as_mut() {
+            shutdown_fn();
+        }
+    });
 }
 pub enum Asset {
     Model(Model),
