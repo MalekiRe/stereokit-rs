@@ -37,18 +37,26 @@ pub use stereokit_sys as sys;
 
 #[test]
 fn test() {
-    functions::SKSettings::default().init();
-    let window_pose = pose::IDENTITY;
-    functions::sk_run(
-        || {
-            ui::window::begin(
-                "Test",
-                window_pose,
-                mint::Vector2 { x: 0_f32, y: 0_f32 },
-                ui::window::WindowType::WindowNormal,
-                ui::window::MoveType::MoveExact,
-            );
-        },
-        || {},
-    );
+	functions::SKSettings::default().init();
+	functions::sk_run(
+		{
+			let window_pose = std::rc::Rc::from(std::cell::RefCell::from(pose::IDENTITY));
+
+			move || {
+				ui::window::begin(
+					"StereoKit Test",
+					&mut *window_pose.borrow_mut(),
+					mint::Vector2 { x: 0., y: 0. },
+					ui::window::WindowType::WindowNormal,
+					ui::window::MoveType::MoveExact,
+				);
+
+				ui::ui::label("Test Label", true);
+				ui::ui::label("Test Text", true);
+
+				ui::window::end();
+			}
+		},
+		|| {},
+	);
 }
