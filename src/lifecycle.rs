@@ -71,7 +71,7 @@ impl Settings {
 		unsafe {
 			if stereokit_sys::sk_init(c_settings) != 0 {
 				GLOBAL_STATE.with(|f| *f.borrow_mut() = true);
-				Ok(StereoKit)
+				Ok(StereoKit(()))
 			} else {
 				Err(())
 			}
@@ -79,7 +79,7 @@ impl Settings {
 	}
 }
 
-pub struct StereoKit;
+pub struct StereoKit(());
 
 unsafe extern "C" fn private_update_fn(context: *mut c_void) {
 	let func_ptr: *mut &mut dyn FnMut() = context.cast();
