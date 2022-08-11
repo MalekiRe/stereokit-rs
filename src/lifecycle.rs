@@ -1,6 +1,7 @@
 use crate::enums::{DepthMode, DisplayBlend, DisplayMode, LogFilter};
 use crate::model::Model;
 use derive_builder::Builder;
+use once_cell::unsync::OnceCell;
 use std::cell::{Ref, RefCell};
 use std::ffi::{c_void, CString};
 use std::marker::PhantomData;
@@ -72,7 +73,9 @@ impl Settings {
 		unsafe {
 			if stereokit_sys::sk_init(c_settings) != 0 {
 				GLOBAL_STATE.with(|f| *f.borrow_mut() = true);
-				Ok(StereoKit(PhantomData))
+				Ok(StereoKit {
+					ran: OnceCell::new(),
+				})
 			} else {
 				Err(())
 			}
@@ -80,7 +83,9 @@ impl Settings {
 	}
 }
 
-pub struct StereoKit(PhantomData<*const ()>);
+pub struct StereoKit {
+	ran: OnceCell<()>,
+}
 pub struct DrawContext(PhantomData<*const ()>);
 
 unsafe extern "C" fn private_update_fn(context: *mut c_void) {
@@ -95,11 +100,16 @@ unsafe extern "C" fn private_shutdown_fn(context: *mut c_void) {
 }
 
 impl StereoKit {
-	pub fn run(&self, mut on_update: impl FnMut(&DrawContext), mut on_close: impl FnMut()) {
-		let mut dyn_update: &mut dyn FnMut(&DrawContext) = &mut on_update;
+	pub fn run(
+		self,
+		mut on_update: impl FnMut(&StereoKit, &DrawContext),
+		mut on_close: impl FnMut(),
+	) {
+		self.ran.set(());
+		let mut dyn_update: &mut dyn FnMut(&StereoKit, &DrawContext) = &mut on_update;
 		let mut dyn_close: &mut dyn FnMut() = &mut on_close;
 
-		let ptr_update: *mut &mut dyn FnMut(&DrawContext) = &mut dyn_update;
+		let ptr_update: *mut &mut dyn FnMut(&StereoKit, &DrawContext) = &mut dyn_update;
 		let ptr_close: *mut &mut dyn FnMut() = &mut dyn_close;
 
 		unsafe {
@@ -119,7 +129,9 @@ impl StereoKit {
 
 impl Drop for StereoKit {
 	fn drop(&mut self) {
-		unsafe { stereokit_sys::sk_shutdown() };
+		if self.ran.get().is_none() {
+			unsafe { stereokit_sys::sk_shutdown() }
+		};
 	}
 }
 

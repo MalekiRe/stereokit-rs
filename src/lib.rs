@@ -44,7 +44,7 @@ fn test() {
 
 	let mut window_pose = pose::IDENTITY;
 	stereokit.run(
-		|ctx| {
+		|_sk, ctx| {
 			ui::window(
 				ctx,
 				"StereoKit Test",
@@ -54,6 +54,7 @@ fn test() {
 				ui::window::MoveType::MoveExact,
 				|ui| {
 					ui.label("Test Label", true);
+					ui.sameline();
 					ui.label("Test Text", true);
 				},
 			);
