@@ -1,3 +1,6 @@
+pub use lifecycle::{quit, run, Settings};
+pub use stereokit_sys;
+
 #[allow(unused)]
 pub mod constants;
 #[allow(unused)]
@@ -5,9 +8,9 @@ pub mod enums;
 #[allow(unused)]
 pub mod font;
 #[allow(unused)]
-pub mod functions;
-#[allow(unused)]
 pub mod input;
+#[allow(unused)]
+pub mod lifecycle;
 #[allow(unused)]
 pub mod material;
 #[allow(unused)]
@@ -33,29 +36,24 @@ pub mod ui;
 #[allow(unused)]
 pub mod values;
 
-pub use stereokit_sys as sys;
-
 #[test]
 fn test() {
-	functions::SKSettings::default().init();
-	functions::sk_run(
-		{
-			let window_pose = std::rc::Rc::from(std::cell::RefCell::from(pose::IDENTITY));
+	Settings::default().init();
+	let mut window_pose = pose::IDENTITY;
+	run(
+		|| {
+			ui::window::begin(
+				"StereoKit Test",
+				&mut window_pose,
+				mint::Vector2 { x: 0., y: 0. },
+				ui::window::WindowType::WindowNormal,
+				ui::window::MoveType::MoveExact,
+			);
 
-			move || {
-				ui::window::begin(
-					"StereoKit Test",
-					&mut *window_pose.borrow_mut(),
-					mint::Vector2 { x: 0., y: 0. },
-					ui::window::WindowType::WindowNormal,
-					ui::window::MoveType::MoveExact,
-				);
+			ui::ui::label("Test Label", true);
+			ui::ui::label("Test Text", true);
 
-				ui::ui::label("Test Label", true);
-				ui::ui::label("Test Text", true);
-
-				ui::window::end();
-			}
+			ui::window::end();
 		},
 		|| {},
 	);
