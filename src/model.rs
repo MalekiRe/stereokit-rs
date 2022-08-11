@@ -5,27 +5,30 @@ use crate::mesh::Mesh;
 use crate::pose::Pose;
 use crate::shader::Shader;
 use crate::values::{color128_from, Color128, Matrix, Vec3};
+use crate::StereoKit;
 use std::ffi::CString;
 use std::fmt::Error;
 use std::path::Path;
 use stereokit_sys::{model_draw, model_t};
 
-pub struct Model {
+pub struct Model<'a> {
+	sk: &'a StereoKit<'a>,
 	pub(crate) model: model_t,
 }
-impl Drop for Model {
+impl Drop for Model<'_> {
 	fn drop(&mut self) {
 		unsafe { stereokit_sys::model_release(self.model) }
 	}
 }
-impl Model {
-	pub fn from_mesh(mesh: Mesh, material: Material) -> Result<Self, Error> {
+impl<'a> Model<'a> {
+	pub fn from_mesh(sk: &'a StereoKit, mesh: Mesh, material: Material) -> Result<Self, Error> {
 		let possible_model =
 			unsafe { stereokit_sys::model_create_mesh(mesh.mesh, material.material) };
 		if possible_model.is_null() {
 			return Err(Error);
 		}
 		Ok(Model {
+			sk,
 			model: possible_model,
 		})
 	}
@@ -45,7 +48,7 @@ impl Model {
 			)
 		}
 	}
-	pub fn from_file(file_path: &Path, shader: Shader) -> Result<Self, Error> {
+	pub fn from_file(sk: &'a StereoKit, file_path: &Path, shader: Shader) -> Result<Self, Error> {
 		let my_str = CString::new(file_path.as_os_str().to_str().unwrap()).unwrap();
 		println!("the path is: {}", my_str.to_str().unwrap());
 		let possible_model =
@@ -54,6 +57,7 @@ impl Model {
 			return Err(Error);
 		}
 		Ok(Model {
+			sk,
 			model: possible_model,
 		})
 	}

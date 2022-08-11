@@ -1,26 +1,31 @@
-use std::ffi::{c_void, CString};
-use std::fmt::Error;
-use stereokit_sys::{material_get_shader, material_set_float, material_set_queue_offset, material_set_texture, material_t};
 use crate::shader::Shader;
 use crate::structs::{Cull, DepthTest, MaterialParameter, Transparency};
 use crate::texture::Texture;
 use crate::values::{Color128, Matrix, Vec2, Vec3, Vec4};
+use crate::StereoKit;
+use std::ffi::{c_void, CString};
+use std::fmt::Error;
+use stereokit_sys::{
+	material_get_shader, material_set_float, material_set_queue_offset, material_set_texture,
+	material_t,
+};
 
-pub struct Material {
+pub struct Material<'a> {
+	sk: &'a StereoKit<'a>,
 	pub(crate) material: material_t,
 }
-impl Drop for Material {
+impl Drop for Material<'_> {
 	fn drop(&mut self) {
 		unsafe { stereokit_sys::material_release(self.material) }
 	}
 }
-impl Material {
-	pub fn new(shader: Shader) -> Result<Self, Error> {
+impl<'a> Material<'a> {
+	pub fn new(sk: &'a StereoKit, shader: Shader) -> Result<Self, Error> {
 		let material = unsafe { stereokit_sys::material_create(shader.shader) };
 		if material.is_null() {
 			return Err(Error);
 		}
-		Ok(Material { material })
+		Ok(Material { sk, material })
 	}
 	pub fn find(id: &str) -> Result<Self, Error> {
 		unimplemented!()
@@ -28,13 +33,13 @@ impl Material {
 	pub fn copy(material: Material) -> Result<Self, Error> {
 		unimplemented!()
 	}
-	pub fn copy_from_id(id: &str) -> Result<Self, Error> {
+	pub fn copy_from_id(sk: &'a StereoKit, id: &str) -> Result<Self, Error> {
 		let str_id = CString::new(id).unwrap();
 		let material = unsafe { stereokit_sys::material_copy_id(str_id.as_ptr()) };
 		if material.is_null() {
 			return Err(Error);
 		}
-		Ok(Material { material })
+		Ok(Material { sk, material })
 	}
 	pub fn set_id(&self, id: &str) {
 		let str_id = CString::new(id).unwrap();
@@ -114,7 +119,9 @@ impl Material {
 	}
 	pub fn set_texture(&self, name: &str, value: Texture) {
 		let c_str = CString::new(name).unwrap();
-		unsafe { material_set_texture(self.material, c_str.as_ptr(), value.tex); }
+		unsafe {
+			material_set_texture(self.material, c_str.as_ptr(), value.tex);
+		}
 	}
 	pub fn set_texture_id(&self, id: u64, value: Texture) -> bool {
 		unimplemented!()
@@ -134,7 +141,12 @@ impl Material {
 	pub fn get_param_id(&self, id: u64, type_: MaterialParameter, out_value: c_void) {
 		unimplemented!()
 	}
-	pub fn get_param_info(&self, index: i32, out_name: Vec<&str>, out_type: &mut MaterialParameter) {
+	pub fn get_param_info(
+		&self,
+		index: i32,
+		out_name: Vec<&str>,
+		out_type: &mut MaterialParameter,
+	) {
 		unimplemented!()
 	}
 	pub fn get_param_count(&self) -> i32 {
@@ -144,8 +156,9 @@ impl Material {
 		unimplemented!()
 	}
 	pub fn get_shader(&self) -> Shader {
-		Shader{ shader: unsafe {
-			material_get_shader(self.material)
-		}}
+		Shader {
+			sk: self.sk,
+			shader: unsafe { material_get_shader(self.material) },
+		}
 	}
 }

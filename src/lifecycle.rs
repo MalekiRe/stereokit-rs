@@ -40,7 +40,7 @@ pub struct SKSettingsBuilt {
 }
 
 impl Settings {
-	pub fn init(self) -> Result<StereoKit, ()> {
+	pub fn init<'a>(self) -> Result<StereoKit<'a>, ()> {
 		if GLOBAL_STATE.with(|f| *f.borrow()) {
 			return Err(());
 		}
@@ -75,6 +75,7 @@ impl Settings {
 				GLOBAL_STATE.with(|f| *f.borrow_mut() = true);
 				Ok(StereoKit {
 					ran: OnceCell::new(),
+					lifetime_constraint: PhantomData,
 				})
 			} else {
 				Err(())
@@ -83,8 +84,9 @@ impl Settings {
 	}
 }
 
-pub struct StereoKit {
+pub struct StereoKit<'a> {
 	ran: OnceCell<()>,
+	lifetime_constraint: PhantomData<&'a ()>,
 }
 pub struct DrawContext(PhantomData<*const ()>);
 
@@ -99,17 +101,17 @@ unsafe extern "C" fn private_shutdown_fn(context: *mut c_void) {
 	GLOBAL_STATE.with(|f| *f.borrow_mut() = false);
 }
 
-impl StereoKit {
+impl<'a> StereoKit<'a> {
 	pub fn run(
 		self,
-		mut on_update: impl FnMut(&StereoKit, &DrawContext),
+		mut on_update: impl FnMut(&'a StereoKit, &DrawContext),
 		mut on_close: impl FnMut(),
 	) {
 		self.ran.set(());
-		let mut dyn_update: &mut dyn FnMut(&StereoKit, &DrawContext) = &mut on_update;
+		let mut dyn_update: &mut dyn FnMut(&'a StereoKit, &DrawContext) = &mut on_update;
 		let mut dyn_close: &mut dyn FnMut() = &mut on_close;
 
-		let ptr_update: *mut &mut dyn FnMut(&StereoKit, &DrawContext) = &mut dyn_update;
+		let ptr_update: *mut &mut dyn FnMut(&'a StereoKit, &DrawContext) = &mut dyn_update;
 		let ptr_close: *mut &mut dyn FnMut() = &mut dyn_close;
 
 		unsafe {
@@ -127,7 +129,7 @@ impl StereoKit {
 	}
 }
 
-impl Drop for StereoKit {
+impl<'a> Drop for StereoKit<'a> {
 	fn drop(&mut self) {
 		if self.ran.get().is_none() {
 			unsafe { stereokit_sys::sk_shutdown() }
@@ -135,8 +137,8 @@ impl Drop for StereoKit {
 	}
 }
 
-pub enum Asset {
-	Model(Model),
+pub enum Asset<'a> {
+	Model(Model<'a>),
 	//Font(Font)
 }
 pub fn asset_releaseref(asset: Asset) {
