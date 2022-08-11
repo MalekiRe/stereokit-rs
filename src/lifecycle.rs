@@ -1,7 +1,9 @@
 use crate::enums::{DepthMode, DisplayBlend, DisplayMode, LogFilter};
 use crate::model::Model;
 use derive_builder::Builder;
+use std::cell::{Ref, RefCell};
 use std::ffi::{c_void, CString};
+use std::os::unix::thread;
 use std::path::{Path, PathBuf};
 use std::ptr::null;
 use std::sync::Mutex;
@@ -10,6 +12,10 @@ use stereokit_sys::{
 	assets_releaseref_threadsafe, bool32_t, color32, depth_mode_, display_blend_, display_mode_,
 	log_, material_t, model_t, sk_settings_t,
 };
+
+thread_local! {
+	static GLOBAL_STATE: RefCell<bool> = RefCell::new(false);
+}
 
 #[derive(Builder)]
 #[builder(name = "Settings", pattern = "owned", setter(into), build_fn(skip))]
@@ -32,7 +38,11 @@ pub struct SKSettingsBuilt {
 }
 
 impl Settings {
-	pub fn init(self) {
+	pub fn init(self) -> Result<StereoKit, ()> {
+		if GLOBAL_STATE.with(|f| *f.borrow()) {
+			return Err(());
+		}
+
 		let c_settings = sk_settings_t {
 			app_name: CString::new(self.app_name.unwrap_or("sk_app".to_owned()).as_str())
 				.unwrap()
@@ -59,36 +69,50 @@ impl Settings {
 			android_activity: ptr::null_mut(),
 		};
 		unsafe {
-			if stereokit_sys::sk_init(c_settings) == 0 {
-				panic!("sk_init failed!")
+			if stereokit_sys::sk_init(c_settings) != 0 {
+				GLOBAL_STATE.with(|f| *f.borrow_mut() = true);
+				Ok(StereoKit)
+			} else {
+				Err(())
 			}
 		}
 	}
 }
 
-pub fn run(mut on_update: impl FnMut(), mut on_close: impl FnMut()) {
-	let mut dyn_update: &mut dyn FnMut() = &mut on_update;
-	let mut dyn_close: &mut dyn FnMut() = &mut on_close;
+pub struct StereoKit;
 
-	let ptr_update: *mut &mut dyn FnMut() = &mut dyn_update;
-	let ptr_close: *mut &mut dyn FnMut() = &mut dyn_close;
-
-	unsafe {
-		stereokit_sys::sk_run_data(
-			Some(private_sk_run_func),
-			ptr_update as *mut c_void,
-			Some(private_sk_run_func),
-			ptr_close as *mut c_void,
-		);
-	}
-}
-unsafe extern "C" fn private_sk_run_func(context: *mut c_void) {
+unsafe extern "C" fn private_update_fn(context: *mut c_void) {
 	let func_ptr: *mut &mut dyn FnMut() = context.cast();
 	(*func_ptr)();
 }
+unsafe extern "C" fn private_shutdown_fn(context: *mut c_void) {
+	let func_ptr: *mut &mut dyn FnMut() = context.cast();
+	(*func_ptr)();
 
-pub fn quit() {
-	unsafe { stereokit_sys::sk_quit() }
+	GLOBAL_STATE.with(|f| *f.borrow_mut() = false);
+}
+
+impl StereoKit {
+	pub fn run(self, mut on_update: impl FnMut(), mut on_close: impl FnMut()) {
+		let mut dyn_update: &mut dyn FnMut() = &mut on_update;
+		let mut dyn_close: &mut dyn FnMut() = &mut on_close;
+
+		let ptr_update: *mut &mut dyn FnMut() = &mut dyn_update;
+		let ptr_close: *mut &mut dyn FnMut() = &mut dyn_close;
+
+		unsafe {
+			stereokit_sys::sk_run_data(
+				Some(private_update_fn),
+				ptr_update as *mut c_void,
+				Some(private_shutdown_fn),
+				ptr_close as *mut c_void,
+			);
+		}
+	}
+
+	pub fn quit(&self) {
+		unsafe { stereokit_sys::sk_quit() }
+	}
 }
 
 pub enum Asset {

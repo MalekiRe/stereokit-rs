@@ -1,4 +1,4 @@
-pub use lifecycle::{quit, run, Settings};
+pub use lifecycle::{Settings, StereoKit};
 pub use stereokit_sys;
 
 #[allow(unused)]
@@ -38,9 +38,12 @@ pub mod values;
 
 #[test]
 fn test() {
-	Settings::default().init();
+	let stereokit = Settings::default()
+		.init()
+		.expect("StereoKit failed to initialize");
+
 	let mut window_pose = pose::IDENTITY;
-	run(
+	stereokit.run(
 		|| {
 			ui::window::begin(
 				"StereoKit Test",
