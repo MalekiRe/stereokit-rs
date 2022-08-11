@@ -44,19 +44,19 @@ fn test() {
 
 	let mut window_pose = pose::IDENTITY;
 	stereokit.run(
-		|| {
-			ui::window::begin(
+		|ctx| {
+			ui::window(
+				ctx,
 				"StereoKit Test",
 				&mut window_pose,
 				mint::Vector2 { x: 0., y: 0. },
 				ui::window::WindowType::WindowNormal,
 				ui::window::MoveType::MoveExact,
+				|ui| {
+					ui.label("Test Label", true);
+					ui.label("Test Text", true);
+				},
 			);
-
-			ui::ui::label("Test Label", true);
-			ui::ui::label("Test Text", true);
-
-			ui::window::end();
 		},
 		|| {},
 	);
