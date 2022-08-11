@@ -81,10 +81,11 @@ impl Settings {
 }
 
 pub struct StereoKit(PhantomData<*const ()>);
+pub struct DrawContext(PhantomData<*const ()>);
 
 unsafe extern "C" fn private_update_fn(context: *mut c_void) {
-	let func_ptr: *mut &mut dyn FnMut() = context.cast();
-	(*func_ptr)();
+	let func_ptr: *mut &mut dyn FnMut(&DrawContext) = context.cast();
+	(*func_ptr)(&DrawContext(PhantomData));
 }
 unsafe extern "C" fn private_shutdown_fn(context: *mut c_void) {
 	let func_ptr: *mut &mut dyn FnMut() = context.cast();
@@ -94,11 +95,11 @@ unsafe extern "C" fn private_shutdown_fn(context: *mut c_void) {
 }
 
 impl StereoKit {
-	pub fn run(self, mut on_update: impl FnMut(), mut on_close: impl FnMut()) {
-		let mut dyn_update: &mut dyn FnMut() = &mut on_update;
+	pub fn run(&self, mut on_update: impl FnMut(&DrawContext), mut on_close: impl FnMut()) {
+		let mut dyn_update: &mut dyn FnMut(&DrawContext) = &mut on_update;
 		let mut dyn_close: &mut dyn FnMut() = &mut on_close;
 
-		let ptr_update: *mut &mut dyn FnMut() = &mut dyn_update;
+		let ptr_update: *mut &mut dyn FnMut(&DrawContext) = &mut dyn_update;
 		let ptr_close: *mut &mut dyn FnMut() = &mut dyn_close;
 
 		unsafe {
@@ -112,7 +113,13 @@ impl StereoKit {
 	}
 
 	pub fn quit(&self) {
-		unsafe { stereokit_sys::sk_quit() }
+		unsafe { stereokit_sys::sk_quit() };
+	}
+}
+
+impl Drop for StereoKit {
+	fn drop(&mut self) {
+		unsafe { stereokit_sys::sk_shutdown() };
 	}
 }
 

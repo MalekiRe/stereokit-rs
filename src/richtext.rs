@@ -1,11 +1,12 @@
 use crate::enums::TextAlign;
 use crate::input::key;
+use crate::lifecycle::DrawContext;
+use crate::pose::Pose;
 use crate::textstyle::TextStyle;
 use crate::values::{color128_from, Color128, Matrix};
 use prisma::FromTuple;
 use std::ffi::CString;
 use stereokit_sys::{text_add_at, text_align_, text_size};
-use crate::pose::Pose;
 
 pub struct RichText {
 	text_modules: Vec<TextModule>,
@@ -43,7 +44,7 @@ impl RichText {
 		&self.text_modules
 	}
 
-	pub fn draw(&mut self) {
+	pub fn draw(&mut self, _ctx: &DrawContext) {
 		let white = Color128::from_tuple(((100., 100., 100.), 100.));
 		let mut last: Option<&TextModule> = None;
 		let mut total_offset = 0.0f32;
