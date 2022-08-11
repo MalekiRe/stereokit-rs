@@ -3,6 +3,7 @@ use crate::model::Model;
 use derive_builder::Builder;
 use std::cell::{Ref, RefCell};
 use std::ffi::{c_void, CString};
+use std::marker::PhantomData;
 use std::os::unix::thread;
 use std::path::{Path, PathBuf};
 use std::ptr::null;
@@ -71,7 +72,7 @@ impl Settings {
 		unsafe {
 			if stereokit_sys::sk_init(c_settings) != 0 {
 				GLOBAL_STATE.with(|f| *f.borrow_mut() = true);
-				Ok(StereoKit(()))
+				Ok(StereoKit(PhantomData))
 			} else {
 				Err(())
 			}
@@ -79,7 +80,7 @@ impl Settings {
 	}
 }
 
-pub struct StereoKit(());
+pub struct StereoKit(PhantomData<*const ()>);
 
 unsafe extern "C" fn private_update_fn(context: *mut c_void) {
 	let func_ptr: *mut &mut dyn FnMut() = context.cast();
