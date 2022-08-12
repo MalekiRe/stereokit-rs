@@ -44,7 +44,7 @@ impl<'a> Model<'a> {
 				self.model,
 				matrix.matrix,
 				color128_from(color_linear),
-				(layer as u32).into(),
+				layer.bits().into(),
 			)
 		}
 	}

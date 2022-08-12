@@ -59,7 +59,7 @@ impl WindowContext {
 	}
 	pub fn text(&self, text: &str, text_align: TextAlign) {
 		let my_string = CString::new(text).unwrap();
-		unsafe { ui_text(my_string.as_ptr(), text_align as text_align_) }
+		unsafe { ui_text(my_string.as_ptr(), text_align.bits().into()) }
 	}
 	pub fn label(&self, text: &str, use_padding: bool) {
 		let my_string = CString::new(text).unwrap();
