@@ -120,9 +120,10 @@ impl<'a> Texture<'a> {
 		let tex: tex_t =
 			unsafe { stereokit_sys::tex_create(texture_type.bits().into(), format as u32) };
 		if tex.is_null() {
-			return Err(Error);
+			Err(Error)
+		} else {
+			Ok(Texture { sk, tex })
 		}
-		Ok(Texture { sk, tex })
 	}
 	pub fn from_color32(
 		sk: &'a StereoKit,
@@ -139,9 +140,10 @@ impl<'a> Texture<'a> {
 			stereokit_sys::tex_create_color32(&mut color32_from(data), width, height, my_var)
 		};
 		if tex.is_null() {
-			return Err(Error);
+			Err(Error)
+		} else {
+			Ok(Texture { sk, tex })
 		}
-		Ok(Texture { sk, tex })
 	}
 
 	pub fn from_cubemap_equirectangular(
@@ -163,13 +165,14 @@ impl<'a> Texture<'a> {
 			)
 		};
 		if tex.is_null() {
-			return Err(Error);
+			Err(Error)
+		} else {
+			Ok((
+				Texture { sk, tex },
+				SphericalHarmonics {
+					spherical_harmonics,
+				},
+			))
 		}
-		Ok((
-			Texture { sk, tex },
-			SphericalHarmonics {
-				spherical_harmonics,
-			},
-		))
 	}
 }
