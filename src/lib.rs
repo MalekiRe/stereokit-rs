@@ -1,5 +1,5 @@
 pub use lifecycle::{Settings, StereoKit};
-pub use stereokit_sys;
+pub use stereokit_sys as sys;
 
 #[allow(unused)]
 pub mod constants;
@@ -43,6 +43,21 @@ fn test() {
 		.expect("StereoKit failed to initialize");
 
 	let mut window_pose = pose::IDENTITY;
+	let cube_mesh = mesh::Mesh::gen_cube(
+		&stereokit,
+		mint::Vector3 {
+			x: 1_f32,
+			y: 1_f32,
+			z: 1_f32,
+		},
+		1,
+	)
+	.expect("Failed to generate cube");
+	let cube_material = material::Material::copy_from_id(&stereokit, "default")
+		.expect("Could not copy default material from id");
+
+	let cube_model = model::Model::from_mesh(&stereokit, cube_mesh, cube_material)
+		.expect("Could not make model out of mesh and material");
 	stereokit.run(
 		|_sk, ctx| {
 			ui::window(
@@ -58,6 +73,8 @@ fn test() {
 					ui.label("Test Text", true);
 				},
 			);
+
+			// cube_model.draw(_sk, Matrix::IDENTITY, Color::, enums::RenderLayer::Layer0);
 		},
 		|| {},
 	);

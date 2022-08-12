@@ -103,11 +103,13 @@ unsafe extern "C" fn private_shutdown_fn(context: *mut c_void) {
 
 impl<'a> StereoKit<'a> {
 	pub fn run(
-		self,
+		&self,
 		mut on_update: impl FnMut(&'a StereoKit, &DrawContext),
 		mut on_close: impl FnMut(),
 	) {
-		self.ran.set(());
+		if self.ran.set(()).is_err() {
+			return;
+		}
 		let mut dyn_update: &mut dyn FnMut(&'a StereoKit, &DrawContext) = &mut on_update;
 		let mut dyn_close: &mut dyn FnMut() = &mut on_close;
 
