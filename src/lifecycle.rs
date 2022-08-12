@@ -1,4 +1,3 @@
-use crate::enums::{DepthMode, DisplayBlend, DisplayMode, LogFilter};
 use crate::model::Model;
 use derive_builder::Builder;
 use once_cell::unsync::OnceCell;
@@ -14,6 +13,32 @@ use stereokit_sys::{
 	assets_releaseref_threadsafe, bool32_t, color32, depth_mode_, display_blend_, display_mode_,
 	log_, material_t, model_t, sk_settings_t,
 };
+
+pub enum DisplayMode {
+	MixedReality = 0,
+	Flatscreen = 1,
+	None = 2,
+}
+pub enum DisplayBlend {
+	None = 0,
+	Opaque = 1,
+	Additive = 2,
+	Blend = 4,
+	AnyTransparent = 6,
+}
+pub enum DepthMode {
+	Balanced = 0,
+	D16 = 1,
+	D32 = 2,
+	Stencil = 3,
+}
+pub enum LogFilter {
+	None = 0,
+	Diagnostic = 1,
+	Inform = 2,
+	Warning = 3,
+	Error = 4,
+}
 
 thread_local! {
 	static GLOBAL_STATE: RefCell<bool> = RefCell::new(false);

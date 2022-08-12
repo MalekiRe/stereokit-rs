@@ -1,8 +1,7 @@
-use crate::enums::TextAlign;
 use crate::input::key;
 use crate::lifecycle::DrawContext;
 use crate::pose::Pose;
-use crate::textstyle::TextStyle;
+use crate::textstyle::{TextAlign, TextStyle};
 use crate::values::{color128_from, Color128, Matrix};
 use crate::StereoKit;
 use prisma::FromTuple;

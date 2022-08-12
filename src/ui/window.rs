@@ -1,6 +1,6 @@
-use crate::enums::TextAlign;
 use crate::{
 	lifecycle::DrawContext,
+	textstyle::TextAlign,
 	values::{vec2_from, Vec2},
 };
 use std::{ffi::CString, marker::PhantomData};
