@@ -4,7 +4,7 @@ use crate::render::SphericalHarmonics;
 use crate::values::{color128_from, color128_to, color32_from, color32_to, Color32};
 use crate::StereoKit;
 use bitflags::bitflags;
-use std::ffi::CString;
+use std::ffi::{c_void, CString};
 use std::fmt::Error;
 use stereokit_sys::tex_t;
 
@@ -173,6 +173,27 @@ impl<'a> Texture<'a> {
 					spherical_harmonics,
 				},
 			))
+		}
+	}
+
+	pub fn set_native(
+		&self,
+		native_texture: usize,
+		native_format: i64,
+		texture_type: TextureType,
+		width: u32,
+		height: u32,
+	) {
+		unsafe {
+			stereokit_sys::tex_set_surface(
+				self.tex,
+				native_texture as *mut c_void,
+				texture_type.bits(),
+				native_format,
+				width as i32,
+				height as i32,
+				1,
+			);
 		}
 	}
 }
