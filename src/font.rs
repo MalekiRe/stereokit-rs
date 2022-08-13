@@ -1,34 +1,31 @@
-use std::ffi::CString;
 use std::fmt::Error;
 use std::path::Path;
-use stereokit_sys::{_font_t, default_id_font, font_create, font_find, font_t};
+use std::{ffi::CString, ptr::NonNull};
+use stereokit_sys::{_font_t, default_id_font, font_create, font_find};
+use ustr::ustr;
 
 use crate::{lifecycle::StereoKitInstanceWrapper, StereoKit};
 
 pub struct Font {
 	sk: StereoKitInstanceWrapper,
-	pub(crate) font: font_t,
+	pub(crate) font: NonNull<_font_t>,
 }
 
 impl Font {
-	pub fn from_file(sk: &StereoKit, file: &Path) -> Result<Self, Error> {
-		let my_string = CString::new(file.as_os_str().to_str().unwrap()).unwrap();
-		let possible_font = unsafe { stereokit_sys::font_create(my_string.as_ptr()) };
-		if possible_font.is_null() {
-			return Err(Error);
-		}
-		Ok(Font {
+	pub fn from_file(sk: &StereoKit, file: &Path) -> Option<Self> {
+		let file_path = ustr(file.as_os_str().to_str().unwrap());
+
+		Some(Font {
 			sk: sk.get_wrapper(),
-			font: possible_font,
+			font: NonNull::new(unsafe { stereokit_sys::font_create(file_path.as_char_ptr()) })?,
 		})
 	}
 	pub fn default(sk: &StereoKit) -> Self {
-		let my_string = CString::new("default/font").unwrap();
-		unsafe {
-			Font {
-				sk: sk.get_wrapper(),
-				font: font_find(my_string.as_ptr()),
-			}
+		let default_id = ustr("default/font");
+
+		Font {
+			sk: sk.get_wrapper(),
+			font: NonNull::new(unsafe { font_find(default_id.as_char_ptr()) }).unwrap(),
 		}
 	}
 }

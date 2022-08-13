@@ -7,8 +7,9 @@ use crate::StereoKit;
 use bitflags::bitflags;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
+use std::ptr::NonNull;
 use std::rc::{Rc, Weak};
-use stereokit_sys::tex_t;
+use stereokit_sys::_tex_t;
 
 /// What type of color information will the texture contain? A
 /// good default here is Rgba32.
@@ -143,12 +144,12 @@ bitflags! {
 
 pub struct Texture {
 	sk: StereoKitInstanceWrapper,
-	pub(super) tex: tex_t,
+	pub(super) tex: NonNull<_tex_t>,
 }
 
 impl Drop for Texture {
 	fn drop(&mut self) {
-		unsafe { stereokit_sys::tex_release(self.tex) }
+		unsafe { stereokit_sys::tex_release(self.tex.as_ptr()) }
 	}
 }
 impl Texture {
@@ -156,39 +157,26 @@ impl Texture {
 		sk: &StereoKit,
 		texture_type: TextureType,
 		format: TextureFormat,
-	) -> Result<Self, Error> {
-		let tex = unsafe { stereokit_sys::tex_create(texture_type.bits(), format as u32) };
-		if tex.is_null() {
-			Err(Error)
-		} else {
-			Ok(Texture {
-				sk: sk.get_wrapper(),
-				tex,
-			})
-		}
+	) -> Option<Self> {
+		Some(Texture {
+			sk: sk.get_wrapper(),
+			tex: NonNull::new(unsafe {
+				stereokit_sys::tex_create(texture_type.bits(), format as u32)
+			})?,
+		})
 	}
-	pub fn from_mem(
-		sk: &StereoKit,
-		memory: &[u8],
-		srgb_data: bool,
-		priority: i32,
-	) -> Result<Self, Error> {
-		let tex = unsafe {
-			stereokit_sys::tex_create_mem(
-				memory.as_ptr() as *mut c_void,
-				memory.len() as u64,
-				srgb_data as i32,
-				priority,
-			)
-		};
-		if tex.is_null() {
-			Err(Error)
-		} else {
-			Ok(Texture {
-				sk: sk.get_wrapper(),
-				tex,
-			})
-		}
+	pub fn from_mem(sk: &StereoKit, memory: &[u8], srgb_data: bool, priority: i32) -> Option<Self> {
+		Some(Texture {
+			sk: sk.get_wrapper(),
+			tex: NonNull::new(unsafe {
+				stereokit_sys::tex_create_mem(
+					memory.as_ptr() as *mut c_void,
+					memory.len() as u64,
+					srgb_data as i32,
+					priority,
+				)
+			})?,
+		})
 	}
 	pub fn from_color32(
 		sk: &StereoKit,
@@ -196,23 +184,18 @@ impl Texture {
 		width: i32,
 		height: i32,
 		uses_srgb_data: bool,
-	) -> Result<Self, Error> {
-		let tex = unsafe {
-			stereokit_sys::tex_create_color32(
-				&mut color32_from(data),
-				width,
-				height,
-				uses_srgb_data as i32,
-			)
-		};
-		if tex.is_null() {
-			Err(Error)
-		} else {
-			Ok(Texture {
-				sk: sk.get_wrapper(),
-				tex,
-			})
-		}
+	) -> Option<Self> {
+		Some(Texture {
+			sk: sk.get_wrapper(),
+			tex: NonNull::new(unsafe {
+				stereokit_sys::tex_create_color32(
+					&mut color32_from(data),
+					width,
+					height,
+					uses_srgb_data as i32,
+				)
+			})?,
+		})
 	}
 
 	pub fn from_cubemap_equirectangular(
@@ -220,32 +203,28 @@ impl Texture {
 		file_path: &str,
 		uses_srgb_data: bool,
 		load_priority: i32,
-	) -> Result<(Self, SphericalHarmonics), Error> {
+	) -> Option<(Self, SphericalHarmonics)> {
 		let c_file_path = CString::new(file_path).unwrap();
 		let mut spherical_harmonics = stereokit_sys::spherical_harmonics_t {
 			coefficients: [unsafe { stereokit_sys::vec3_zero }; 9],
 		};
-		let tex = unsafe {
+		let tex = NonNull::new(unsafe {
 			stereokit_sys::tex_create_cubemap_file(
 				c_file_path.as_ptr(),
 				uses_srgb_data.into(),
 				&mut spherical_harmonics,
 				load_priority,
 			)
-		};
-		if tex.is_null() {
-			Err(Error)
-		} else {
-			Ok((
-				Texture {
-					sk: sk.get_wrapper(),
-					tex,
-				},
-				SphericalHarmonics {
-					spherical_harmonics,
-				},
-			))
-		}
+		})?;
+		Some((
+			Texture {
+				sk: sk.get_wrapper(),
+				tex,
+			},
+			SphericalHarmonics {
+				spherical_harmonics,
+			},
+		))
 	}
 
 	pub unsafe fn set_native(
@@ -257,7 +236,7 @@ impl Texture {
 		height: u32,
 	) {
 		stereokit_sys::tex_set_surface(
-			self.tex,
+			self.tex.as_ptr(),
 			native_texture as *mut c_void,
 			texture_type.bits(),
 			native_format.into(),
@@ -268,12 +247,12 @@ impl Texture {
 	}
 
 	pub unsafe fn set_sample(&self, sample: TextureSample) {
-		stereokit_sys::tex_set_sample(self.tex, sample as u32);
+		stereokit_sys::tex_set_sample(self.tex.as_ptr(), sample as u32);
 	}
 	pub unsafe fn set_address_mode(&self, address_mode: TextureAddress) {
-		stereokit_sys::tex_set_address(self.tex, address_mode as u32);
+		stereokit_sys::tex_set_address(self.tex.as_ptr(), address_mode as u32);
 	}
 	pub unsafe fn set_anisotropy_level(&self, anisotropy_level: i32) {
-		stereokit_sys::tex_set_anisotropy(self.tex, anisotropy_level);
+		stereokit_sys::tex_set_anisotropy(self.tex.as_ptr(), anisotropy_level);
 	}
 }

@@ -44,7 +44,11 @@ impl TextStyle {
 		TextStyle {
 			sk: sk.get_wrapper(),
 			text_style: unsafe {
-				text_make_style(font.font, character_height, color128_from(color_gamma))
+				text_make_style(
+					font.font.as_ptr(),
+					character_height,
+					color128_from(color_gamma),
+				)
 			},
 		}
 	}

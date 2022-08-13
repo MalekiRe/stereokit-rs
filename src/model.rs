@@ -9,28 +9,27 @@ use crate::StereoKit;
 use std::ffi::CString;
 use std::fmt::Error;
 use std::path::Path;
+use std::ptr::NonNull;
 use std::rc::{Rc, Weak};
-use stereokit_sys::{model_draw, model_t};
+use stereokit_sys::{_model_t, model_draw};
+use ustr::ustr;
 
 pub struct Model {
 	sk: StereoKitInstanceWrapper,
-	pub(crate) model: model_t,
+	pub(crate) model: NonNull<_model_t>,
 }
 impl Drop for Model {
 	fn drop(&mut self) {
-		unsafe { stereokit_sys::model_release(self.model) }
+		unsafe { stereokit_sys::model_release(self.model.as_ptr()) }
 	}
 }
 impl Model {
-	pub fn from_mesh(sk: &StereoKit, mesh: &Mesh, material: &Material) -> Result<Self, Error> {
-		let possible_model =
-			unsafe { stereokit_sys::model_create_mesh(mesh.mesh, material.material) };
-		if possible_model.is_null() {
-			return Err(Error);
-		}
-		Ok(Model {
+	pub fn from_mesh(sk: &StereoKit, mesh: &Mesh, material: &Material) -> Option<Self> {
+		Some(Model {
 			sk: sk.get_wrapper(),
-			model: possible_model,
+			model: NonNull::new(unsafe {
+				stereokit_sys::model_create_mesh(mesh.mesh.as_ptr(), material.material.as_ptr())
+			})?,
 		})
 	}
 	pub fn draw(
@@ -42,24 +41,20 @@ impl Model {
 	) {
 		unsafe {
 			model_draw(
-				self.model,
+				self.model.as_ptr(),
 				matrix_from(matrix),
 				color128_from(color_linear),
 				layer.bits(),
 			)
 		}
 	}
-	pub fn from_file(sk: &StereoKit, file_path: &Path, shader: &Shader) -> Result<Self, Error> {
-		let my_str = CString::new(file_path.as_os_str().to_str().unwrap()).unwrap();
-		println!("the path is: {}", my_str.to_str().unwrap());
-		let possible_model =
-			unsafe { stereokit_sys::model_create_file(my_str.as_ptr(), shader.shader) };
-		if possible_model.is_null() {
-			return Err(Error);
-		}
-		Ok(Model {
+	pub fn from_file(sk: &StereoKit, file_path: &Path, shader: &Shader) -> Option<Self> {
+		let file_path = ustr(file_path.as_os_str().to_str().unwrap());
+		Some(Model {
 			sk: sk.get_wrapper(),
-			model: possible_model,
+			model: NonNull::new(unsafe {
+				stereokit_sys::model_create_file(file_path.as_char_ptr(), shader.shader)
+			})?,
 		})
 	}
 }

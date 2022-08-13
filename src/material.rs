@@ -6,11 +6,13 @@ use crate::values::{Color128, Matrix, Vec2, Vec3, Vec4};
 use crate::StereoKit;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
+use std::ptr::NonNull;
 use std::rc::{Rc, Weak};
 use stereokit_sys::{
-	material_get_shader, material_param__material_param_texture, material_set_float,
-	material_set_param, material_set_queue_offset, material_set_texture, material_t,
+	_material_t, material_get_shader, material_param__material_param_texture, material_set_float,
+	material_set_param, material_set_queue_offset, material_set_texture,
 };
+use ustr::ustr;
 
 pub const DEFAULT_ID_MATERIAL: &str = "default/material";
 pub const DEFAULT_ID_MATERIAL_PBR: &str = "default/material_pbr";
@@ -34,51 +36,44 @@ impl MaterialParameter for Texture {
 	const SK_TYPE: u32 = material_param__material_param_texture;
 
 	fn as_raw(&self) -> *const c_void {
-		self.tex as *const c_void
+		self.tex.as_ptr() as *const c_void
 	}
 }
 
 pub struct Material {
 	sk: StereoKitInstanceWrapper,
-	pub(crate) material: material_t,
+	pub(crate) material: NonNull<_material_t>,
 }
 impl Drop for Material {
 	fn drop(&mut self) {
-		unsafe { stereokit_sys::material_release(self.material) }
+		unsafe { stereokit_sys::material_release(self.material.as_ptr()) }
 	}
 }
 impl Material {
-	pub fn new(sk: &StereoKit, shader: Shader) -> Result<Self, Error> {
-		let material = unsafe { stereokit_sys::material_create(shader.shader) };
-		if material.is_null() {
-			return Err(Error);
-		}
-		Ok(Material {
+	pub fn new(sk: &StereoKit, shader: Shader) -> Option<Self> {
+		Some(Material {
 			sk: sk.get_wrapper(),
-			material,
+			material: NonNull::new(unsafe { stereokit_sys::material_create(shader.shader) })?,
 		})
 	}
-	pub fn find(id: &str) -> Result<Self, Error> {
+	pub fn find(id: &str) -> Option<Self> {
 		unimplemented!()
 	}
-	pub fn copy(material: Material) -> Result<Self, Error> {
+	pub fn copy(material: Material) -> Option<Self> {
 		unimplemented!()
 	}
-	pub fn copy_from_id(sk: &StereoKit, id: &str) -> Result<Self, Error> {
-		let str_id = CString::new(id).unwrap();
-		let material = unsafe { stereokit_sys::material_copy_id(str_id.as_ptr()) };
-		if material.is_null() {
-			return Err(Error);
-		}
-		Ok(Material {
+	pub fn copy_from_id(sk: &StereoKit, id: &str) -> Option<Self> {
+		Some(Material {
 			sk: sk.get_wrapper(),
-			material,
+			material: NonNull::new(unsafe {
+				stereokit_sys::material_copy_id(ustr(id).as_char_ptr())
+			})?,
 		})
 	}
 	pub fn set_id(&self, id: &str) {
 		let str_id = CString::new(id).unwrap();
 		unsafe {
-			stereokit_sys::material_set_id(self.material, str_id.as_ptr());
+			stereokit_sys::material_set_id(self.material.as_ptr(), str_id.as_ptr());
 		}
 	}
 	pub fn set_transparency(&self, mode: Transparency) {
@@ -97,7 +92,7 @@ impl Material {
 		unimplemented!()
 	}
 	pub fn set_queue_offset(&self, offset: i32) {
-		unsafe { material_set_queue_offset(self.material, offset) }
+		unsafe { material_set_queue_offset(self.material.as_ptr(), offset) }
 	}
 	pub fn get_transparency(&self) -> Transparency {
 		unimplemented!()
@@ -119,7 +114,7 @@ impl Material {
 	}
 	pub fn set_float(&self, name: &str, value: f32) {
 		let c_str = CString::new(name).unwrap();
-		unsafe { material_set_float(self.material, c_str.as_ptr(), value) }
+		unsafe { material_set_float(self.material.as_ptr(), c_str.as_ptr(), value) }
 	}
 	pub fn set_vector2(&self, name: &str, value: Vec2) {
 		unimplemented!()
@@ -154,7 +149,7 @@ impl Material {
 	pub fn set_texture(&self, name: &str, value: Texture) {
 		let c_str = CString::new(name).unwrap();
 		unsafe {
-			material_set_texture(self.material, c_str.as_ptr(), value.tex);
+			material_set_texture(self.material.as_ptr(), c_str.as_ptr(), value.tex.as_ptr());
 		}
 	}
 	pub fn set_texture_id(&self, id: u64, value: Texture) -> bool {
@@ -169,7 +164,7 @@ impl Material {
 	{
 		unsafe {
 			material_set_param(
-				self.material,
+				self.material.as_ptr(),
 				ustr::ustr(name).as_char_ptr(),
 				P::SK_TYPE,
 				value.as_raw(),
@@ -202,7 +197,7 @@ impl Material {
 	pub fn get_shader(&self) -> Shader {
 		Shader {
 			sk: self.sk.clone(),
-			shader: unsafe { material_get_shader(self.material) },
+			shader: unsafe { material_get_shader(self.material.as_ptr()) },
 		}
 	}
 }
