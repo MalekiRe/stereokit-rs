@@ -1,6 +1,6 @@
 #![allow(non_upper_case_globals)]
 
-use crate::lifecycle::StereoKitInstance;
+use crate::lifecycle::StereoKitInstanceWrapper;
 use crate::render::SphericalHarmonics;
 use crate::values::{color128_from, color128_to, color32_from, color32_to, Color32};
 use crate::StereoKit;
@@ -142,7 +142,7 @@ bitflags! {
 }
 
 pub struct Texture {
-	sk: Weak<StereoKitInstance>,
+	sk: StereoKitInstanceWrapper,
 	pub(super) tex: tex_t,
 }
 
@@ -162,7 +162,7 @@ impl Texture {
 			Err(Error)
 		} else {
 			Ok(Texture {
-				sk: sk.get_weak_instance(),
+				sk: sk.get_wrapper(),
 				tex,
 			})
 		}
@@ -185,7 +185,7 @@ impl Texture {
 			Err(Error)
 		} else {
 			Ok(Texture {
-				sk: sk.get_weak_instance(),
+				sk: sk.get_wrapper(),
 				tex,
 			})
 		}
@@ -209,7 +209,7 @@ impl Texture {
 			Err(Error)
 		} else {
 			Ok(Texture {
-				sk: sk.get_weak_instance(),
+				sk: sk.get_wrapper(),
 				tex,
 			})
 		}
@@ -238,7 +238,7 @@ impl Texture {
 		} else {
 			Ok((
 				Texture {
-					sk: sk.get_weak_instance(),
+					sk: sk.get_wrapper(),
 					tex,
 				},
 				SphericalHarmonics {

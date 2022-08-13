@@ -1,14 +1,12 @@
 use std::ffi::CString;
 use std::fmt::Error;
 use std::path::Path;
-use std::rc::{Rc, Weak};
 use stereokit_sys::{_font_t, default_id_font, font_create, font_find, font_t};
 
-use crate::lifecycle::StereoKitInstance;
-use crate::StereoKit;
+use crate::{lifecycle::StereoKitInstanceWrapper, StereoKit};
 
 pub struct Font {
-	sk: Weak<StereoKitInstance>,
+	sk: StereoKitInstanceWrapper,
 	pub(crate) font: font_t,
 }
 
@@ -20,7 +18,7 @@ impl Font {
 			return Err(Error);
 		}
 		Ok(Font {
-			sk: sk.get_weak_instance(),
+			sk: sk.get_wrapper(),
 			font: possible_font,
 		})
 	}
@@ -28,7 +26,7 @@ impl Font {
 		let my_string = CString::new("default/font").unwrap();
 		unsafe {
 			Font {
-				sk: sk.get_weak_instance(),
+				sk: sk.get_wrapper(),
 				font: font_find(my_string.as_ptr()),
 			}
 		}

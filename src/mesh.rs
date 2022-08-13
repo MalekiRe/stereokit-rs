@@ -1,5 +1,5 @@
 use crate::{
-	lifecycle::StereoKitInstance,
+	lifecycle::StereoKitInstanceWrapper,
 	values::{vec3_from, Vec3},
 	StereoKit,
 };
@@ -8,7 +8,7 @@ use std::rc::{Rc, Weak};
 use stereokit_sys::mesh_t;
 
 pub struct Mesh {
-	sk: Weak<StereoKitInstance>,
+	sk: StereoKitInstanceWrapper,
 	pub(crate) mesh: mesh_t,
 }
 
@@ -19,7 +19,7 @@ impl Mesh {
 			return Err(Error);
 		}
 		Ok(Mesh {
-			sk: sk.get_weak_instance(),
+			sk: sk.get_wrapper(),
 			mesh: possible_cube,
 		})
 	}

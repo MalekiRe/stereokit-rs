@@ -1,4 +1,4 @@
-use crate::lifecycle::StereoKitInstance;
+use crate::lifecycle::StereoKitInstanceWrapper;
 use crate::shader::Shader;
 use crate::structs::{Cull, DepthTest, Transparency};
 use crate::texture::Texture;
@@ -39,7 +39,7 @@ impl MaterialParameter for Texture {
 }
 
 pub struct Material {
-	sk: Weak<StereoKitInstance>,
+	sk: StereoKitInstanceWrapper,
 	pub(crate) material: material_t,
 }
 impl Drop for Material {
@@ -54,7 +54,7 @@ impl Material {
 			return Err(Error);
 		}
 		Ok(Material {
-			sk: sk.get_weak_instance(),
+			sk: sk.get_wrapper(),
 			material,
 		})
 	}
@@ -71,7 +71,7 @@ impl Material {
 			return Err(Error);
 		}
 		Ok(Material {
-			sk: sk.get_weak_instance(),
+			sk: sk.get_wrapper(),
 			material,
 		})
 	}

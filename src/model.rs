@@ -1,5 +1,5 @@
 use crate::enums::RenderLayer;
-use crate::lifecycle::{DrawContext, StereoKitInstance};
+use crate::lifecycle::{DrawContext, StereoKitInstanceWrapper};
 use crate::material::Material;
 use crate::mesh::Mesh;
 use crate::pose::Pose;
@@ -13,7 +13,7 @@ use std::rc::{Rc, Weak};
 use stereokit_sys::{model_draw, model_t};
 
 pub struct Model {
-	sk: Weak<StereoKitInstance>,
+	sk: StereoKitInstanceWrapper,
 	pub(crate) model: model_t,
 }
 impl Drop for Model {
@@ -29,7 +29,7 @@ impl Model {
 			return Err(Error);
 		}
 		Ok(Model {
-			sk: sk.get_weak_instance(),
+			sk: sk.get_wrapper(),
 			model: possible_model,
 		})
 	}
@@ -58,7 +58,7 @@ impl Model {
 			return Err(Error);
 		}
 		Ok(Model {
-			sk: sk.get_weak_instance(),
+			sk: sk.get_wrapper(),
 			model: possible_model,
 		})
 	}

@@ -3,6 +3,7 @@ use derive_builder::Builder;
 use once_cell::unsync::OnceCell;
 use std::cell::{Ref, RefCell};
 use std::ffi::{c_void, CString};
+use std::fmt::Error;
 use std::marker::PhantomData;
 use std::os::unix::thread;
 use std::path::{Path, PathBuf};
@@ -112,6 +113,16 @@ impl Settings {
 }
 
 pub(crate) struct StereoKitInstance;
+
+#[derive(Clone)]
+pub(crate) struct StereoKitInstanceWrapper(Weak<StereoKitInstance>);
+
+impl StereoKitInstanceWrapper {
+	pub(crate) fn valid(&self) -> Result<(), Error> {
+		self.0.upgrade().map(|_| ()).ok_or(Error)
+	}
+}
+
 pub struct StereoKit {
 	ran: OnceCell<()>,
 	handle: Rc<StereoKitInstance>,
@@ -155,8 +166,8 @@ impl StereoKit {
 		unsafe { stereokit_sys::sk_quit() };
 	}
 
-	pub(crate) fn get_weak_instance(&self) -> Weak<StereoKitInstance> {
-		Rc::downgrade(&self.handle)
+	pub(crate) fn get_wrapper(&self) -> StereoKitInstanceWrapper {
+		StereoKitInstanceWrapper(Rc::downgrade(&self.handle))
 	}
 }
 

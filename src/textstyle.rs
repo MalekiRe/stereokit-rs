@@ -1,7 +1,7 @@
 #![allow(non_upper_case_globals)]
 
 use crate::font::Font;
-use crate::lifecycle::StereoKitInstance;
+use crate::lifecycle::StereoKitInstanceWrapper;
 use crate::values::{color128_from, Color128};
 use crate::StereoKit;
 use bitflags::bitflags;
@@ -30,7 +30,7 @@ bitflags! {
 
 #[derive(Clone)]
 pub struct TextStyle {
-	sk: Weak<StereoKitInstance>,
+	sk: StereoKitInstanceWrapper,
 	pub(crate) text_style: text_style_t,
 }
 
@@ -42,7 +42,7 @@ impl TextStyle {
 		color_gamma: Color128,
 	) -> Self {
 		TextStyle {
-			sk: sk.get_weak_instance(),
+			sk: sk.get_wrapper(),
 			text_style: unsafe {
 				text_make_style(font.font, character_height, color128_from(color_gamma))
 			},
