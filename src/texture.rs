@@ -155,8 +155,27 @@ impl<'a> Texture<'a> {
 		texture_type: TextureType,
 		format: TextureFormat,
 	) -> Result<Self, Error> {
-		let tex: tex_t =
-			unsafe { stereokit_sys::tex_create(texture_type.bits().into(), format as u32) };
+		let tex = unsafe { stereokit_sys::tex_create(texture_type.bits().into(), format as u32) };
+		if tex.is_null() {
+			Err(Error)
+		} else {
+			Ok(Texture { sk, tex })
+		}
+	}
+	pub fn from_mem(
+		sk: &'a StereoKit,
+		memory: &[u8],
+		srgb_data: bool,
+		priority: i32,
+	) -> Result<Self, Error> {
+		let tex = unsafe {
+			stereokit_sys::tex_create_mem(
+				memory.as_ptr() as *mut c_void,
+				memory.len() as u64,
+				srgb_data as i32,
+				priority,
+			)
+		};
 		if tex.is_null() {
 			Err(Error)
 		} else {
