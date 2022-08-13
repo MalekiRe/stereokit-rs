@@ -132,12 +132,13 @@ impl<'a> Texture<'a> {
 		height: i32,
 		uses_srgb_data: bool,
 	) -> Result<Self, Error> {
-		let mut my_var: stereokit_sys::bool32_t = 0;
-		if uses_srgb_data {
-			my_var = 1;
-		}
-		let tex: tex_t = unsafe {
-			stereokit_sys::tex_create_color32(&mut color32_from(data), width, height, my_var)
+		let tex = unsafe {
+			stereokit_sys::tex_create_color32(
+				&mut color32_from(data),
+				width,
+				height,
+				uses_srgb_data as i32,
+			)
 		};
 		if tex.is_null() {
 			Err(Error)
@@ -178,8 +179,8 @@ impl<'a> Texture<'a> {
 
 	pub fn set_native(
 		&self,
-		native_texture: usize,
-		native_format: i64,
+		native_texture: u32,
+		native_format: u32,
 		texture_type: TextureType,
 		width: u32,
 		height: u32,
@@ -189,7 +190,7 @@ impl<'a> Texture<'a> {
 				self.tex,
 				native_texture as *mut c_void,
 				texture_type.bits(),
-				native_format,
+				native_format.into(),
 				width as i32,
 				height as i32,
 				1,

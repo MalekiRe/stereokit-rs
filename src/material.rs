@@ -1,13 +1,13 @@
 use crate::shader::Shader;
-use crate::structs::{Cull, DepthTest, MaterialParameter, Transparency};
+use crate::structs::{Cull, DepthTest, Transparency};
 use crate::texture::Texture;
 use crate::values::{Color128, Matrix, Vec2, Vec3, Vec4};
 use crate::StereoKit;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
 use stereokit_sys::{
-	material_get_shader, material_set_float, material_set_queue_offset, material_set_texture,
-	material_t,
+	material_get_shader, material_param__material_param_texture, material_set_float,
+	material_set_param, material_set_queue_offset, material_set_texture, material_t,
 };
 
 pub const DEFAULT_ID_MATERIAL: &'static str = "default/material";
@@ -21,6 +21,20 @@ pub const DEFAULT_ID_MATERIAL_HAND: &'static str = "default/material_hand";
 pub const DEFAULT_ID_MATERIAL_UI: &'static str = "default/material_ui";
 pub const DEFAULT_ID_MATERIAL_UI_BOX: &'static str = "default/material_ui_box";
 pub const DEFAULT_ID_MATERIAL_UI_QUADRANT: &'static str = "default/material_ui_quadrant";
+
+pub trait MaterialParameter {
+	const SK_TYPE: u32;
+
+	fn as_raw(&self) -> *const c_void;
+}
+
+impl MaterialParameter for Texture<'_> {
+	const SK_TYPE: u32 = material_param__material_param_texture;
+
+	fn as_raw(&self) -> *const c_void {
+		self.tex as *const c_void
+	}
+}
 
 pub struct Material<'a> {
 	sk: &'a StereoKit<'a>,
@@ -138,26 +152,36 @@ impl<'a> Material<'a> {
 	pub fn set_texture_id(&self, id: u64, value: Texture) -> bool {
 		unimplemented!()
 	}
-	pub fn has_parameter(&self, name: &str, type_: MaterialParameter) -> bool {
+	pub fn has_parameter(&self, name: &str, type_: impl MaterialParameter) -> bool {
 		unimplemented!()
 	}
-	pub fn set_parameter(&self, name: &str, type_: MaterialParameter, value: c_void) {
+	pub fn set_parameter<P>(&self, name: &str, value: &P)
+	where
+		P: MaterialParameter,
+	{
+		unsafe {
+			material_set_param(
+				self.material,
+				ustr::ustr(name).as_char_ptr(),
+				P::SK_TYPE,
+				value.as_raw(),
+			);
+		}
+	}
+	pub fn set_parameter_id(&self, id: u64, type_: impl MaterialParameter, value: c_void) {
 		unimplemented!()
 	}
-	pub fn set_parameter_id(&self, id: u64, type_: MaterialParameter, value: c_void) {
+	pub fn get_parameter(&self, id: u64, type_: impl MaterialParameter, value: c_void) {
 		unimplemented!()
 	}
-	pub fn get_parameter(&self, id: u64, type_: MaterialParameter, value: c_void) {
-		unimplemented!()
-	}
-	pub fn get_param_id(&self, id: u64, type_: MaterialParameter, out_value: c_void) {
+	pub fn get_param_id(&self, id: u64, type_: impl MaterialParameter, out_value: c_void) {
 		unimplemented!()
 	}
 	pub fn get_param_info(
 		&self,
 		index: i32,
 		out_name: Vec<&str>,
-		out_type: &mut MaterialParameter,
+		out_type: &mut impl MaterialParameter,
 	) {
 		unimplemented!()
 	}
