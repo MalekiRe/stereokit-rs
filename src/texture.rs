@@ -1,11 +1,13 @@
 #![allow(non_upper_case_globals)]
 
+use crate::lifecycle::StereoKitInstance;
 use crate::render::SphericalHarmonics;
 use crate::values::{color128_from, color128_to, color32_from, color32_to, Color32};
 use crate::StereoKit;
 use bitflags::bitflags;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
+use std::rc::{Rc, Weak};
 use stereokit_sys::tex_t;
 
 /// What type of color information will the texture contain? A
@@ -139,19 +141,19 @@ bitflags! {
 	}
 }
 
-pub struct Texture<'a> {
-	sk: &'a StereoKit<'a>,
+pub struct Texture {
+	sk: Weak<StereoKitInstance>,
 	pub(super) tex: tex_t,
 }
 
-impl Drop for Texture<'_> {
+impl Drop for Texture {
 	fn drop(&mut self) {
 		unsafe { stereokit_sys::tex_release(self.tex) }
 	}
 }
-impl<'a> Texture<'a> {
+impl Texture {
 	pub fn create(
-		sk: &'a StereoKit,
+		sk: &StereoKit,
 		texture_type: TextureType,
 		format: TextureFormat,
 	) -> Result<Self, Error> {
@@ -159,11 +161,14 @@ impl<'a> Texture<'a> {
 		if tex.is_null() {
 			Err(Error)
 		} else {
-			Ok(Texture { sk, tex })
+			Ok(Texture {
+				sk: sk.get_weak_instance(),
+				tex,
+			})
 		}
 	}
 	pub fn from_mem(
-		sk: &'a StereoKit,
+		sk: &StereoKit,
 		memory: &[u8],
 		srgb_data: bool,
 		priority: i32,
@@ -179,11 +184,14 @@ impl<'a> Texture<'a> {
 		if tex.is_null() {
 			Err(Error)
 		} else {
-			Ok(Texture { sk, tex })
+			Ok(Texture {
+				sk: sk.get_weak_instance(),
+				tex,
+			})
 		}
 	}
 	pub fn from_color32(
-		sk: &'a StereoKit,
+		sk: &StereoKit,
 		data: Color32,
 		width: i32,
 		height: i32,
@@ -200,12 +208,15 @@ impl<'a> Texture<'a> {
 		if tex.is_null() {
 			Err(Error)
 		} else {
-			Ok(Texture { sk, tex })
+			Ok(Texture {
+				sk: sk.get_weak_instance(),
+				tex,
+			})
 		}
 	}
 
 	pub fn from_cubemap_equirectangular(
-		sk: &'a StereoKit,
+		sk: &StereoKit,
 		file_path: &str,
 		uses_srgb_data: bool,
 		load_priority: i32,
@@ -226,7 +237,10 @@ impl<'a> Texture<'a> {
 			Err(Error)
 		} else {
 			Ok((
-				Texture { sk, tex },
+				Texture {
+					sk: sk.get_weak_instance(),
+					tex,
+				},
 				SphericalHarmonics {
 					spherical_harmonics,
 				},

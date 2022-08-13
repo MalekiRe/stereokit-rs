@@ -61,7 +61,7 @@ fn test() {
 	let cube_model = model::Model::from_mesh(&stereokit, &cube_mesh, &cube_material)
 		.expect("Could not make model out of mesh and material");
 	stereokit.run(
-		|_sk, ctx| {
+		|ctx| {
 			ui::window(
 				ctx,
 				"StereoKit Test",

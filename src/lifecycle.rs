@@ -7,6 +7,7 @@ use std::marker::PhantomData;
 use std::os::unix::thread;
 use std::path::{Path, PathBuf};
 use std::ptr::null;
+use std::rc::{Rc, Weak};
 use std::sync::Mutex;
 use std::{mem, ptr};
 use stereokit_sys::{
@@ -65,7 +66,7 @@ pub struct SKSettingsBuilt {
 }
 
 impl Settings {
-	pub fn init<'a>(self) -> Result<StereoKit<'a>, ()> {
+	pub fn init(self) -> Result<StereoKit, ()> {
 		if GLOBAL_STATE.with(|f| *f.borrow()) {
 			return Err(());
 		}
@@ -100,6 +101,7 @@ impl Settings {
 				GLOBAL_STATE.with(|f| *f.borrow_mut() = true);
 				Ok(StereoKit {
 					ran: OnceCell::new(),
+					handle: Rc::new(StereoKitInstance),
 					lifetime_constraint: PhantomData,
 				})
 			} else {
@@ -109,9 +111,11 @@ impl Settings {
 	}
 }
 
-pub struct StereoKit<'a> {
+pub(crate) struct StereoKitInstance;
+pub struct StereoKit {
 	ran: OnceCell<()>,
-	lifetime_constraint: PhantomData<&'a ()>,
+	handle: Rc<StereoKitInstance>,
+	lifetime_constraint: PhantomData<*const ()>,
 }
 pub struct DrawContext(PhantomData<*const ()>);
 
@@ -126,19 +130,15 @@ unsafe extern "C" fn private_shutdown_fn(context: *mut c_void) {
 	GLOBAL_STATE.with(|f| *f.borrow_mut() = false);
 }
 
-impl<'a> StereoKit<'a> {
-	pub fn run(
-		&self,
-		mut on_update: impl FnMut(&'a StereoKit, &DrawContext),
-		mut on_close: impl FnMut(),
-	) {
+impl StereoKit {
+	pub fn run(&self, mut on_update: impl FnMut(&DrawContext), mut on_close: impl FnMut()) {
 		if self.ran.set(()).is_err() {
 			return;
 		}
-		let mut dyn_update: &mut dyn FnMut(&'a StereoKit, &DrawContext) = &mut on_update;
+		let mut dyn_update: &mut dyn FnMut(&DrawContext) = &mut on_update;
 		let mut dyn_close: &mut dyn FnMut() = &mut on_close;
 
-		let ptr_update: *mut &mut dyn FnMut(&'a StereoKit, &DrawContext) = &mut dyn_update;
+		let ptr_update: *mut &mut dyn FnMut(&DrawContext) = &mut dyn_update;
 		let ptr_close: *mut &mut dyn FnMut() = &mut dyn_close;
 
 		unsafe {
@@ -154,9 +154,13 @@ impl<'a> StereoKit<'a> {
 	pub fn quit(&self) {
 		unsafe { stereokit_sys::sk_quit() };
 	}
+
+	pub(crate) fn get_weak_instance(&self) -> Weak<StereoKitInstance> {
+		Rc::downgrade(&self.handle)
+	}
 }
 
-impl<'a> Drop for StereoKit<'a> {
+impl Drop for StereoKit {
 	fn drop(&mut self) {
 		if self.ran.get().is_none() {
 			unsafe { stereokit_sys::sk_shutdown() }
@@ -164,8 +168,8 @@ impl<'a> Drop for StereoKit<'a> {
 	}
 }
 
-pub enum Asset<'a> {
-	Model(Model<'a>),
+pub enum Asset {
+	Model(Model),
 	//Font(Font)
 }
 pub fn asset_releaseref(asset: Asset) {

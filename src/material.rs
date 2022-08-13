@@ -1,3 +1,4 @@
+use crate::lifecycle::StereoKitInstance;
 use crate::shader::Shader;
 use crate::structs::{Cull, DepthTest, Transparency};
 use crate::texture::Texture;
@@ -5,6 +6,7 @@ use crate::values::{Color128, Matrix, Vec2, Vec3, Vec4};
 use crate::StereoKit;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
+use std::rc::{Rc, Weak};
 use stereokit_sys::{
 	material_get_shader, material_param__material_param_texture, material_set_float,
 	material_set_param, material_set_queue_offset, material_set_texture, material_t,
@@ -28,7 +30,7 @@ pub trait MaterialParameter {
 	fn as_raw(&self) -> *const c_void;
 }
 
-impl MaterialParameter for Texture<'_> {
+impl MaterialParameter for Texture {
 	const SK_TYPE: u32 = material_param__material_param_texture;
 
 	fn as_raw(&self) -> *const c_void {
@@ -36,22 +38,25 @@ impl MaterialParameter for Texture<'_> {
 	}
 }
 
-pub struct Material<'a> {
-	sk: &'a StereoKit<'a>,
+pub struct Material {
+	sk: Weak<StereoKitInstance>,
 	pub(crate) material: material_t,
 }
-impl Drop for Material<'_> {
+impl Drop for Material {
 	fn drop(&mut self) {
 		unsafe { stereokit_sys::material_release(self.material) }
 	}
 }
-impl<'a> Material<'a> {
-	pub fn new(sk: &'a StereoKit, shader: Shader) -> Result<Self, Error> {
+impl Material {
+	pub fn new(sk: &StereoKit, shader: Shader) -> Result<Self, Error> {
 		let material = unsafe { stereokit_sys::material_create(shader.shader) };
 		if material.is_null() {
 			return Err(Error);
 		}
-		Ok(Material { sk, material })
+		Ok(Material {
+			sk: sk.get_weak_instance(),
+			material,
+		})
 	}
 	pub fn find(id: &str) -> Result<Self, Error> {
 		unimplemented!()
@@ -59,13 +64,16 @@ impl<'a> Material<'a> {
 	pub fn copy(material: Material) -> Result<Self, Error> {
 		unimplemented!()
 	}
-	pub fn copy_from_id(sk: &'a StereoKit, id: &str) -> Result<Self, Error> {
+	pub fn copy_from_id(sk: &StereoKit, id: &str) -> Result<Self, Error> {
 		let str_id = CString::new(id).unwrap();
 		let material = unsafe { stereokit_sys::material_copy_id(str_id.as_ptr()) };
 		if material.is_null() {
 			return Err(Error);
 		}
-		Ok(Material { sk, material })
+		Ok(Material {
+			sk: sk.get_weak_instance(),
+			material,
+		})
 	}
 	pub fn set_id(&self, id: &str) {
 		let str_id = CString::new(id).unwrap();
@@ -193,7 +201,7 @@ impl<'a> Material<'a> {
 	}
 	pub fn get_shader(&self) -> Shader {
 		Shader {
-			sk: self.sk,
+			sk: self.sk.clone(),
 			shader: unsafe { material_get_shader(self.material) },
 		}
 	}

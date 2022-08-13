@@ -6,19 +6,20 @@ use crate::values::{color128_from, matrix_from, Color128, Matrix};
 use crate::StereoKit;
 use prisma::FromTuple;
 use std::ffi::CString;
+use std::rc::{Rc, Weak};
 use stereokit_sys::{text_add_at, text_align_, text_size};
 
-pub struct RichText<'a> {
-	text_modules: Vec<TextModule<'a>>,
+pub struct RichText {
+	text_modules: Vec<TextModule>,
 	transform: Matrix,
 	padding: f32,
 }
-pub struct TextModule<'a> {
+pub struct TextModule {
 	pub text: String,
-	pub text_style: TextStyle<'a>,
+	pub text_style: TextStyle,
 }
-impl<'a> RichText<'a> {
-	pub fn new(sk: &'a StereoKit, transform: Matrix, padding: f32) -> Self {
+impl RichText {
+	pub fn new(sk: &StereoKit, transform: Matrix, padding: f32) -> Self {
 		RichText {
 			text_modules: vec![],
 			transform,
@@ -28,7 +29,7 @@ impl<'a> RichText<'a> {
 	pub fn clear(&mut self) {
 		self.text_modules.clear();
 	}
-	pub fn push(&mut self, text_module: TextModule<'a>) {
+	pub fn push(&mut self, text_module: TextModule) {
 		self.text_modules.push(text_module);
 	}
 	pub fn pop(&mut self) {

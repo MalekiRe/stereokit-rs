@@ -1,5 +1,5 @@
 use crate::enums::RenderLayer;
-use crate::lifecycle::DrawContext;
+use crate::lifecycle::{DrawContext, StereoKitInstance};
 use crate::material::Material;
 use crate::mesh::Mesh;
 use crate::pose::Pose;
@@ -9,26 +9,27 @@ use crate::StereoKit;
 use std::ffi::CString;
 use std::fmt::Error;
 use std::path::Path;
+use std::rc::{Rc, Weak};
 use stereokit_sys::{model_draw, model_t};
 
-pub struct Model<'a> {
-	sk: &'a StereoKit<'a>,
+pub struct Model {
+	sk: Weak<StereoKitInstance>,
 	pub(crate) model: model_t,
 }
-impl Drop for Model<'_> {
+impl Drop for Model {
 	fn drop(&mut self) {
 		unsafe { stereokit_sys::model_release(self.model) }
 	}
 }
-impl<'a> Model<'a> {
-	pub fn from_mesh(sk: &'a StereoKit, mesh: &Mesh, material: &Material) -> Result<Self, Error> {
+impl Model {
+	pub fn from_mesh(sk: &StereoKit, mesh: &Mesh, material: &Material) -> Result<Self, Error> {
 		let possible_model =
 			unsafe { stereokit_sys::model_create_mesh(mesh.mesh, material.material) };
 		if possible_model.is_null() {
 			return Err(Error);
 		}
 		Ok(Model {
-			sk,
+			sk: sk.get_weak_instance(),
 			model: possible_model,
 		})
 	}
@@ -48,7 +49,7 @@ impl<'a> Model<'a> {
 			)
 		}
 	}
-	pub fn from_file(sk: &'a StereoKit, file_path: &Path, shader: &Shader) -> Result<Self, Error> {
+	pub fn from_file(sk: &StereoKit, file_path: &Path, shader: &Shader) -> Result<Self, Error> {
 		let my_str = CString::new(file_path.as_os_str().to_str().unwrap()).unwrap();
 		println!("the path is: {}", my_str.to_str().unwrap());
 		let possible_model =
@@ -57,7 +58,7 @@ impl<'a> Model<'a> {
 			return Err(Error);
 		}
 		Ok(Model {
-			sk,
+			sk: sk.get_weak_instance(),
 			model: possible_model,
 		})
 	}
