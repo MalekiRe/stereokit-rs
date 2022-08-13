@@ -4,7 +4,7 @@ use crate::material::Material;
 use crate::mesh::Mesh;
 use crate::pose::Pose;
 use crate::shader::Shader;
-use crate::values::{color128_from, Color128, Matrix, Vec3};
+use crate::values::{color128_from, matrix_from, Color128, Matrix, Vec3};
 use crate::StereoKit;
 use std::ffi::CString;
 use std::fmt::Error;
@@ -42,7 +42,7 @@ impl<'a> Model<'a> {
 		unsafe {
 			model_draw(
 				self.model,
-				matrix.matrix,
+				matrix_from(matrix),
 				color128_from(color_linear),
 				layer.bits().into(),
 			)
