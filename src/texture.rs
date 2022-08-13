@@ -157,7 +157,7 @@ impl Texture {
 		texture_type: TextureType,
 		format: TextureFormat,
 	) -> Result<Self, Error> {
-		let tex = unsafe { stereokit_sys::tex_create(texture_type.bits().into(), format as u32) };
+		let tex = unsafe { stereokit_sys::tex_create(texture_type.bits(), format as u32) };
 		if tex.is_null() {
 			Err(Error)
 		} else {

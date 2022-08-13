@@ -67,15 +67,19 @@ pub struct SKSettingsBuilt {
 }
 
 impl Settings {
-	pub fn init(self) -> Result<StereoKit, ()> {
+	pub fn init(self) -> Option<StereoKit> {
 		if GLOBAL_STATE.with(|f| *f.borrow()) {
-			return Err(());
+			return None;
 		}
 
 		let c_settings = sk_settings_t {
-			app_name: CString::new(self.app_name.unwrap_or("sk_app".to_owned()).as_str())
-				.unwrap()
-				.into_raw(),
+			app_name: CString::new(
+				self.app_name
+					.unwrap_or_else(|| "sk_app".to_owned())
+					.as_str(),
+			)
+			.unwrap()
+			.into_raw(),
 			assets_folder: CString::new(self.assets_folder.unwrap_or_default().as_str())
 				.unwrap()
 				.into_raw(),
@@ -100,13 +104,13 @@ impl Settings {
 		unsafe {
 			if stereokit_sys::sk_init(c_settings) != 0 {
 				GLOBAL_STATE.with(|f| *f.borrow_mut() = true);
-				Ok(StereoKit {
+				Some(StereoKit {
 					ran: OnceCell::new(),
 					handle: Rc::new(StereoKitInstance),
 					lifetime_constraint: PhantomData,
 				})
 			} else {
-				Err(())
+				None
 			}
 		}
 	}

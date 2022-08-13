@@ -12,17 +12,17 @@ use stereokit_sys::{
 	material_set_param, material_set_queue_offset, material_set_texture, material_t,
 };
 
-pub const DEFAULT_ID_MATERIAL: &'static str = "default/material";
-pub const DEFAULT_ID_MATERIAL_PBR: &'static str = "default/material_pbr";
-pub const DEFAULT_ID_MATERIAL_PBR_CLIP: &'static str = "default/material_pbr_clip";
-pub const DEFAULT_ID_MATERIAL_UNLIT: &'static str = "default/material_unlit";
-pub const DEFAULT_ID_MATERIAL_UNLIT_CLIP: &'static str = "default/material_unlit_clip";
-pub const DEFAULT_ID_MATERIAL_EQUIRECT: &'static str = "default/equirect_convert";
-pub const DEFAULT_ID_MATERIAL_FONT: &'static str = "default/material_font";
-pub const DEFAULT_ID_MATERIAL_HAND: &'static str = "default/material_hand";
-pub const DEFAULT_ID_MATERIAL_UI: &'static str = "default/material_ui";
-pub const DEFAULT_ID_MATERIAL_UI_BOX: &'static str = "default/material_ui_box";
-pub const DEFAULT_ID_MATERIAL_UI_QUADRANT: &'static str = "default/material_ui_quadrant";
+pub const DEFAULT_ID_MATERIAL: &str = "default/material";
+pub const DEFAULT_ID_MATERIAL_PBR: &str = "default/material_pbr";
+pub const DEFAULT_ID_MATERIAL_PBR_CLIP: &str = "default/material_pbr_clip";
+pub const DEFAULT_ID_MATERIAL_UNLIT: &str = "default/material_unlit";
+pub const DEFAULT_ID_MATERIAL_UNLIT_CLIP: &str = "default/material_unlit_clip";
+pub const DEFAULT_ID_MATERIAL_EQUIRECT: &str = "default/equirect_convert";
+pub const DEFAULT_ID_MATERIAL_FONT: &str = "default/material_font";
+pub const DEFAULT_ID_MATERIAL_HAND: &str = "default/material_hand";
+pub const DEFAULT_ID_MATERIAL_UI: &str = "default/material_ui";
+pub const DEFAULT_ID_MATERIAL_UI_BOX: &str = "default/material_ui_box";
+pub const DEFAULT_ID_MATERIAL_UI_QUADRANT: &str = "default/material_ui_quadrant";
 
 pub trait MaterialParameter {
 	const SK_TYPE: u32;

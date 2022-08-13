@@ -45,7 +45,7 @@ impl Model {
 				self.model,
 				matrix_from(matrix),
 				color128_from(color_linear),
-				layer.bits().into(),
+				layer.bits(),
 			)
 		}
 	}
