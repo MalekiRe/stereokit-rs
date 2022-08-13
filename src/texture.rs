@@ -234,17 +234,13 @@ impl<'a> Texture<'a> {
 		);
 	}
 
-	pub unsafe fn set_options(
-		&self,
-		sample: TextureSample,
-		address_mode: TextureAddress,
-		anisotropy_level: i32,
-	) {
-		stereokit_sys::tex_set_options(
-			self.tex,
-			sample as u32,
-			address_mode as u32,
-			anisotropy_level,
-		);
+	pub unsafe fn set_sample(&self, sample: TextureSample) {
+		stereokit_sys::tex_set_sample(self.tex, sample as u32);
+	}
+	pub unsafe fn set_address_mode(&self, address_mode: TextureAddress) {
+		stereokit_sys::tex_set_address(self.tex, address_mode as u32);
+	}
+	pub unsafe fn set_anisotropy_level(&self, anisotropy_level: i32) {
+		stereokit_sys::tex_set_anisotropy(self.tex, anisotropy_level);
 	}
 }
