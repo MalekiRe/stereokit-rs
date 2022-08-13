@@ -69,6 +69,44 @@ pub enum TextureFormat {
 	Depth16 = 16,
 }
 
+/// How does the shader grab pixels from the texture? Or more
+/// specifically, how does the shader grab colors between the provided
+/// pixels? If you'd like an in-depth explanation of these topics, check
+/// out [this exploration of texture filtering](https://medium.com/@bgolus/sharper-mipmapping-using-shader-based-supersampling-ed7aadb47bec)
+/// by graphics wizard Ben Golus.
+pub enum TextureSample {
+	/// Use a linear blend between adjacent pixels, this creates
+	/// a smooth, blurry look when texture resolution is too low.
+	Linear = 0,
+	/// Choose the nearest pixel's color! This makes your texture
+	/// look like pixel art if you're too close.
+	Point = 1,
+	/// This helps reduce texture blurriness when a surface is
+	/// viewed at an extreme angle!
+	Anisotropic = 2,
+}
+
+/// What happens when the shader asks for a texture coordinate
+/// that's outside the texture?? Believe it or not, this happens plenty
+/// often!
+pub enum TextureAddress {
+	/// Wrap the UV coordinate around to the other side of the
+	/// texture! This is basically like a looping texture, and is an
+	/// excellent default. If you can see weird bits of color at the edges
+	/// of your texture, this may be due to Wrap blending the color with
+	/// the other side of the texture, Clamp may be better in such cases.
+	Wrap = 0,
+	/// Clamp the UV coordinates to the edge of the texture!
+	/// This'll create color streaks that continue to forever. This is
+	/// actually really great for non-looping textures that you know will
+	/// always be accessed on the 0-1 range.
+	Clamp = 1,
+	/// Like Wrap, but it reflects the image each time! Who needs
+	/// this? I'm not sure!! But the graphics card can do it, so now you
+	/// can too!
+	Mirror = 2,
+}
+
 bitflags! {
 	/// Textures come in various types and flavors! These are bit-flags
 	/// that tell StereoKit what type of texture we want; and how the application
@@ -177,7 +215,7 @@ impl<'a> Texture<'a> {
 		}
 	}
 
-	pub fn set_native(
+	pub unsafe fn set_native(
 		&self,
 		native_texture: u32,
 		native_format: u32,
@@ -185,16 +223,28 @@ impl<'a> Texture<'a> {
 		width: u32,
 		height: u32,
 	) {
-		unsafe {
-			stereokit_sys::tex_set_surface(
-				self.tex,
-				native_texture as *mut c_void,
-				texture_type.bits(),
-				native_format.into(),
-				width as i32,
-				height as i32,
-				1,
-			);
-		}
+		stereokit_sys::tex_set_surface(
+			self.tex,
+			native_texture as *mut c_void,
+			texture_type.bits(),
+			native_format.into(),
+			width as i32,
+			height as i32,
+			1,
+		);
+	}
+
+	pub unsafe fn set_options(
+		&self,
+		sample: TextureSample,
+		address_mode: TextureAddress,
+		anisotropy_level: i32,
+	) {
+		stereokit_sys::tex_set_options(
+			self.tex,
+			sample as u32,
+			address_mode as u32,
+			anisotropy_level,
+		);
 	}
 }
