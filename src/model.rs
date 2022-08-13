@@ -21,7 +21,7 @@ impl Drop for Model<'_> {
 	}
 }
 impl<'a> Model<'a> {
-	pub fn from_mesh(sk: &'a StereoKit, mesh: Mesh, material: Material) -> Result<Self, Error> {
+	pub fn from_mesh(sk: &'a StereoKit, mesh: &Mesh, material: &Material) -> Result<Self, Error> {
 		let possible_model =
 			unsafe { stereokit_sys::model_create_mesh(mesh.mesh, material.material) };
 		if possible_model.is_null() {
@@ -48,7 +48,7 @@ impl<'a> Model<'a> {
 			)
 		}
 	}
-	pub fn from_file(sk: &'a StereoKit, file_path: &Path, shader: Shader) -> Result<Self, Error> {
+	pub fn from_file(sk: &'a StereoKit, file_path: &Path, shader: &Shader) -> Result<Self, Error> {
 		let my_str = CString::new(file_path.as_os_str().to_str().unwrap()).unwrap();
 		println!("the path is: {}", my_str.to_str().unwrap());
 		let possible_model =

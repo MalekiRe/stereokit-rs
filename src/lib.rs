@@ -58,7 +58,7 @@ fn test() {
 	let cube_material = material::Material::copy_from_id(&stereokit, material::DEFAULT_ID_MATERIAL)
 		.expect("Could not copy default material from id");
 
-	let cube_model = model::Model::from_mesh(&stereokit, cube_mesh, cube_material)
+	let cube_model = model::Model::from_mesh(&stereokit, &cube_mesh, &cube_material)
 		.expect("Could not make model out of mesh and material");
 	stereokit.run(
 		|_sk, ctx| {
