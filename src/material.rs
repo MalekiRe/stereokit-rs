@@ -56,8 +56,14 @@ impl Material {
 	pub fn find(id: &str) -> Option<Self> {
 		unimplemented!()
 	}
-	pub fn copy(material: &Material) -> Option<Self> {
-		unimplemented!()
+	pub fn copy(&self) -> Option<Self> {
+		self.sk.valid().ok()?;
+		Some(Material {
+			sk: self.sk.clone(),
+			material: NonNull::new(unsafe {
+				stereokit_sys::material_copy(self.material.as_ptr())
+			})?,
+		})
 	}
 	pub fn copy_from_id(sk: &StereoKit, id: &str) -> Option<Self> {
 		Some(Material {
