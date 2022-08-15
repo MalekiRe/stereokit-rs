@@ -1,17 +1,28 @@
+use crate::{lifecycle::StereoKitInstanceWrapper, StereoKit};
 use std::{
 	ffi::c_void,
+	path::Path,
 	ptr::NonNull,
 	rc::{Rc, Weak},
 };
 use stereokit_sys::_shader_t;
+use ustr::ustr;
 
-use crate::{lifecycle::StereoKitInstanceWrapper, StereoKit};
 pub struct Shader {
 	pub(crate) sk: StereoKitInstanceWrapper,
 	pub(crate) shader: NonNull<_shader_t>,
 }
 
 impl Shader {
+	pub fn from_file(sk: &StereoKit, file_path: &Path, shader: &Shader) -> Option<Self> {
+		let file_path = ustr(file_path.as_os_str().to_str().unwrap());
+		Some(Shader {
+			sk: sk.get_wrapper(),
+			shader: NonNull::new(unsafe {
+				stereokit_sys::shader_create_file(file_path.as_char_ptr())
+			})?,
+		})
+	}
 	pub fn from_mem(sk: &StereoKit, memory: &[u8]) -> Option<Self> {
 		Some(Shader {
 			sk: sk.get_wrapper(),
