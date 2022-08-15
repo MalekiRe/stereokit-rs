@@ -53,7 +53,7 @@ impl Model {
 		Some(Model {
 			sk: sk.get_wrapper(),
 			model: NonNull::new(unsafe {
-				stereokit_sys::model_create_file(file_path.as_char_ptr(), shader.shader)
+				stereokit_sys::model_create_file(file_path.as_char_ptr(), shader.shader.as_ptr())
 			})?,
 		})
 	}

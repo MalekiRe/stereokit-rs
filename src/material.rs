@@ -53,7 +53,9 @@ impl Material {
 	pub fn new(sk: &StereoKit, shader: Shader) -> Option<Self> {
 		Some(Material {
 			sk: sk.get_wrapper(),
-			material: NonNull::new(unsafe { stereokit_sys::material_create(shader.shader) })?,
+			material: NonNull::new(unsafe {
+				stereokit_sys::material_create(shader.shader.as_ptr())
+			})?,
 		})
 	}
 	pub fn find(id: &str) -> Option<Self> {
@@ -197,7 +199,7 @@ impl Material {
 	pub fn get_shader(&self) -> Shader {
 		Shader {
 			sk: self.sk.clone(),
-			shader: unsafe { material_get_shader(self.material.as_ptr()) },
+			shader: unsafe { NonNull::new(material_get_shader(self.material.as_ptr())).unwrap() },
 		}
 	}
 }
