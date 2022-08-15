@@ -6,7 +6,7 @@ use crate::pose::Pose;
 use crate::shader::Shader;
 use crate::values::{color128_from, matrix_from, Color128, Matrix, Vec3};
 use crate::StereoKit;
-use std::ffi::CString;
+use std::ffi::{c_void, CString};
 use std::fmt::Error;
 use std::path::Path;
 use std::ptr::{null, null_mut, NonNull};
@@ -26,6 +26,27 @@ impl Model {
 			model: NonNull::new(unsafe {
 				stereokit_sys::model_create_file(
 					file_path.as_char_ptr(),
+					shader
+						.map(|shader| shader.shader.as_ptr())
+						.unwrap_or(null_mut()),
+				)
+			})?,
+		})
+	}
+	pub fn from_mem(
+		sk: &StereoKit,
+		file_name: &str,
+		memory: &[u8],
+		shader: Option<&Shader>,
+	) -> Option<Self> {
+		let file_name = ustr(file_name);
+		Some(Model {
+			sk: sk.get_wrapper(),
+			model: NonNull::new(unsafe {
+				stereokit_sys::model_create_mem(
+					file_name.as_char_ptr(),
+					memory.as_ptr() as *mut c_void,
+					memory.len() as u64,
 					shader
 						.map(|shader| shader.shader.as_ptr())
 						.unwrap_or(null_mut()),
