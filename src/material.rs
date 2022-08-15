@@ -45,7 +45,7 @@ pub struct Material {
 	pub(crate) material: NonNull<_material_t>,
 }
 impl Material {
-	pub fn create(sk: &StereoKit, shader: Shader) -> Option<Self> {
+	pub fn create(sk: &StereoKit, shader: &Shader) -> Option<Self> {
 		Some(Material {
 			sk: sk.get_wrapper(),
 			material: NonNull::new(unsafe {
