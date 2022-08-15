@@ -11,7 +11,7 @@ use std::fmt::Error;
 use std::path::Path;
 use std::ptr::{null, null_mut, NonNull};
 use std::rc::{Rc, Weak};
-use stereokit_sys::{_model_t, model_draw};
+use stereokit_sys::_model_t;
 use ustr::ustr;
 
 pub struct Model {
@@ -70,12 +70,29 @@ impl Model {
 		layer: RenderLayer,
 	) {
 		unsafe {
-			model_draw(
+			stereokit_sys::model_draw(
 				self.model.as_ptr(),
 				matrix_from(matrix),
 				color128_from(color_linear),
 				layer.bits(),
 			)
+		}
+	}
+	pub fn get_material(&self, sk: &StereoKit, subset: i32) -> Option<Material> {
+		Some(Material {
+			sk: sk.get_wrapper(),
+			material: NonNull::new(unsafe {
+				stereokit_sys::model_get_material(self.model.as_ptr(), subset)
+			})?,
+		})
+	}
+	pub fn set_material(&self, subset: i32, material: &Material) {
+		unsafe {
+			stereokit_sys::model_set_material(
+				self.model.as_ptr(),
+				subset,
+				material.material.as_ptr(),
+			);
 		}
 	}
 }

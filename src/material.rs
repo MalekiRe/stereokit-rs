@@ -41,7 +41,7 @@ impl MaterialParameter for Texture {
 }
 
 pub struct Material {
-	sk: StereoKitInstanceWrapper,
+	pub(crate) sk: StereoKitInstanceWrapper,
 	pub(crate) material: NonNull<_material_t>,
 }
 impl Material {
