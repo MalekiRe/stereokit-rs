@@ -1,6 +1,6 @@
 use crate::{
 	lifecycle::StereoKitInstanceWrapper,
-	values::{vec3_from, Vec3},
+	values::{vec2_from, vec3_from, Vec2, Vec3},
 	StereoKit,
 };
 use std::rc::{Rc, Weak};
@@ -18,6 +18,25 @@ impl Mesh {
 			sk: sk.get_wrapper(),
 			mesh: NonNull::new(unsafe {
 				stereokit_sys::mesh_gen_cube(vec3_from(size), subdivisions)
+			})?,
+		})
+	}
+	pub fn gen_plane(
+		sk: &StereoKit,
+		dimensions: Vec2,
+		plane_normal: Vec3,
+		plane_top_direction: Vec3,
+		subdivisions: i32,
+	) -> Option<Self> {
+		Some(Mesh {
+			sk: sk.get_wrapper(),
+			mesh: NonNull::new(unsafe {
+				stereokit_sys::mesh_gen_plane(
+					vec2_from(dimensions),
+					vec3_from(plane_normal),
+					vec3_from(plane_top_direction),
+					subdivisions,
+				)
 			})?,
 		})
 	}
