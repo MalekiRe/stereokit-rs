@@ -44,13 +44,8 @@ pub struct Material {
 	sk: StereoKitInstanceWrapper,
 	pub(crate) material: NonNull<_material_t>,
 }
-impl Drop for Material {
-	fn drop(&mut self) {
-		unsafe { stereokit_sys::material_release(self.material.as_ptr()) }
-	}
-}
 impl Material {
-	pub fn new(sk: &StereoKit, shader: Shader) -> Option<Self> {
+	pub fn create(sk: &StereoKit, shader: Shader) -> Option<Self> {
 		Some(Material {
 			sk: sk.get_wrapper(),
 			material: NonNull::new(unsafe {
@@ -61,7 +56,7 @@ impl Material {
 	pub fn find(id: &str) -> Option<Self> {
 		unimplemented!()
 	}
-	pub fn copy(material: Material) -> Option<Self> {
+	pub fn copy(material: &Material) -> Option<Self> {
 		unimplemented!()
 	}
 	pub fn copy_from_id(sk: &StereoKit, id: &str) -> Option<Self> {
@@ -201,5 +196,10 @@ impl Material {
 			sk: self.sk.clone(),
 			shader: unsafe { NonNull::new(material_get_shader(self.material.as_ptr())).unwrap() },
 		}
+	}
+}
+impl Drop for Material {
+	fn drop(&mut self) {
+		unsafe { stereokit_sys::material_release(self.material.as_ptr()) }
 	}
 }

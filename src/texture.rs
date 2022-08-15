@@ -146,12 +146,6 @@ pub struct Texture {
 	sk: StereoKitInstanceWrapper,
 	pub(super) tex: NonNull<_tex_t>,
 }
-
-impl Drop for Texture {
-	fn drop(&mut self) {
-		unsafe { stereokit_sys::tex_release(self.tex.as_ptr()) }
-	}
-}
 impl Texture {
 	pub fn create(
 		sk: &StereoKit,
@@ -254,5 +248,10 @@ impl Texture {
 	}
 	pub unsafe fn set_anisotropy_level(&self, anisotropy_level: i32) {
 		stereokit_sys::tex_set_anisotropy(self.tex.as_ptr(), anisotropy_level);
+	}
+}
+impl Drop for Texture {
+	fn drop(&mut self) {
+		unsafe { stereokit_sys::tex_release(self.tex.as_ptr()) }
 	}
 }

@@ -18,11 +18,6 @@ pub struct Model {
 	sk: StereoKitInstanceWrapper,
 	pub(crate) model: NonNull<_model_t>,
 }
-impl Drop for Model {
-	fn drop(&mut self) {
-		unsafe { stereokit_sys::model_release(self.model.as_ptr()) }
-	}
-}
 impl Model {
 	pub fn from_file(sk: &StereoKit, file_path: &Path, shader: Option<&Shader>) -> Option<Self> {
 		let file_path = ustr(file_path.as_os_str().to_str().unwrap());
@@ -61,5 +56,10 @@ impl Model {
 				layer.bits(),
 			)
 		}
+	}
+}
+impl Drop for Model {
+	fn drop(&mut self) {
+		unsafe { stereokit_sys::model_release(self.model.as_ptr()) }
 	}
 }
