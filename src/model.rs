@@ -9,7 +9,7 @@ use crate::StereoKit;
 use std::ffi::CString;
 use std::fmt::Error;
 use std::path::Path;
-use std::ptr::NonNull;
+use std::ptr::{null, null_mut, NonNull};
 use std::rc::{Rc, Weak};
 use stereokit_sys::{_model_t, model_draw};
 use ustr::ustr;
@@ -24,6 +24,20 @@ impl Drop for Model {
 	}
 }
 impl Model {
+	pub fn from_file(sk: &StereoKit, file_path: &Path, shader: Option<&Shader>) -> Option<Self> {
+		let file_path = ustr(file_path.as_os_str().to_str().unwrap());
+		Some(Model {
+			sk: sk.get_wrapper(),
+			model: NonNull::new(unsafe {
+				stereokit_sys::model_create_file(
+					file_path.as_char_ptr(),
+					shader
+						.map(|shader| shader.shader.as_ptr())
+						.unwrap_or(null_mut()),
+				)
+			})?,
+		})
+	}
 	pub fn from_mesh(sk: &StereoKit, mesh: &Mesh, material: &Material) -> Option<Self> {
 		Some(Model {
 			sk: sk.get_wrapper(),
@@ -47,14 +61,5 @@ impl Model {
 				layer.bits(),
 			)
 		}
-	}
-	pub fn from_file(sk: &StereoKit, file_path: &Path, shader: &Shader) -> Option<Self> {
-		let file_path = ustr(file_path.as_os_str().to_str().unwrap());
-		Some(Model {
-			sk: sk.get_wrapper(),
-			model: NonNull::new(unsafe {
-				stereokit_sys::model_create_file(file_path.as_char_ptr(), shader.shader.as_ptr())
-			})?,
-		})
 	}
 }
