@@ -1,11 +1,13 @@
 use crate::{
-	lifecycle::StereoKitInstanceWrapper,
-	values::{vec2_from, vec3_from, Vec2, Vec3},
+	enums::RenderLayer,
+	lifecycle::{DrawContext, StereoKitInstanceWrapper},
+	material::Material,
+	values::{color128_from, matrix_from, vec2_from, vec3_from, Color128, Matrix, Vec2, Vec3},
 	StereoKit,
 };
 use std::rc::{Rc, Weak};
 use std::{fmt::Error, ptr::NonNull};
-use stereokit_sys::_mesh_t;
+use stereokit_sys::{_mesh_t, mesh_draw};
 
 pub struct Mesh {
 	sk: StereoKitInstanceWrapper,
@@ -39,6 +41,24 @@ impl Mesh {
 				)
 			})?,
 		})
+	}
+	pub fn draw(
+		&self,
+		_ctx: &DrawContext,
+		material: &Material,
+		matrix: Matrix,
+		color_linear: Color128,
+		layer: RenderLayer,
+	) {
+		unsafe {
+			mesh_draw(
+				self.mesh.as_ptr(),
+				material.material.as_ptr(),
+				matrix_from(matrix),
+				color128_from(color_linear),
+				layer.bits(),
+			)
+		}
 	}
 }
 impl Drop for Mesh {
