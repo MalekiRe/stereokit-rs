@@ -40,11 +40,12 @@ pub mod values;
 fn test() {
 	use glam::{vec3, Mat4, Quat};
 	use prisma::{Rgb, Rgba};
+
 	let stereokit = Settings::default()
 		.init()
 		.expect("StereoKit failed to initialize");
 
-	let mut window_pose = pose::IDENTITY;
+	let mut window_pose = pose::Pose::IDENTITY;
 	let cube_mesh = mesh::Mesh::gen_cube(
 		&stereokit,
 		mint::Vector3 {

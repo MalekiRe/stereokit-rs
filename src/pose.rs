@@ -6,13 +6,13 @@ use stereokit_sys::{pose_identity, pose_matrix, pose_t, quat_identity, vec3_zero
 pub struct Pose {
 	pub(crate) pose: pose_t,
 }
-pub const IDENTITY: Pose = Pose {
-	pose: pose_t {
-		position: VEC3_ZERO,
-		orientation: QUAT_IDENTITY,
-	},
-};
 impl Pose {
+	pub const IDENTITY: Pose = Pose {
+		pose: pose_t {
+			position: VEC3_ZERO,
+			orientation: QUAT_IDENTITY,
+		},
+	};
 	pub fn new(position: Vec3, orientation: Quat) -> Self {
 		Pose {
 			pose: pose_t {
