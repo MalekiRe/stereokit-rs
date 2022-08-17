@@ -223,8 +223,8 @@ impl Texture {
 
 	pub unsafe fn set_native(
 		&self,
-		native_texture: u32,
-		native_format: u32,
+		native_texture: usize,
+		native_format: i64,
 		texture_type: TextureType,
 		width: u32,
 		height: u32,
@@ -233,7 +233,7 @@ impl Texture {
 			self.tex.as_ptr(),
 			native_texture as *mut c_void,
 			texture_type.bits(),
-			native_format.into(),
+			native_format,
 			width as i32,
 			height as i32,
 			1,
