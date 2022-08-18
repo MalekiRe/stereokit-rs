@@ -1,11 +1,13 @@
 use crate::model::Model;
 use derive_builder::Builder;
 use once_cell::unsync::OnceCell;
+use std::any::Any;
 use std::cell::{Ref, RefCell};
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
 use std::marker::PhantomData;
 use std::os::unix::thread;
+use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::ptr::null;
 use std::rc::{Rc, Weak};
@@ -134,38 +136,90 @@ pub struct StereoKit {
 }
 pub struct DrawContext(PhantomData<*const ()>);
 
-unsafe extern "C" fn private_update_fn(context: *mut c_void) {
-	let func_ptr: *mut &mut dyn FnMut(&DrawContext) = context.cast();
-	(*func_ptr)(&DrawContext(PhantomData));
-}
-unsafe extern "C" fn private_shutdown_fn(context: *mut c_void) {
-	let func_ptr: *mut &mut dyn FnMut() = context.cast();
-	(*func_ptr)();
+type PanicPayload = Box<dyn Any + Send + 'static>;
 
-	GLOBAL_STATE.with(|f| *f.borrow_mut() = false);
+/// SAFETY: payload_ptr must point to a value of type
+/// `(&mut F, LST, GST, &mut Option<PanicPayload>)`.
+/// It must also not be called synchronously with itself
+/// or any other callback using the same parameters (due to &mut).
+/// If `caught_panic` is written to, `F` and `LST` are
+/// panic-poisoned, and the panic should likely be propagated.
+unsafe extern "C" fn callback_trampoline<F, LST, GST>(payload_ptr: *mut c_void)
+where
+    F: FnMut(&mut LST, &GST),
+{
+    let payload =
+        &mut *(payload_ptr as *mut (&mut F, &mut LST, &GST, &mut Option<PanicPayload>));
+    let (closure, state, global_state, caught_panic) = payload;
+
+    if caught_panic.is_some() {
+        // we should consider the state poisoned and not run the callback
+        return;
+    }
+
+    // the caller should ensure closure variables and state cannot be observed
+    // after the panic without catching the panic,
+    // which will in turn require them to be UnwindSafe
+    let mut closure = AssertUnwindSafe(closure);
+    let mut state = AssertUnwindSafe(state);
+    // TODO: is global state always safe to be re-observed after a shutdown?
+    let mut global_state = AssertUnwindSafe(global_state);
+
+    let result = std::panic::catch_unwind(move || closure(*state, *global_state));
+    if let Err(panic_payload) = result {
+        caught_panic.replace(panic_payload);
+        stereokit_sys::sk_quit();
+    }
 }
 
 impl StereoKit {
 	pub fn run(&self, mut on_update: impl FnMut(&DrawContext), mut on_close: impl FnMut()) {
+		self._run(&mut (), |(), sks| on_update(sks), |_, _| on_close());
+	}
+	pub fn run_stateful<ST>(&self, state: &mut ST, mut on_update: impl FnMut(&mut ST, &DrawContext), mut on_close: impl FnMut(&mut ST)) {
+		self._run(state, |st, sks| on_update(st, sks), |st, _| on_close(st));
+	}
+
+    fn _run<ST, U, S>(&self, state: &mut ST, mut update: U, mut shutdown: S)
+    where
+        U: FnMut(&mut ST, &DrawContext),
+        S: FnMut(&mut ST, &DrawContext),
+    {
+		let draw_context = DrawContext(PhantomData);
+
+        // use one variable so shutdown doesn't run if update panics
+        let mut caught_panic = Option::<PanicPayload>::None;
+
+        let mut update_ref: (&mut U, &mut ST, &DrawContext, &mut Option<PanicPayload>) =
+            (&mut update, state, &draw_context, &mut caught_panic);
+        let update_raw = &mut update_ref
+            as *mut (&mut U, &mut ST, &DrawContext, &mut Option<PanicPayload>)
+            as *mut c_void;
+
+        let mut shutdown_ref: (&mut S, &mut ST, &DrawContext, &mut Option<PanicPayload>) =
+            (&mut shutdown, state, &draw_context, &mut caught_panic);
+        let shutdown_raw = &mut shutdown_ref
+            as *mut (&mut S, &mut ST, &DrawContext, &mut Option<PanicPayload>)
+            as *mut c_void;
+
 		if self.ran.set(()).is_err() {
 			return;
 		}
-		let mut dyn_update: &mut dyn FnMut(&DrawContext) = &mut on_update;
-		let mut dyn_close: &mut dyn FnMut() = &mut on_close;
 
-		let ptr_update: *mut &mut dyn FnMut(&DrawContext) = &mut dyn_update;
-		let ptr_close: *mut &mut dyn FnMut() = &mut dyn_close;
+        unsafe {
+            stereokit_sys::sk_run_data(
+                Some(callback_trampoline::<U, ST, DrawContext>),
+                update_raw,
+                Some(callback_trampoline::<S, ST, DrawContext>),
+                shutdown_raw,
+            );
+        }
 
-		unsafe {
-			stereokit_sys::sk_run_data(
-				Some(private_update_fn),
-				ptr_update as *mut c_void,
-				Some(private_shutdown_fn),
-				ptr_close as *mut c_void,
-			);
-		}
-	}
-
+        if let Some(panic_payload) = caught_panic {
+            std::panic::resume_unwind(panic_payload);
+        }
+    }
+	
 	pub fn quit(&self) {
 		unsafe { stereokit_sys::sk_quit() };
 	}
