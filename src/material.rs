@@ -2,15 +2,16 @@ use crate::lifecycle::StereoKitInstanceWrapper;
 use crate::shader::Shader;
 use crate::structs::{Cull, DepthTest, Transparency};
 use crate::texture::Texture;
-use crate::values::{Color128, Matrix, Vec2, Vec3, Vec4};
+use crate::values::{vec2_from, Color128, Matrix, Vec2, Vec3, Vec4};
 use crate::StereoKit;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
 use std::ptr::NonNull;
 use std::rc::{Rc, Weak};
 use stereokit_sys::{
-	_material_t, material_get_shader, material_param__material_param_texture, material_set_float,
-	material_set_param, material_set_queue_offset, material_set_texture,
+	_material_t, material_get_shader, material_param__material_param_texture,
+	material_param__material_param_vector2, material_param__material_param_vector3,
+	material_set_float, material_set_param, material_set_queue_offset, material_set_texture,
 };
 use ustr::ustr;
 
@@ -32,6 +33,20 @@ pub trait MaterialParameter {
 	fn as_raw(&self) -> *const c_void;
 }
 
+impl MaterialParameter for Vec2 {
+	const SK_TYPE: u32 = material_param__material_param_vector2;
+
+	fn as_raw(&self) -> *const c_void {
+		&self as *const _ as *const c_void
+	}
+}
+impl MaterialParameter for Vec3 {
+	const SK_TYPE: u32 = material_param__material_param_vector3;
+
+	fn as_raw(&self) -> *const c_void {
+		&self as *const _ as *const c_void
+	}
+}
 impl MaterialParameter for Texture {
 	const SK_TYPE: u32 = material_param__material_param_texture;
 
