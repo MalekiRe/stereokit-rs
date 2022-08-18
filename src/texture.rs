@@ -7,9 +7,11 @@ use crate::StereoKit;
 use bitflags::bitflags;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
+use std::path::Path;
 use std::ptr::NonNull;
 use std::rc::{Rc, Weak};
 use stereokit_sys::_tex_t;
+use ustr::ustr;
 
 /// What type of color information will the texture contain? A
 /// good default here is Rgba32.
@@ -147,6 +149,20 @@ pub struct Texture {
 	pub(super) tex: NonNull<_tex_t>,
 }
 impl Texture {
+	pub fn from_file(
+		sk: &StereoKit,
+		file_path: &Path,
+		is_srgb: bool,
+		priority: i32,
+	) -> Option<Self> {
+		let file_path = ustr(file_path.as_os_str().to_str().unwrap());
+		Some(Texture {
+			sk: sk.get_wrapper(),
+			tex: NonNull::new(unsafe {
+				stereokit_sys::tex_create_file(file_path.as_char_ptr(), is_srgb as i32, priority)
+			})?,
+		})
+	}
 	pub fn create(
 		sk: &StereoKit,
 		texture_type: TextureType,
