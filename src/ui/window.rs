@@ -5,7 +5,8 @@ use crate::{
 };
 use std::{ffi::CString, marker::PhantomData};
 use stereokit_sys::{
-	bool32_t, text_align_, ui_label, ui_move_, ui_sameline, ui_settings, ui_space, ui_text, ui_win_,
+	bool32_t, pose_t, text_align_, ui_label, ui_move_, ui_sameline, ui_settings, ui_space, ui_text,
+	ui_win_,
 };
 
 pub enum WindowType {
@@ -36,7 +37,7 @@ pub fn window(
 	unsafe {
 		stereokit_sys::ui_window_begin(
 			my_c_string.as_ptr(),
-			&mut pose.pose,
+			pose as *mut _ as *mut pose_t,
 			vec2_from(size),
 			window_type as ui_win_,
 			move_type as ui_move_,
