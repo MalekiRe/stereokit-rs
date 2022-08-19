@@ -10,7 +10,7 @@ use std::fmt::Error;
 use std::path::Path;
 use std::ptr::NonNull;
 use std::rc::{Rc, Weak};
-use stereokit_sys::_tex_t;
+use stereokit_sys::{_tex_t, bool32_t};
 use ustr::ustr;
 
 /// What type of color information will the texture contain? A
@@ -244,6 +244,7 @@ impl Texture {
 		texture_type: TextureType,
 		width: u32,
 		height: u32,
+		owned: bool,
 	) {
 		stereokit_sys::tex_set_surface(
 			self.tex.as_ptr(),
@@ -253,6 +254,7 @@ impl Texture {
 			width as i32,
 			height as i32,
 			1,
+			owned as bool32_t,
 		);
 	}
 
