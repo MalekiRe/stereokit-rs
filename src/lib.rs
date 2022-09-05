@@ -37,6 +37,12 @@ pub mod ui;
 pub mod values;
 
 #[test]
+fn basic() {
+	let stereokit = Settings::default().init().unwrap();
+	stereokit.run(|_| {}, || {});
+}
+
+#[test]
 fn test() {
 	use glam::{vec3, Mat4, Quat};
 	use prisma::{Rgb, Rgba};
