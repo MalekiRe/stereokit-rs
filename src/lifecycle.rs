@@ -1,4 +1,5 @@
 use crate::model::Model;
+use crate::pose::Pose;
 use derive_builder::Builder;
 use once_cell::unsync::OnceCell;
 use std::any::Any;
@@ -15,7 +16,7 @@ use std::sync::Mutex;
 use std::{mem, ptr};
 use stereokit_sys::{
 	assets_releaseref_threadsafe, bool32_t, color32, depth_mode_, display_blend_, display_mode_,
-	log_, material_t, model_t, sk_settings_t,
+	log_, material_t, model_t, pose_t, sk_settings_t,
 };
 
 pub enum DisplayMode {
@@ -258,6 +259,10 @@ impl StereoKit {
 	}
 	pub fn time_get_unscaled(&self) -> f64 {
 		unsafe { stereokit_sys::time_get_unscaled() }
+	}
+
+	pub fn input_head(&self) -> Pose {
+		unsafe { *(stereokit_sys::input_head() as *const pose_t as *const Pose) }
 	}
 }
 

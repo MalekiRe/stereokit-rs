@@ -26,8 +26,8 @@ impl Pose {
 	};
 	pub fn new(position: Vec3, orientation: Quat) -> Self {
 		Pose {
-			position: position,
-			orientation: orientation,
+			position,
+			orientation,
 		}
 	}
 	pub fn pose_matrix(&self, vec3: Vec3) -> Matrix {
