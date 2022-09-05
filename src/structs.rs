@@ -11,12 +11,6 @@ use stereokit_sys::{
 };
 use stereokit_sys::{material_set_float, material_set_queue_offset};
 
-pub struct DepthTest {}
-
-pub struct Cull {}
-
-pub struct Transparency {}
-
 #[derive(Debug, Clone)]
 pub struct InitError;
 

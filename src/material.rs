@@ -1,6 +1,5 @@
 use crate::lifecycle::StereoKitInstanceWrapper;
 use crate::shader::Shader;
-use crate::structs::{Cull, DepthTest, Transparency};
 use crate::texture::Texture;
 use crate::values::{vec2_from, Color128, Matrix, Vec2, Vec3, Vec4};
 use crate::StereoKit;
@@ -55,6 +54,31 @@ impl MaterialParameter for Texture {
 	}
 }
 
+#[repr(u32)]
+pub enum Transparency {
+	None,
+	Blend,
+	Add,
+}
+
+#[repr(u32)]
+pub enum DepthTest {
+	Less,
+	LessOrEqual,
+	Greater,
+	GreaterOrEqual,
+	Equal,
+	NotEqual,
+	Always,
+	Never,
+}
+#[repr(u32)]
+pub enum Cull {
+	Back,
+	Front,
+	None,
+}
+
 pub struct Material {
 	pub(crate) sk: StereoKitInstanceWrapper,
 	pub(crate) material: NonNull<_material_t>,
@@ -95,19 +119,23 @@ impl Material {
 		}
 	}
 	pub fn set_transparency(&self, mode: Transparency) {
-		unimplemented!()
+		unsafe { stereokit_sys::material_set_transparency(self.material.as_ptr(), mode as u32) }
 	}
 	pub fn set_cull(&self, mode: Cull) {
-		unimplemented!()
+		unsafe { stereokit_sys::material_set_cull(self.material.as_ptr(), mode as u32) }
 	}
 	pub fn set_wireframe(&self, wireframe: bool) {
-		unimplemented!()
+		unsafe { stereokit_sys::material_set_wireframe(self.material.as_ptr(), wireframe as i32) }
 	}
 	pub fn set_depth_test(&self, depth_test_mode: DepthTest) {
-		unimplemented!()
+		unsafe {
+			stereokit_sys::material_set_depth_test(self.material.as_ptr(), depth_test_mode as u32)
+		}
 	}
 	pub fn set_depth_write(&self, write_enabled: bool) {
-		unimplemented!()
+		unsafe {
+			stereokit_sys::material_set_depth_write(self.material.as_ptr(), write_enabled as i32)
+		}
 	}
 	pub fn set_queue_offset(&self, offset: i32) {
 		unsafe { material_set_queue_offset(self.material.as_ptr(), offset) }
