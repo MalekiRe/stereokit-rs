@@ -56,9 +56,9 @@ impl MaterialParameter for Texture {
 
 #[repr(u32)]
 pub enum Transparency {
-	None = 0,
-	Blend = 1,
-	Add = 2,
+	None = 1,
+	Blend = 2,
+	Add = 3,
 }
 
 #[repr(u32)]
