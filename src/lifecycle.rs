@@ -273,18 +273,3 @@ impl Drop for StereoKit {
 		};
 	}
 }
-
-pub enum Asset {
-	Model(Model),
-	//Font(Font)
-}
-pub fn asset_releaseref(asset: Asset) {
-	match asset {
-		Asset::Model(mut model) => {
-			let my_var = &mut model.model as *mut _ as *mut std::ffi::c_void;
-			unsafe {
-				assets_releaseref_threadsafe(my_var);
-			}
-		}
-	}
-}

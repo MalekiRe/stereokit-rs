@@ -1,7 +1,7 @@
 use crate::{
-	enums::RenderLayer,
 	lifecycle::{DrawContext, StereoKitInstanceWrapper},
 	material::Material,
+	render::RenderLayer,
 	values::{color128_from, matrix_from, vec2_from, vec3_from, Color128, Matrix, Vec2, Vec3},
 	StereoKit,
 };
@@ -58,6 +58,15 @@ impl Mesh {
 				color128_from(color_linear),
 				layer.bits(),
 			)
+		}
+	}
+}
+impl Clone for Mesh {
+	fn clone(&self) -> Self {
+		let mesh = unsafe { stereokit_sys::mesh_copy(self.mesh.as_ptr()) };
+		Self {
+			sk: self.sk.clone(),
+			mesh: NonNull::new(mesh).unwrap(),
 		}
 	}
 }

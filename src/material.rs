@@ -204,6 +204,15 @@ impl Material {
 		}
 	}
 }
+impl Clone for Material {
+	fn clone(&self) -> Self {
+		let material = unsafe { stereokit_sys::material_copy(self.material.as_ptr()) };
+		Self {
+			sk: self.sk.clone(),
+			material: NonNull::new(material).unwrap(),
+		}
+	}
+}
 impl Drop for Material {
 	fn drop(&mut self) {
 		unsafe { stereokit_sys::material_release(self.material.as_ptr()) }

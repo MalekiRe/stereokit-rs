@@ -1,4 +1,3 @@
-use crate::constants::{QUAT_IDENTITY, VEC3_ZERO};
 use crate::values::{matrix_to, quat_from, vec3_from, Matrix, Quat, Vec3};
 use std::fmt::Error;
 use stereokit_sys::{pose_identity, pose_matrix, pose_t, quat_identity, vec3_zero};

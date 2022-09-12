@@ -35,3 +35,8 @@ impl Shader {
 		})
 	}
 }
+impl Drop for Shader {
+	fn drop(&mut self) {
+		unsafe { stereokit_sys::shader_release(self.shader.as_ptr()) };
+	}
+}

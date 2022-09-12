@@ -11,6 +11,7 @@ pub(crate) type Quat = mint::Quaternion<f32>;
 pub(crate) type Matrix = mint::ColumnMatrix4<f32>;
 pub(crate) type Color32 = Rgba<u8>;
 pub(crate) type Color128 = Rgba<f32>;
+
 pub(crate) fn vec2_from(var: Vec2) -> vec2 {
 	vec2 { x: var.x, y: var.y }
 }

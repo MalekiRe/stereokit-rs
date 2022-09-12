@@ -1,8 +1,8 @@
-use crate::enums::RenderLayer;
 use crate::lifecycle::{DrawContext, StereoKitInstanceWrapper};
 use crate::material::Material;
 use crate::mesh::Mesh;
 use crate::pose::Pose;
+use crate::render::RenderLayer;
 use crate::shader::Shader;
 use crate::values::{color128_from, matrix_from, Color128, Matrix, Vec3};
 use crate::StereoKit;
@@ -93,6 +93,15 @@ impl Model {
 				subset,
 				material.material.as_ptr(),
 			);
+		}
+	}
+}
+impl Clone for Model {
+	fn clone(&self) -> Self {
+		let model = unsafe { stereokit_sys::model_copy(self.model.as_ptr()) };
+		Self {
+			sk: self.sk.clone(),
+			model: NonNull::new(model).unwrap(),
 		}
 	}
 }

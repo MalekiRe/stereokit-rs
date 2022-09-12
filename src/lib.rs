@@ -2,10 +2,6 @@ pub use lifecycle::{Settings, StereoKit};
 pub use stereokit_sys as sys;
 
 #[allow(unused)]
-pub mod constants;
-#[allow(unused)]
-pub mod enums;
-#[allow(unused)]
 pub mod font;
 #[allow(unused)]
 pub mod input;
@@ -92,7 +88,7 @@ fn test() {
 				)
 				.into(),
 				Rgba::new(Rgb::new(1_f32, 1_f32, 1_f32), 1_f32).into(),
-				enums::RenderLayer::Layer0,
+				render::RenderLayer::Layer0,
 			);
 		},
 		|| {},
