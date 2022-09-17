@@ -32,7 +32,7 @@ impl Pose {
 	pub fn pose_matrix(&self, vec3: Vec3) -> Matrix {
 		unsafe {
 			matrix_to(stereokit_sys::pose_matrix(
-				self as *const _ as *const pose_t,
+				std::mem::transmute(self),
 				vec3_from(vec3),
 			))
 		}
