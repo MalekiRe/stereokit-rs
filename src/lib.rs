@@ -27,6 +27,7 @@ pub mod structs;
 pub mod textstyle;
 #[allow(unused)]
 pub mod texture;
+mod time;
 #[allow(unused)]
 pub mod ui;
 #[allow(unused)]
