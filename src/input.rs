@@ -1,7 +1,7 @@
 use crate::{
 	input::ButtonState::{Active, Any, Changed, Inactive, JustActive, JustInactive},
 	pose::Pose,
-	values::{Vec2, Vec3},
+	values::{Quat, Vec2, Vec3},
 	StereoKit,
 };
 use derive_is_enum_variant::is_enum_variant;
@@ -116,7 +116,7 @@ pub enum Key {
 	Divide = 111,
 	MAX = 255,
 }
-#[derive(FromPrimitive, Copy, Clone, is_enum_variant)]
+#[derive(Debug, FromPrimitive, Copy, Clone, is_enum_variant)]
 pub enum ButtonState {
 	Inactive = 0,
 	Active = 1,
@@ -189,5 +189,41 @@ impl StereoKit {
 
 	pub fn input_mouse(&self) -> &Mouse {
 		unsafe { transmute(&*stereokit_sys::input_mouse()) }
+	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum Handed {
+	Left = 0,
+	Right = 1,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Joint {
+	pub position: Vec3,
+	pub orientation: Quat,
+	pub radius: f32,
+}
+
+/// The fingers go thumb to little, metacarpal to tip
+#[derive(Debug, Clone, Copy)]
+pub struct Hand {
+	pub fingers: [[Joint; 5]; 5],
+	pub wrist: Pose,
+	pub palm: Pose,
+	pub pinch_point: f32,
+	pub handedness: Handed,
+	pub tracked_state: ButtonState,
+	pub pinch_state: ButtonState,
+	pub grip_state: ButtonState,
+	pub size: f32,
+	pub pinch_activation: f32,
+	pub grip_activation: f32,
+}
+
+impl StereoKit {
+	pub fn input_hand(&self, handed: Handed) -> &Hand {
+		unsafe { std::mem::transmute(&*stereokit_sys::input_hand(handed as u32)) }
 	}
 }
