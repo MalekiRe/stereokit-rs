@@ -27,17 +27,17 @@ pub struct WindowContext(PhantomData<*const ()>);
 pub fn window(
 	_ctx: &DrawContext,
 	window_title: &str,
-	mut pose: &mut crate::pose::Pose,
+	pose: &mut crate::pose::Pose,
 	size: Vec2,
 	window_type: WindowType,
 	move_type: MoveType,
-	mut content_closure: impl FnMut(&WindowContext),
+	content_closure: impl FnOnce(&WindowContext),
 ) {
 	let my_c_string = CString::new(window_title).unwrap();
 	unsafe {
 		stereokit_sys::ui_window_begin(
 			my_c_string.as_ptr(),
-			pose as *mut _ as *mut pose_t,
+			std::mem::transmute(pose),
 			vec2_from(size),
 			window_type as ui_win_,
 			move_type as ui_move_,
