@@ -212,7 +212,7 @@ pub struct Hand {
 	pub fingers: [[Joint; 5]; 5],
 	pub wrist: Pose,
 	pub palm: Pose,
-	pub pinch_point: f32,
+	pub pinch_point: Vec3,
 	pub handedness: Handed,
 	pub tracked_state: ButtonState,
 	pub pinch_state: ButtonState,
