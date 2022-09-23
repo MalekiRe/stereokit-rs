@@ -15,6 +15,8 @@ exclude = [
 [features]
 default = []
 linux-egl = ["stereokit-sys/linux-egl"]
+bevy = ["bevy_ecs"]
+
 
 [dependencies]
 mint = "0.5.9"
@@ -28,6 +30,7 @@ stereokit-sys = "1.0.3"
 once_cell = "1.13.0"
 bitflags = "1.3.2"
 ustr = "0.9.0"
+bevy_ecs = {version = "0.8.1", optional = true}
 
 [dev-dependencies]
 anyhow = "1.0.61"

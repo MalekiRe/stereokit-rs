@@ -16,6 +16,7 @@ use ustr::ustr;
 /// What type of color information will the texture contain? A
 /// good default here is Rgba32.
 #[repr(u32)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum TextureFormat {
 	/// A default zero value for TexFormat! Uninitialized formats
 	/// will get this value and **** **** up so you know to assign it
@@ -79,6 +80,7 @@ pub enum TextureFormat {
 /// pixels? If you'd like an in-depth explanation of these topics, check
 /// out [this exploration of texture filtering](https://medium.com/@bgolus/sharper-mipmapping-using-shader-based-supersampling-ed7aadb47bec)
 /// by graphics wizard Ben Golus.
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum TextureSample {
 	/// Use a linear blend between adjacent pixels, this creates
 	/// a smooth, blurry look when texture resolution is too low.
@@ -94,6 +96,7 @@ pub enum TextureSample {
 /// What happens when the shader asks for a texture coordinate
 /// that's outside the texture?? Believe it or not, this happens plenty
 /// often!
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum TextureAddress {
 	/// Wrap the UV coordinate around to the other side of the
 	/// texture! This is basically like a looping texture, and is an
@@ -144,6 +147,7 @@ bitflags! {
 	}
 }
 
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Texture {
 	sk: StereoKitInstanceWrapper,
 	pub(super) tex: NonNull<_tex_t>,

@@ -3,6 +3,7 @@ use std::fmt::Error;
 use stereokit_sys::{pose_identity, pose_matrix, pose_t, quat_identity, vec3_zero};
 
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Pose {
 	pub position: Vec3,
 	pub orientation: Quat,

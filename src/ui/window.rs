@@ -8,13 +8,14 @@ use stereokit_sys::{
 	bool32_t, pose_t, text_align_, ui_label, ui_move_, ui_sameline, ui_settings, ui_space, ui_text,
 	ui_win_,
 };
-
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum WindowType {
 	WindowEmpty = 0,
 	WindowHead = 1,
 	WindowBody = 2,
 	WindowNormal = 3,
 }
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum MoveType {
 	MoveExact = 0,
 	MoveFaceUser = 1,

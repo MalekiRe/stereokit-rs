@@ -19,11 +19,13 @@ use stereokit_sys::{
 	log_, material_t, model_t, pose_t, sk_settings_t,
 };
 
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum DisplayMode {
 	MixedReality = 0,
 	Flatscreen = 1,
 	None = 2,
 }
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum DisplayBlend {
 	None = 0,
 	Opaque = 1,
@@ -31,12 +33,14 @@ pub enum DisplayBlend {
 	Blend = 4,
 	AnyTransparent = 6,
 }
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum DepthMode {
 	Balanced = 0,
 	D16 = 1,
 	D32 = 2,
 	Stencil = 3,
 }
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum LogFilter {
 	None = 0,
 	Diagnostic = 1,

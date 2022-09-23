@@ -14,6 +14,7 @@ use std::rc::{Rc, Weak};
 use stereokit_sys::_model_t;
 use ustr::ustr;
 
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Model {
 	sk: StereoKitInstanceWrapper,
 	pub(crate) model: NonNull<_model_t>,
