@@ -154,9 +154,10 @@ type PanicPayload = Box<dyn Any + Send + 'static>;
 /// panic-poisoned, and the panic should likely be propagated.
 unsafe extern "C" fn callback_trampoline<F, LST, GST>(payload_ptr: *mut c_void)
 where
-	F: FnMut(&mut LST, &GST),
+	F: FnMut(&mut LST, &mut GST),
 {
-	let payload = &mut *(payload_ptr as *mut (&mut F, &mut LST, &GST, &mut Option<PanicPayload>));
+	let payload =
+		&mut *(payload_ptr as *mut (&mut F, &mut LST, &mut GST, &mut Option<PanicPayload>));
 	let (closure, state, global_state, caught_panic) = payload;
 
 	if caught_panic.is_some() {
@@ -180,39 +181,77 @@ where
 }
 
 impl StereoKit {
-	pub fn run(&self, mut on_update: impl FnMut(&DrawContext), mut on_close: impl FnMut()) {
-		self._run(&mut (), |(), sks| on_update(sks), |_, _| on_close());
+	pub fn run(
+		self,
+		mut on_update: impl FnMut(&mut StereoKit, &DrawContext),
+		mut on_close: impl FnMut(&mut StereoKit),
+	) {
+		self._run(
+			&mut (),
+			|(), (sk, dc)| on_update(*sk, dc),
+			|_, (sk, _)| on_close(sk),
+		);
 	}
 	pub fn run_stateful<ST>(
-		&self,
+		self,
 		state: &mut ST,
-		mut on_update: impl FnMut(&mut ST, &DrawContext),
-		mut on_close: impl FnMut(&mut ST),
+		mut on_update: impl FnMut(&mut ST, &mut StereoKit, &DrawContext),
+		mut on_close: impl FnMut(&mut ST, &mut StereoKit),
 	) {
-		self._run(state, |st, sks| on_update(st, sks), |st, _| on_close(st));
+		self._run(
+			state,
+			|st, (sk, dc)| on_update(st, *sk, dc),
+			|st, (sk, _)| on_close(st, sk),
+		);
 	}
 
-	fn _run<ST, U, S>(&self, state: &mut ST, mut update: U, mut shutdown: S)
+	fn _run<ST, U, S>(mut self, state: &mut ST, mut update: U, mut shutdown: S)
 	where
-		U: FnMut(&mut ST, &DrawContext),
-		S: FnMut(&mut ST, &DrawContext),
+		U: FnMut(&mut ST, &mut (&mut StereoKit, &DrawContext)),
+		S: FnMut(&mut ST, &mut (&mut StereoKit, &DrawContext)),
 	{
 		let draw_context = DrawContext(PhantomData);
 
 		// use one variable so shutdown doesn't run if update panics
 		let mut caught_panic = Option::<PanicPayload>::None;
 
-		let mut update_ref: (&mut U, &mut ST, &DrawContext, &mut Option<PanicPayload>) =
-			(&mut update, state, &draw_context, &mut caught_panic);
+		let mut update_ref: (
+			&mut U,
+			&mut ST,
+			&mut (&mut StereoKit, &DrawContext),
+			&mut Option<PanicPayload>,
+		) = (
+			&mut update,
+			state,
+			&mut (&mut self, &draw_context),
+			&mut caught_panic,
+		);
 		let update_raw = &mut update_ref
-			as *mut (&mut U, &mut ST, &DrawContext, &mut Option<PanicPayload>)
-			as *mut c_void;
+			as *mut (
+				&mut U,
+				&mut ST,
+				&mut (&mut StereoKit, &DrawContext),
+				&mut Option<PanicPayload>,
+			) as *mut c_void;
 
-		let mut shutdown_ref: (&mut S, &mut ST, &DrawContext, &mut Option<PanicPayload>) =
-			(&mut shutdown, state, &draw_context, &mut caught_panic);
+		let mut shutdown_ref: (
+			&mut S,
+			&mut ST,
+			&mut (&mut StereoKit, &DrawContext),
+			&mut Option<PanicPayload>,
+		) = (
+			&mut shutdown,
+			state,
+			&mut (&mut self, &draw_context),
+			&mut caught_panic,
+		);
 		let shutdown_raw = &mut shutdown_ref
-			as *mut (&mut S, &mut ST, &DrawContext, &mut Option<PanicPayload>)
-			as *mut c_void;
+			as *mut (
+				&mut S,
+				&mut ST,
+				&mut (&mut StereoKit, &DrawContext),
+				&mut Option<PanicPayload>,
+			) as *mut c_void;
 
 		if self.ran.set(()).is_err() {
 			return;
@@ -220,9 +259,9 @@ impl StereoKit {
 
 		unsafe {
 			stereokit_sys::sk_run_data(
-				Some(callback_trampoline::<U, ST, DrawContext>),
+				Some(callback_trampoline::<U, ST, (&mut StereoKit, &DrawContext)>),
 				update_raw,
-				Some(callback_trampoline::<S, ST, DrawContext>),
+				Some(callback_trampoline::<S, ST, (&mut StereoKit, &DrawContext)>),
 				shutdown_raw,
 			);
 		}
