@@ -36,7 +36,7 @@ pub mod values;
 #[test]
 fn basic() {
 	let stereokit = Settings::default().init().unwrap();
-	stereokit.run(|_| {}, || {});
+	stereokit.run(|_, _| {}, |_| {});
 }
 
 #[test]
@@ -65,7 +65,7 @@ fn test() {
 	let cube_model = model::Model::from_mesh(&stereokit, &cube_mesh, &cube_material)
 		.expect("Could not make model out of mesh and material");
 	stereokit.run(
-		|ctx| {
+		|_, ctx| {
 			ui::window(
 				ctx,
 				"StereoKit Test",
@@ -92,6 +92,6 @@ fn test() {
 				render::RenderLayer::Layer0,
 			);
 		},
-		|| {},
+		|_| {},
 	);
 }
