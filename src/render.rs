@@ -1,7 +1,10 @@
 #![allow(non_upper_case_globals)]
 
+use std::fmt::Debug;
+
 use crate::{texture::Texture, StereoKit};
 use bitflags::bitflags;
+use stereokit_sys::{_gradient_t, vec3};
 
 bitflags! {
 	pub struct RenderLayer: u32 {
@@ -21,18 +24,41 @@ bitflags! {
 	}
 }
 
+#[derive(Clone, Copy)]
 pub struct SphericalHarmonics {
 	pub(crate) spherical_harmonics: stereokit_sys::spherical_harmonics_t,
 }
-
-pub fn set_skylight(sk: &StereoKit, light: &SphericalHarmonics) {
-	unsafe {
-		stereokit_sys::render_set_skylight(&light.spherical_harmonics);
+impl Default for SphericalHarmonics {
+	fn default() -> Self {
+		Self {
+			spherical_harmonics: stereokit_sys::spherical_harmonics_t {
+				coefficients: [vec3 {
+					x: 0.0,
+					y: 0.0,
+					z: 0.0,
+				}; 9],
+			},
+		}
+	}
+}
+impl Debug for SphericalHarmonics {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("SphericalHarmonics")
+			.field("coefficients", &self.spherical_harmonics.coefficients)
+			.finish()
 	}
 }
 
-pub fn set_skytex(sk: &StereoKit, tex: &Texture) {
-	unsafe {
-		stereokit_sys::render_set_skytex(tex.tex.as_ptr());
+impl StereoKit {
+	pub fn set_skylight(&mut self, light: &SphericalHarmonics) {
+		unsafe {
+			stereokit_sys::render_set_skylight(&light.spherical_harmonics);
+		}
+	}
+
+	pub fn set_skytex(&mut self, tex: &Texture) {
+		unsafe {
+			stereokit_sys::render_set_skytex(tex.tex.as_ptr());
+		}
 	}
 }
