@@ -2,7 +2,9 @@
 
 use crate::lifecycle::StereoKitInstanceWrapper;
 use crate::render::SphericalHarmonics;
-use crate::values::{color128_from, color128_to, color32_from, color32_to, Color32};
+use crate::values::{
+	color128_from, color128_to, color32_from, color32_to, Color128, Color32, Vec3,
+};
 use crate::StereoKit;
 use bitflags::bitflags;
 use std::ffi::{c_void, CString};
@@ -10,7 +12,7 @@ use std::fmt::Error;
 use std::path::Path;
 use std::ptr::NonNull;
 use std::rc::{Rc, Weak};
-use stereokit_sys::{_tex_t, bool32_t};
+use stereokit_sys::{_gradient_t, _tex_t, bool32_t, spherical_harmonics_t, vec3};
 use ustr::ustr;
 
 /// What type of color information will the texture contain? A
@@ -147,6 +149,26 @@ bitflags! {
 	}
 }
 
+pub struct Gradient {
+	gradient: NonNull<_gradient_t>,
+}
+impl Gradient {
+	pub fn new(stereokit: &StereoKit) -> Self {
+		Gradient {
+			gradient: NonNull::new(unsafe { stereokit_sys::gradient_create() }).unwrap(),
+		}
+	}
+	pub fn add(&mut self, color: Color128, position: f32) {
+		unsafe {
+			stereokit_sys::gradient_add(
+				self.gradient.as_ptr(),
+				std::mem::transmute(color),
+				position,
+			)
+		}
+	}
+}
+
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Texture {
 	sk: StereoKitInstanceWrapper,
@@ -211,22 +233,19 @@ impl Texture {
 			})?,
 		})
 	}
-
 	pub fn from_cubemap_equirectangular(
 		sk: &StereoKit,
 		file_path: &str,
 		uses_srgb_data: bool,
 		load_priority: i32,
 	) -> Option<(Self, SphericalHarmonics)> {
-		let c_file_path = CString::new(file_path).unwrap();
-		let mut spherical_harmonics = stereokit_sys::spherical_harmonics_t {
-			coefficients: [unsafe { stereokit_sys::vec3_zero }; 9],
-		};
+		let c_file_path = CString::new(file_path).ok()?;
+		let mut spherical_harmonics = SphericalHarmonics::default();
 		let tex = NonNull::new(unsafe {
 			stereokit_sys::tex_create_cubemap_file(
 				c_file_path.as_ptr(),
 				uses_srgb_data.into(),
-				&mut spherical_harmonics,
+				&mut spherical_harmonics.spherical_harmonics,
 				load_priority,
 			)
 		})?;
@@ -235,10 +254,48 @@ impl Texture {
 				sk: sk.get_wrapper(),
 				tex,
 			},
-			SphericalHarmonics {
-				spherical_harmonics,
-			},
+			spherical_harmonics,
 		))
+	}
+	pub fn cubemap_from_gradient(
+		sk: &StereoKit,
+		gradient: &Gradient,
+		direction: Vec3,
+		resolution: u32,
+		spherical_harmonics_info: Option<&mut SphericalHarmonics>,
+	) -> Option<Self> {
+		Some(Texture {
+			sk: sk.get_wrapper(),
+			tex: NonNull::new(unsafe {
+				stereokit_sys::tex_gen_cubemap(
+					std::mem::transmute(gradient),
+					std::mem::transmute(direction),
+					resolution as i32,
+					spherical_harmonics_info
+						.map(|info| (&mut info.spherical_harmonics) as *mut spherical_harmonics_t)
+						.unwrap_or(std::ptr::null_mut()),
+				)
+			})?,
+		})
+	}
+	pub fn cubemap_from_spherical_harmonics(
+		sk: &StereoKit,
+		spherical_harmonics: &SphericalHarmonics,
+		resolution: u32,
+		light_spot_size_pct: f32,
+		light_spot_intensity: f32,
+	) -> Option<Self> {
+		Some(Texture {
+			sk: sk.get_wrapper(),
+			tex: NonNull::new(unsafe {
+				stereokit_sys::tex_gen_cubemap_sh(
+					&spherical_harmonics.spherical_harmonics,
+					resolution as i32,
+					light_spot_size_pct,
+					light_spot_intensity,
+				)
+			})?,
+		})
 	}
 
 	pub unsafe fn set_native(
