@@ -12,8 +12,8 @@ pub struct Font {
 }
 
 impl Font {
-	pub fn from_file(sk: &StereoKit, file: &Path) -> Option<Self> {
-		let file_path = ustr(file.as_os_str().to_str()?);
+	pub fn from_file(sk: &StereoKit, file: impl AsRef<Path>) -> Option<Self> {
+		let file_path = ustr(file.as_ref().as_os_str().to_str()?);
 
 		Some(Font {
 			sk: sk.get_wrapper(),

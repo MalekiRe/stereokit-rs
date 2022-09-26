@@ -171,11 +171,11 @@ pub struct Texture {
 impl Texture {
 	pub fn from_file(
 		sk: &StereoKit,
-		file_path: &Path,
+		file_path: impl AsRef<Path>,
 		is_srgb: bool,
 		priority: i32,
 	) -> Option<Self> {
-		let file_path = ustr(file_path.as_os_str().to_str()?);
+		let file_path = ustr(file_path.as_ref().as_os_str().to_str()?);
 		Some(Texture {
 			sk: sk.get_wrapper(),
 			tex: NonNull::new(unsafe {
@@ -229,11 +229,11 @@ impl Texture {
 	}
 	pub fn from_cubemap_equirectangular(
 		sk: &StereoKit,
-		file_path: &Path,
+		file_path: impl AsRef<Path>,
 		uses_srgb_data: bool,
 		load_priority: i32,
 	) -> Option<(Self, SphericalHarmonics)> {
-		let file_path = ustr(file_path.as_os_str().to_str()?);
+		let file_path = ustr(file_path.as_ref().as_os_str().to_str()?);
 		let mut spherical_harmonics = SphericalHarmonics::default();
 		let tex = NonNull::new(unsafe {
 			stereokit_sys::tex_create_cubemap_file(
