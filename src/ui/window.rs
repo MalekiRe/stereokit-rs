@@ -1,14 +1,17 @@
 use crate::{
 	lifecycle::DrawContext,
-	textstyle::TextAlign,
+	text::TextAlign,
 	values::{vec2_from, Vec2},
 };
+use num_enum::TryFromPrimitive;
 use std::{ffi::CString, marker::PhantomData};
 use stereokit_sys::{
 	bool32_t, pose_t, text_align_, ui_label, ui_move_, ui_sameline, ui_settings, ui_space, ui_text,
 	ui_win_,
 };
 use ustr::ustr;
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
+#[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum WindowType {
 	WindowEmpty = 0,
@@ -16,6 +19,8 @@ pub enum WindowType {
 	WindowBody = 2,
 	WindowNormal = 3,
 }
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
+#[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum MoveType {
 	MoveExact = 0,

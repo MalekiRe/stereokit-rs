@@ -1,6 +1,7 @@
 use crate::model::Model;
 use crate::pose::Pose;
 use derive_builder::Builder;
+use num_enum::TryFromPrimitive;
 use once_cell::unsync::OnceCell;
 use std::any::Any;
 use std::cell::{Ref, RefCell};
@@ -19,12 +20,17 @@ use stereokit_sys::{
 	log_, material_t, model_t, pose_t, sk_settings_t,
 };
 
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
+#[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum DisplayMode {
 	MixedReality = 0,
 	Flatscreen = 1,
 	None = 2,
 }
+
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
+#[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum DisplayBlend {
 	None = 0,
@@ -33,6 +39,9 @@ pub enum DisplayBlend {
 	Blend = 4,
 	AnyTransparent = 6,
 }
+
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
+#[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum DepthMode {
 	Balanced = 0,
@@ -40,6 +49,9 @@ pub enum DepthMode {
 	D32 = 2,
 	Stencil = 3,
 }
+
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
+#[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum LogFilter {
 	None = 0,

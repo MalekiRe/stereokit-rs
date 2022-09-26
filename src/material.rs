@@ -3,6 +3,7 @@ use crate::shader::Shader;
 use crate::texture::Texture;
 use crate::values::{vec2_from, Color128, Matrix, Vec2, Vec3, Vec4};
 use crate::StereoKit;
+use num_enum::TryFromPrimitive;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
 use std::ptr::NonNull;
@@ -54,6 +55,7 @@ impl MaterialParameter for Texture {
 	}
 }
 
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum Transparency {
@@ -62,6 +64,7 @@ pub enum Transparency {
 	Add = 3,
 }
 
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum DepthTest {
@@ -75,6 +78,7 @@ pub enum DepthTest {
 	Never,
 }
 
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum Cull {

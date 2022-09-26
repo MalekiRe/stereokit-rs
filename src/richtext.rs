@@ -1,8 +1,8 @@
 use crate::input::key;
 use crate::lifecycle::DrawContext;
 use crate::pose::Pose;
-use crate::textstyle::{TextAlign, TextStyle};
-use crate::values::{color128_from, matrix_from, Color128, Matrix};
+use crate::text::{self, TextAlign, TextStyle};
+use crate::values::{color128_from, matrix_from, Color128, Matrix, Vec3};
 use crate::StereoKit;
 use prisma::FromTuple;
 use std::ffi::CString;
@@ -45,28 +45,22 @@ impl RichText {
 		&self.text_modules
 	}
 
-	pub fn draw(&mut self, _ctx: &DrawContext) {
+	pub fn draw(&mut self, ctx: &DrawContext) {
 		let white = Color128::from_tuple(((100., 100., 100.), 100.));
 		let mut last: Option<&TextModule> = None;
 		let mut total_offset = 0.0f32;
 		for text_module in &self.text_modules {
-			let text_utf8 = ustr::ustr(text_module.text.as_str());
-			let style = text_module.text_style.text_style;
-			unsafe {
-				text_add_at(
-					text_utf8.as_char_ptr(),
-					&matrix_from(self.transform),
-					style,
-					TextAlign::TopLeft.bits(),
-					TextAlign::TopLeft.bits(),
-					-total_offset,
-					0.0,
-					0.0,
-					color128_from(white),
-				);
-				total_offset +=
-					text_size(text_utf8.as_char_ptr(), text_module.text_style.text_style).x;
-			}
+			text::draw_at(
+				ctx,
+				&text_module.text,
+				self.transform,
+				&text_module.text_style,
+				TextAlign::TopLeft,
+				TextAlign::TopLeft,
+				Vec3::from([-total_offset, 0.0, 0.0]),
+				white,
+			);
+			total_offset += text::size(&text_module.text, &text_module.text_style).x;
 		}
 	}
 }

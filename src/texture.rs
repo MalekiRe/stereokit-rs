@@ -7,6 +7,7 @@ use crate::values::{
 };
 use crate::StereoKit;
 use bitflags::bitflags;
+use num_enum::TryFromPrimitive;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
 use std::path::Path;
@@ -17,6 +18,7 @@ use ustr::ustr;
 
 /// What type of color information will the texture contain? A
 /// good default here is Rgba32.
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum TextureFormat {
@@ -82,6 +84,8 @@ pub enum TextureFormat {
 /// pixels? If you'd like an in-depth explanation of these topics, check
 /// out [this exploration of texture filtering](https://medium.com/@bgolus/sharper-mipmapping-using-shader-based-supersampling-ed7aadb47bec)
 /// by graphics wizard Ben Golus.
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
+#[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum TextureSample {
 	/// Use a linear blend between adjacent pixels, this creates
@@ -98,6 +102,8 @@ pub enum TextureSample {
 /// What happens when the shader asks for a texture coordinate
 /// that's outside the texture?? Believe it or not, this happens plenty
 /// often!
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
+#[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum TextureAddress {
 	/// Wrap the UV coordinate around to the other side of the

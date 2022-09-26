@@ -24,7 +24,7 @@ pub mod shader;
 #[allow(unused)]
 pub mod structs;
 #[allow(unused)]
-pub mod textstyle;
+pub mod text;
 #[allow(unused)]
 pub mod texture;
 mod time;

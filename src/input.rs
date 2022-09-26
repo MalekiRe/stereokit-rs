@@ -6,11 +6,14 @@ use crate::{
 };
 use derive_is_enum_variant::is_enum_variant;
 use num_derive::FromPrimitive;
+use num_enum::TryFromPrimitive;
 use std::ops::Deref;
 use std::slice::Iter;
 use std::{fmt::Pointer, mem::transmute};
 use stereokit_sys::{button_state_, input_key, key_, pose_t};
 
+#[derive(Debug, Clone, Copy, TryFromPrimitive)]
+#[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum Key {
 	None = 0,
@@ -117,7 +120,8 @@ pub enum Key {
 	Divide = 111,
 	MAX = 255,
 }
-#[derive(Debug, FromPrimitive, Copy, Clone, is_enum_variant)]
+#[derive(Debug, Copy, Clone, is_enum_variant, TryFromPrimitive)]
+#[repr(u32)]
 pub enum ButtonState {
 	Inactive = 0,
 	Active = 1,
@@ -194,7 +198,7 @@ impl StereoKit {
 	}
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
 #[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum Handed {

@@ -1,5 +1,4 @@
 use crate::pose::Pose;
-use crate::textstyle::TextStyle;
 use prisma::{FromTuple, Rgba};
 use std::fmt::Pointer;
 use stereokit_sys::{color128, color32, matrix, quat, text_style_t, vec2, vec3, vec4};
