@@ -8,6 +8,7 @@ use stereokit_sys::{
 	bool32_t, pose_t, text_align_, ui_label, ui_move_, ui_sameline, ui_settings, ui_space, ui_text,
 	ui_win_,
 };
+use ustr::ustr;
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum WindowType {
 	WindowEmpty = 0,
@@ -34,10 +35,10 @@ pub fn window(
 	move_type: MoveType,
 	content_closure: impl FnOnce(&WindowContext),
 ) {
-	let my_c_string = CString::new(window_title).unwrap();
+	let window_title = ustr(window_title);
 	unsafe {
 		stereokit_sys::ui_window_begin(
-			my_c_string.as_ptr(),
+			window_title.as_char_ptr(),
 			std::mem::transmute(pose),
 			vec2_from(size),
 			window_type as ui_win_,
@@ -60,11 +61,11 @@ impl WindowContext {
 		unsafe { ui_space(space) }
 	}
 	pub fn text(&self, text: &str, text_align: TextAlign) {
-		let my_string = CString::new(text).unwrap();
-		unsafe { ui_text(my_string.as_ptr(), text_align.bits()) }
+		let text = ustr(text);
+		unsafe { ui_text(text.as_char_ptr(), text_align.bits()) }
 	}
 	pub fn label(&self, text: &str, use_padding: bool) {
-		let my_string = CString::new(text).unwrap();
-		unsafe { ui_label(my_string.as_ptr(), use_padding as bool32_t) }
+		let text = ustr(text);
+		unsafe { ui_label(text.as_char_ptr(), use_padding as bool32_t) }
 	}
 }

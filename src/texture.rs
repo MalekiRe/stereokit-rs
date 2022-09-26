@@ -12,7 +12,7 @@ use std::fmt::Error;
 use std::path::Path;
 use std::ptr::NonNull;
 use std::rc::{Rc, Weak};
-use stereokit_sys::{_gradient_t, _tex_t, bool32_t, spherical_harmonics_t, vec3};
+use stereokit_sys::{_gradient_t, _tex_t, bool32_t, gradient_t, spherical_harmonics_t, vec3};
 use ustr::ustr;
 
 /// What type of color information will the texture contain? A
@@ -150,22 +150,16 @@ bitflags! {
 }
 
 pub struct Gradient {
-	gradient: NonNull<_gradient_t>,
+	gradient: gradient_t,
 }
 impl Gradient {
 	pub fn new(stereokit: &StereoKit) -> Self {
 		Gradient {
-			gradient: NonNull::new(unsafe { stereokit_sys::gradient_create() }).unwrap(),
+			gradient: unsafe { stereokit_sys::gradient_create() },
 		}
 	}
 	pub fn add(&mut self, color: Color128, position: f32) {
-		unsafe {
-			stereokit_sys::gradient_add(
-				self.gradient.as_ptr(),
-				std::mem::transmute(color),
-				position,
-			)
-		}
+		unsafe { stereokit_sys::gradient_add(self.gradient, std::mem::transmute(color), position) }
 	}
 }
 
@@ -181,7 +175,7 @@ impl Texture {
 		is_srgb: bool,
 		priority: i32,
 	) -> Option<Self> {
-		let file_path = ustr(file_path.as_os_str().to_str().unwrap());
+		let file_path = ustr(file_path.as_os_str().to_str()?);
 		Some(Texture {
 			sk: sk.get_wrapper(),
 			tex: NonNull::new(unsafe {
@@ -235,15 +229,15 @@ impl Texture {
 	}
 	pub fn from_cubemap_equirectangular(
 		sk: &StereoKit,
-		file_path: &str,
+		file_path: &Path,
 		uses_srgb_data: bool,
 		load_priority: i32,
 	) -> Option<(Self, SphericalHarmonics)> {
-		let c_file_path = CString::new(file_path).ok()?;
+		let file_path = ustr(file_path.as_os_str().to_str()?);
 		let mut spherical_harmonics = SphericalHarmonics::default();
 		let tex = NonNull::new(unsafe {
 			stereokit_sys::tex_create_cubemap_file(
-				c_file_path.as_ptr(),
+				file_path.as_char_ptr(),
 				uses_srgb_data.into(),
 				&mut spherical_harmonics.spherical_harmonics,
 				load_priority,

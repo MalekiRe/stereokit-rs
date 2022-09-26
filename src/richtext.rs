@@ -50,12 +50,11 @@ impl RichText {
 		let mut last: Option<&TextModule> = None;
 		let mut total_offset = 0.0f32;
 		for text_module in &self.text_modules {
+			let text_utf8 = ustr::ustr(text_module.text.as_str());
+			let style = text_module.text_style.text_style;
 			unsafe {
-				let my_text = text_module.text.clone();
-				let my_string = CString::new(my_text).unwrap();
-				let style = text_module.text_style.text_style;
 				text_add_at(
-					my_string.as_ptr(),
+					text_utf8.as_char_ptr(),
 					&matrix_from(self.transform),
 					style,
 					TextAlign::TopLeft.bits(),
@@ -65,7 +64,8 @@ impl RichText {
 					0.0,
 					color128_from(white),
 				);
-				total_offset += text_size(my_string.as_ptr(), text_module.text_style.text_style).x;
+				total_offset +=
+					text_size(text_utf8.as_char_ptr(), text_module.text_style.text_style).x;
 			}
 		}
 	}

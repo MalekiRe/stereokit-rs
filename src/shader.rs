@@ -16,7 +16,7 @@ pub struct Shader {
 
 impl Shader {
 	pub fn from_file(sk: &StereoKit, file_path: &Path, shader: &Shader) -> Option<Self> {
-		let file_path = ustr(file_path.as_os_str().to_str().unwrap());
+		let file_path = ustr(file_path.as_os_str().to_str()?);
 		Some(Shader {
 			sk: sk.get_wrapper(),
 			shader: NonNull::new(unsafe {

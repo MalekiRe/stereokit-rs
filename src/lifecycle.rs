@@ -86,10 +86,10 @@ impl Settings {
 					.unwrap_or_else(|| "sk_app".to_owned())
 					.as_str(),
 			)
-			.unwrap()
+			.ok()?
 			.into_raw(),
 			assets_folder: CString::new(self.assets_folder.unwrap_or_default().as_str())
-				.unwrap()
+				.ok()?
 				.into_raw(),
 			display_preference: self.display_preference.unwrap_or(DisplayMode::MixedReality)
 				as display_mode_,

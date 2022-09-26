@@ -21,7 +21,7 @@ pub struct Model {
 }
 impl Model {
 	pub fn from_file(sk: &StereoKit, file_path: &Path, shader: Option<&Shader>) -> Option<Self> {
-		let file_path = ustr(file_path.as_os_str().to_str().unwrap());
+		let file_path = ustr(file_path.as_os_str().to_str()?);
 		Some(Model {
 			sk: sk.get_wrapper(),
 			model: NonNull::new(unsafe {

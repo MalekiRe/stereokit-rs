@@ -118,9 +118,9 @@ impl Material {
 		})
 	}
 	pub fn set_id(&self, id: &str) {
-		let str_id = CString::new(id).unwrap();
+		let id = ustr(id);
 		unsafe {
-			stereokit_sys::material_set_id(self.material.as_ptr(), str_id.as_ptr());
+			stereokit_sys::material_set_id(self.material.as_ptr(), id.as_char_ptr());
 		}
 	}
 	pub fn set_transparency(&self, mode: Transparency) {
