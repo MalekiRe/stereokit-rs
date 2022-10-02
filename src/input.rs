@@ -10,7 +10,7 @@ use num_enum::TryFromPrimitive;
 use std::ops::Deref;
 use std::slice::Iter;
 use std::{fmt::Pointer, mem::transmute};
-use stereokit_sys::{button_state_, input_key, key_, pose_t};
+use stereokit_sys::{button_state_, input_key, key_};
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
@@ -137,6 +137,13 @@ impl ButtonState {
 		BUTTON_STATES.iter()
 	}
 }
+#[derive(Debug, Copy, Clone, is_enum_variant, TryFromPrimitive)]
+#[repr(u32)]
+pub enum TrackState {
+	Lost = 0,
+	Inferred = 1,
+	Known = 2,
+}
 pub fn key(key: Key) -> Vec<ButtonState> {
 	let mut button_states: Vec<ButtonState> = vec![];
 	let input = unsafe { input_key(key as key_) } as usize;
@@ -231,8 +238,30 @@ pub struct Hand {
 	pub grip_activation: f32,
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct Controller {
+	pub pose: Pose,
+	pub palm: Pose,
+	pub aim: Pose,
+	pub tracked: ButtonState,
+	pub tracked_pos: TrackState,
+	pub tracked_rot: TrackState,
+	pub stick_click: ButtonState,
+	pub x1: ButtonState,
+	pub x2: ButtonState,
+	pub trigger: f32,
+	pub grip: f32,
+	pub stick: Vec2,
+}
+
 impl StereoKit {
 	pub fn input_hand(&self, handed: Handed) -> &Hand {
 		unsafe { std::mem::transmute(&*stereokit_sys::input_hand(handed as u32)) }
+	}
+	pub fn input_controller(&self, handed: Handed) -> &Controller {
+		unsafe { std::mem::transmute(&*stereokit_sys::input_controller(handed as u32)) }
+	}
+	pub fn input_controller_menu(&self) -> ButtonState {
+		unsafe { std::mem::transmute(stereokit_sys::input_controller_menu()) }
 	}
 }
