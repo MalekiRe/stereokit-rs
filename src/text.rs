@@ -8,7 +8,10 @@ use crate::values::{
 };
 use crate::StereoKit;
 use bitflags::bitflags;
+use bitflags_serde_shim::impl_serde_for_bitflags;
 use num_enum::TryFromPrimitive;
+use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::rc::{Rc, Weak};
 use stereokit_sys::{text_add_at, text_add_in, text_make_style, text_size, text_style_t};
 
@@ -31,8 +34,9 @@ bitflags! {
 		const BottomRight  = Self::XRight.bits  | Self::YBottom.bits;
 	}
 }
+impl_serde_for_bitflags!(TextAlign);
 
-#[derive(Debug, Clone, Copy, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, TryFromPrimitive, Deserialize_repr, Serialize_repr)]
 #[repr(u32)]
 pub enum TextFit {
 	Wrap = 1 << 0,
