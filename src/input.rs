@@ -1,9 +1,11 @@
+#![allow(non_upper_case_globals)]
+
 use crate::{
-	input::ButtonState::{Active, Any, Changed, Inactive, JustActive, JustInactive},
 	pose::Pose,
 	values::{Quat, Vec2, Vec3},
 	StereoKit,
 };
+use bitflags::bitflags;
 use derive_is_enum_variant::is_enum_variant;
 use num_derive::FromPrimitive;
 use num_enum::TryFromPrimitive;
@@ -120,23 +122,21 @@ pub enum Key {
 	Divide = 111,
 	MAX = 255,
 }
-#[derive(Debug, Copy, Clone, is_enum_variant, TryFromPrimitive)]
-#[repr(u32)]
-pub enum ButtonState {
-	Inactive = 0,
-	Active = 1,
-	JustInactive = 2,
-	JustActive = 4,
-	Changed = 6,
-	Any = 2147483647,
-}
-impl ButtonState {
-	pub fn iterator() -> Iter<'static, ButtonState> {
-		static BUTTON_STATES: [ButtonState; 6] =
-			[Inactive, Active, JustInactive, JustActive, Changed, Any];
-		BUTTON_STATES.iter()
+bitflags! {
+	pub struct ButtonState: u32 {
+		const Inactive = 0;
+		const Active = 1;
+		const JustInactive = 2;
+		const JustActive = 4;
+		const Changed = 6;
 	}
 }
+impl StereoKit {
+	pub fn input_key(&self, key: Key) -> ButtonState {
+		ButtonState::from_bits_truncate(unsafe { input_key(key as key_) })
+	}
+}
+
 #[derive(Debug, Copy, Clone, is_enum_variant, TryFromPrimitive)]
 #[repr(u32)]
 pub enum TrackState {
@@ -144,27 +144,6 @@ pub enum TrackState {
 	Inferred = 1,
 	Known = 2,
 }
-pub fn key(key: Key) -> Vec<ButtonState> {
-	let mut button_states: Vec<ButtonState> = vec![];
-	let input = unsafe { input_key(key as key_) } as usize;
-	ButtonState::iterator().for_each(|button_state| {
-		if (input & (*button_state as usize)) != 0 {
-			match button_state {
-				Inactive => button_states.push(Inactive),
-				Active => button_states.push(Active),
-				JustInactive => button_states.push(JustInactive),
-				JustActive => button_states.push(JustActive),
-				Changed => button_states.push(Changed),
-				Any => button_states.push(Any),
-			}
-		}
-	});
-	button_states
-}
-pub fn key_test(key: Key) {
-	println!("{}", unsafe { input_key(key as key_) });
-}
-
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Ray {
 	pub pos: Vec3,
@@ -194,7 +173,6 @@ impl Mouse {
 		self.available != 0
 	}
 }
-
 impl StereoKit {
 	pub fn input_head(&self) -> &Pose {
 		unsafe { transmute(&*stereokit_sys::input_head()) }
