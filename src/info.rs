@@ -1,4 +1,5 @@
 use num_enum::TryFromPrimitive;
+use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use stereokit_sys::sk_system_info;
 
@@ -21,6 +22,7 @@ pub enum Display {
 	AnyTransparent = 6,
 }
 
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct SystemInfo {
 	pub display_type: Display,
 	pub display_width: u32,
@@ -34,7 +36,7 @@ pub struct SystemInfo {
 }
 
 impl StereoKit {
-	pub fn system_info() -> SystemInfo {
+	pub fn system_info(&self) -> SystemInfo {
 		let info = unsafe { sk_system_info() };
 		SystemInfo {
 			display_type: Display::try_from_primitive(info.display_type).unwrap(),
