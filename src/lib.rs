@@ -4,6 +4,8 @@ pub use stereokit_sys as sys;
 #[allow(unused)]
 pub mod font;
 #[allow(unused)]
+pub mod info;
+#[allow(unused)]
 pub mod input;
 #[allow(unused)]
 pub mod lifecycle;
