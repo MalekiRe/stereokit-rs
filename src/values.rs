@@ -11,6 +11,32 @@ pub(crate) type Matrix = mint::ColumnMatrix4<f32>;
 pub(crate) type Color32 = Rgba<u8>;
 pub(crate) type Color128 = Rgba<f32>;
 
+pub struct SKMatrix {
+	matrix: Matrix,
+	inverse: Option<Matrix>
+}
+impl SKMatrix {
+	pub fn new(matrix: Matrix) -> Self {
+		Self {
+			matrix,
+			inverse: None
+		}
+	}
+	pub fn transform_point(&mut self, pt: Vec3) -> Vec3 {
+		if self.inverse.is_none() {
+			self.inverse = Some(matrix_to(
+				unsafe {
+					stereokit_sys::matrix_invert(&matrix_from(self.matrix))
+				}
+			))
+		}
+		let inverse = self.inverse.unwrap();
+		vec3_to(unsafe {
+			stereokit_sys::matrix_transform_pt(matrix_from(inverse), vec3_from(pt))
+		})
+	}
+}
+
 pub(crate) fn vec2_from(var: Vec2) -> vec2 {
 	vec2 { x: var.x, y: var.y }
 }

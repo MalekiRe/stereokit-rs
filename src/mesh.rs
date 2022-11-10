@@ -8,6 +8,7 @@ use crate::{
 use std::rc::{Rc, Weak};
 use std::{fmt::Error, ptr::NonNull};
 use stereokit_sys::{_mesh_t, mesh_draw};
+use crate::bounds::Bounds;
 
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Mesh {
@@ -60,6 +61,12 @@ impl Mesh {
 				color128_from(color_linear),
 				layer.bits(),
 			)
+		}
+	}
+	pub fn get_bounds(&self, sk: &StereoKit) -> Bounds {
+		Bounds {
+			sk: sk.get_wrapper(),
+			bounds: unsafe {stereokit_sys::mesh_get_bounds(self.mesh.as_ptr())}
 		}
 	}
 }

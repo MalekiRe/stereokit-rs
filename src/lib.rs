@@ -34,6 +34,8 @@ mod time;
 pub mod ui;
 #[allow(unused)]
 pub mod values;
+#[allow(unused)]
+pub mod bounds;
 
 #[test]
 fn basic() {

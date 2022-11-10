@@ -13,6 +13,7 @@ use std::ptr::{null, null_mut, NonNull};
 use std::rc::{Rc, Weak};
 use stereokit_sys::_model_t;
 use ustr::ustr;
+use crate::bounds::Bounds;
 
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Model {
@@ -98,6 +99,12 @@ impl Model {
 				subset,
 				material.material.as_ptr(),
 			);
+		}
+	}
+	pub fn get_bounds(&self, sk: &StereoKit) -> Bounds {
+		Bounds {
+			sk: sk.get_wrapper(),
+			bounds: unsafe {stereokit_sys::model_get_bounds(self.model.as_ptr())}
 		}
 	}
 }
