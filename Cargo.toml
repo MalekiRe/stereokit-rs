@@ -1,6 +1,6 @@
 [package]
 name = "stereokit"
-version = "0.7.1"
+version = "0.8.0"
 edition = "2021"
 description = "Higher-Level wrapper around stereokit-sys bindings for StereoKitC library for XR"
 homepage = "https://stereokit.net/"
@@ -19,7 +19,7 @@ exclude = [
 [features]
 default = []
 linux-egl = ["stereokit-sys/linux-egl"]
-high-level = []
+high-level = ["dep:glam", "dep:anyhow"]
 
 [dependencies]
 mint = "0.5.9"
@@ -37,6 +37,8 @@ serde = { version = "1.0.147", features = ["derive"] }
 serde_repr = "0.1.9"
 bitflags_serde_shim = "0.2.2"
 num_enum = "0.5.7"
+glam = {version = "0.22.0", features = ["mint"], optional = true}
+anyhow = {version = "1.0.66", optional = true}
 
 [target.'cfg(target_os = "android")'.dependencies]
 ndk-context = "0.1.1"

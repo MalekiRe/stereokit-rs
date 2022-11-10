@@ -7,7 +7,7 @@ use crate::{
 };
 use std::rc::{Rc, Weak};
 use std::{fmt::Error, ptr::NonNull};
-use stereokit_sys::{_mesh_t, mesh_draw};
+use stereokit_sys::{_mesh_t, bool32_t, mesh_draw};
 use crate::bounds::Bounds;
 
 pub struct Mesh {
@@ -66,6 +66,16 @@ impl Mesh {
 		Bounds {
 			sk: sk.get_wrapper(),
 			bounds: unsafe {stereokit_sys::mesh_get_bounds(self.mesh.as_ptr())}
+		}
+	}
+	pub fn mesh_get_keep_data(&self) -> bool {
+		unsafe {
+			stereokit_sys::mesh_get_keep_data(self.mesh.as_ptr()) != 0
+		}
+	}
+	pub fn mesh_set_keep_data(&mut self, keep_data: bool) {
+		unsafe {
+			stereokit_sys::mesh_set_keep_data(self.mesh.as_ptr(), keep_data as bool32_t)
 		}
 	}
 }

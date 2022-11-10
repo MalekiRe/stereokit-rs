@@ -8,8 +8,8 @@ pub(crate) type Vec3 = mint::Vector3<f32>;
 pub(crate) type Vec4 = mint::Vector4<f32>;
 pub(crate) type Quat = mint::Quaternion<f32>;
 pub(crate) type Matrix = mint::ColumnMatrix4<f32>;
-pub(crate) type Color32 = Rgba<u8>;
-pub(crate) type Color128 = Rgba<f32>;
+pub type Color32 = Rgba<u8>;
+pub type Color128 = Rgba<f32>;
 
 pub struct SKMatrix {
 	matrix: Matrix,
