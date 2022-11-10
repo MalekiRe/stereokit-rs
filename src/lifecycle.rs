@@ -11,7 +11,7 @@ use std::marker::PhantomData;
 use std::os::unix::thread;
 use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
-use std::ptr::null;
+use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 use std::sync::Mutex;
 use std::{mem, ptr};
@@ -91,7 +91,14 @@ impl Settings {
 		if GLOBAL_STATE.with(|f| *f.borrow()) {
 			return None;
 		}
-
+		let (vm_pointer, jobject_pointer) = (null_mut::<c_void>(), null_mut::<c_void>());
+		#[cfg(target_os = "android")]
+		let (vm_pointer, jobject_pointer) = {
+			{
+				let context = ndk_context::android_context();
+				(context.vm(), context.context())
+			}
+		};
 		let c_settings = sk_settings_t {
 			app_name: CString::new(
 				self.app_name
@@ -120,8 +127,8 @@ impl Settings {
 			disable_desktop_input_window: self.disable_desktop_input_window.unwrap_or_default()
 				as bool32_t,
 			disable_unfocused_sleep: self.disable_unfocused_sleep.unwrap_or_default() as bool32_t,
-			android_java_vm: ptr::null_mut(),
-			android_activity: ptr::null_mut(),
+			android_java_vm: vm_pointer,
+			android_activity: jobject_pointer,
 		};
 		unsafe {
 			if stereokit_sys::sk_init(c_settings) != 0 {

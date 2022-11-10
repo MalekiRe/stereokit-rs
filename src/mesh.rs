@@ -39,6 +39,7 @@ impl Mesh {
 					vec3_from(plane_normal),
 					vec3_from(plane_top_direction),
 					subdivisions,
+					0,
 				)
 			})?,
 		})
