@@ -37,6 +37,10 @@ pub mod values;
 #[allow(unused)]
 pub mod bounds;
 
+#[cfg(feature = "high-level")]
+#[allow(unused)]
+pub mod high_level;
+
 #[test]
 fn basic() {
 	let stereokit = Settings::default().init().unwrap();

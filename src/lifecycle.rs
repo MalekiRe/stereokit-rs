@@ -22,7 +22,6 @@ use stereokit_sys::{
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum DisplayMode {
 	MixedReality = 0,
 	Flatscreen = 1,
@@ -31,7 +30,6 @@ pub enum DisplayMode {
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum DisplayBlend {
 	None = 0,
 	Opaque = 1,
@@ -42,7 +40,6 @@ pub enum DisplayBlend {
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum DepthMode {
 	Balanced = 0,
 	D16 = 1,
@@ -52,7 +49,6 @@ pub enum DepthMode {
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum LogFilter {
 	None = 0,
 	Diagnostic = 1,

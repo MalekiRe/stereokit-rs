@@ -20,7 +20,6 @@ use ustr::ustr;
 /// good default here is Rgba32.
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum TextureFormat {
 	/// A default zero value for TexFormat! Uninitialized formats
 	/// will get this value and **** **** up so you know to assign it
@@ -86,7 +85,6 @@ pub enum TextureFormat {
 /// by graphics wizard Ben Golus.
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum TextureSample {
 	/// Use a linear blend between adjacent pixels, this creates
 	/// a smooth, blurry look when texture resolution is too low.
@@ -104,7 +102,6 @@ pub enum TextureSample {
 /// often!
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum TextureAddress {
 	/// Wrap the UV coordinate around to the other side of the
 	/// texture! This is basically like a looping texture, and is an
@@ -169,7 +166,6 @@ impl Gradient {
 	}
 }
 
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Texture {
 	sk: StereoKitInstanceWrapper,
 	pub(super) tex: NonNull<_tex_t>,

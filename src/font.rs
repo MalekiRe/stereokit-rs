@@ -5,7 +5,6 @@ use stereokit_sys::{_font_t, default_id_font, font_create, font_find};
 use ustr::ustr;
 
 use crate::{lifecycle::StereoKitInstanceWrapper, StereoKit};
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Font {
 	sk: StereoKitInstanceWrapper,
 	pub(crate) font: NonNull<_font_t>,

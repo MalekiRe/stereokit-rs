@@ -10,7 +10,6 @@ use std::{fmt::Error, ptr::NonNull};
 use stereokit_sys::{_mesh_t, mesh_draw};
 use crate::bounds::Bounds;
 
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Mesh {
 	sk: StereoKitInstanceWrapper,
 	pub(crate) mesh: NonNull<_mesh_t>,

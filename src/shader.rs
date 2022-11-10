@@ -8,7 +8,6 @@ use std::{
 use stereokit_sys::_shader_t;
 use ustr::ustr;
 
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Shader {
 	pub(crate) sk: StereoKitInstanceWrapper,
 	pub(crate) shader: NonNull<_shader_t>,

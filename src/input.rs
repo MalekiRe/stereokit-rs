@@ -16,7 +16,6 @@ use stereokit_sys::{button_state_, input_key, key_};
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum Key {
 	None = 0,
 	MouseLeft = 1,
@@ -144,7 +143,7 @@ pub enum TrackState {
 	Inferred = 1,
 	Known = 2,
 }
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
+
 pub struct Ray {
 	pub pos: Vec3,
 	pub dir: Vec3,
@@ -160,7 +159,7 @@ impl Ray {
 			.then_some(ray)
 	}
 }
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
+
 pub struct Mouse {
 	available: i32,
 	pub pos: Vec2,
@@ -185,14 +184,12 @@ impl StereoKit {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive)]
 #[repr(u32)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum Handed {
 	Left = 0,
 	Right = 1,
 }
 
 #[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Joint {
 	pub position: Vec3,
 	pub orientation: Quat,
@@ -201,7 +198,6 @@ pub struct Joint {
 
 /// The fingers go thumb to little, metacarpal to tip
 #[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Hand {
 	pub fingers: [[Joint; 5]; 5],
 	pub wrist: Pose,

@@ -57,7 +57,6 @@ impl MaterialParameter for Texture {
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum Transparency {
 	None = 1,
 	Blend = 2,
@@ -66,7 +65,6 @@ pub enum Transparency {
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum DepthTest {
 	Less,
 	LessOrEqual,
@@ -80,14 +78,12 @@ pub enum DepthTest {
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub enum Cull {
 	Back,
 	Front,
 	None,
 }
 
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Material {
 	pub(crate) sk: StereoKitInstanceWrapper,
 	pub(crate) material: NonNull<_material_t>,

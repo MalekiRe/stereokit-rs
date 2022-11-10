@@ -47,7 +47,6 @@ pub enum TextFit {
 }
 
 #[derive(Clone)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct TextStyle {
 	sk: StereoKitInstanceWrapper,
 	pub(crate) text_style: text_style_t,

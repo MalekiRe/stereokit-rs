@@ -15,7 +15,6 @@ use stereokit_sys::_model_t;
 use ustr::ustr;
 use crate::bounds::Bounds;
 
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
 pub struct Model {
 	sk: StereoKitInstanceWrapper,
 	pub(crate) model: NonNull<_model_t>,
