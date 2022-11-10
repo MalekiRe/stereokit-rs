@@ -3,6 +3,10 @@ use glam::{EulerRot, Mat4, Quat, Vec3};
 
 #[allow(unused)]
 pub mod model;
+#[allow(unused)]
+pub mod text;
+#[allow(unused)]
+pub mod math_traits;
 
 pub struct Scale(pub Vec3);
 
