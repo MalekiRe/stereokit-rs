@@ -66,7 +66,7 @@ pub struct MatrixContainer {
 
 impl MatrixContainer {
     fn sync_matrix(&mut self) {
-        self.mat4 = Mat4::from_scale_rotation_translation(self.scale, Quat::from_euler(EulerRot::XYZ, self.rotation.x, self.rotation.y, self.rotation.z), self.pos);
+        self.mat4 = Mat4::from_scale_rotation_translation(self.scale, Quat::from_euler(EulerRot::XYZ, self.rotation.x.to_radians(), self.rotation.y.to_radians(), self.rotation.z.to_radians()), self.pos);
     }
     pub fn get_matrix(&self) -> Mat4 {
         self.mat4.clone()
