@@ -4,7 +4,7 @@ use crate::mesh::Mesh;
 use crate::pose::Pose;
 use crate::render::RenderLayer;
 use crate::shader::Shader;
-use crate::values::{color128_from, matrix_from, Color128, Matrix, Vec3};
+use crate::values::{color128_from, matrix_from, Color128, Matrix, Vec3, vec3_from, vec3_to};
 use crate::StereoKit;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
@@ -100,11 +100,9 @@ impl Model {
 			);
 		}
 	}
-	pub fn get_bounds(&self, sk: &StereoKit) -> Bounds {
-		Bounds {
-			sk: sk.get_wrapper(),
-			bounds: unsafe {stereokit_sys::model_get_bounds(self.model.as_ptr())}
-		}
+	pub fn get_bounds(&self, _sk: &StereoKit) -> Bounds {
+		let b = unsafe {stereokit_sys::model_get_bounds(self.model.as_ptr())};
+		Bounds::new(vec3_to(b.center), vec3_to(b.dimensions))
 	}
 }
 impl Clone for Model {

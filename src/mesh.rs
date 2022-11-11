@@ -9,6 +9,7 @@ use std::rc::{Rc, Weak};
 use std::{fmt::Error, ptr::NonNull};
 use stereokit_sys::{_mesh_t, bool32_t, mesh_draw};
 use crate::bounds::Bounds;
+use crate::values::vec3_to;
 
 pub struct Mesh {
 	sk: StereoKitInstanceWrapper,
@@ -16,11 +17,11 @@ pub struct Mesh {
 }
 
 impl Mesh {
-	pub fn gen_cube(sk: &StereoKit, size: Vec3, subdivisions: i32) -> Option<Self> {
+	pub fn gen_cube(sk: &StereoKit, size: impl Into<Vec3>, subdivisions: i32) -> Option<Self> {
 		Some(Mesh {
 			sk: sk.get_wrapper(),
 			mesh: NonNull::new(unsafe {
-				stereokit_sys::mesh_gen_cube(vec3_from(size), subdivisions)
+				stereokit_sys::mesh_gen_cube(vec3_from(size.into()), subdivisions)
 			})?,
 		})
 	}
@@ -63,10 +64,8 @@ impl Mesh {
 		}
 	}
 	pub fn get_bounds(&self, sk: &StereoKit) -> Bounds {
-		Bounds {
-			sk: sk.get_wrapper(),
-			bounds: unsafe {stereokit_sys::mesh_get_bounds(self.mesh.as_ptr())}
-		}
+		let bounds = unsafe {stereokit_sys::mesh_get_bounds(self.mesh.as_ptr())};
+		Bounds::new(vec3_to(bounds.center), vec3_to(bounds.dimensions))
 	}
 	pub fn mesh_get_keep_data(&self) -> bool {
 		unsafe {

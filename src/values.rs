@@ -4,7 +4,7 @@ use std::fmt::Pointer;
 use stereokit_sys::{color128, color32, matrix, quat, text_style_t, vec2, vec3, vec4};
 
 pub(crate) type Vec2 = mint::Vector2<f32>;
-pub(crate) type Vec3 = mint::Vector3<f32>;
+pub type Vec3 = mint::Vector3<f32>;
 pub(crate) type Vec4 = mint::Vector4<f32>;
 pub(crate) type Quat = mint::Quaternion<f32>;
 pub(crate) type Matrix = mint::ColumnMatrix4<f32>;

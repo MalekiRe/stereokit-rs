@@ -7,6 +7,8 @@ pub mod model;
 pub mod text;
 #[allow(unused)]
 pub mod math_traits;
+#[allow(unused)]
+pub mod collider;
 
 pub struct Scale(pub Vec3);
 
@@ -41,7 +43,7 @@ impl From<Vec3> for Pos {
 }
 
 pub fn quat_from_angles(x: f32, y: f32, z: f32) -> Quat {
-    Quat::from_euler(EulerRot::XYZ, x, y, z)
+    Quat::from_euler(EulerRot::XYZ, x.to_radians(), y.to_radians(), z.to_radians())
 }
 
 // pub enum Matrix {

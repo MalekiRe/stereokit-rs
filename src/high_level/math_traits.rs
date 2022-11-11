@@ -1,5 +1,6 @@
 use std::ops::{AddAssign, Deref, MulAssign};
 use glam::{EulerRot, Mat4, Quat};
+use crate::high_level::quat_from_angles;
 use crate::values::Vec3;
 
 pub trait PosTrait {
@@ -56,6 +57,11 @@ pub trait RotationTrait {
     fn rotate_vec(&mut self, rotation: impl Into<Vec3>);
 }
 
+pub trait MatrixTrait {
+    fn get_matrix(&self) -> Mat4;
+    fn set_matrix(&mut self, matrix: Mat4);
+}
+
 pub struct MatrixContainer {
     pub mat4: Mat4,
     pub pos: glam::Vec3,
@@ -66,10 +72,13 @@ pub struct MatrixContainer {
 
 impl MatrixContainer {
     fn sync_matrix(&mut self) {
-        self.mat4 = Mat4::from_scale_rotation_translation(self.scale, Quat::from_euler(EulerRot::XYZ, self.rotation.x.to_radians(), self.rotation.y.to_radians(), self.rotation.z.to_radians()), self.pos);
+        self.mat4 = Mat4::from_scale_rotation_translation(self.scale, quat_from_angles(self.rotation.x, self.rotation.y, self.rotation.z), self.pos);
     }
-    pub fn get_matrix(&self) -> Mat4 {
-        self.mat4.clone()
+    fn sync_fields(&mut self) {
+        let (a, b, c) = self.mat4.to_scale_rotation_translation();
+        self.scale = a; self.pos = c;
+        let r = b.to_euler(EulerRot::XYZ);
+        self.rotation = Vec3::from([r.0.to_degrees(), r.1.to_degrees(), r.2.to_degrees()]).into();
     }
     pub fn new(pos: impl Into<Vec3>, rotation: impl Into<Vec3>, scale: impl Into<Vec3>) -> Self {
         let mut matrix_container = MatrixContainer {
@@ -80,6 +89,16 @@ impl MatrixContainer {
         };
         matrix_container.sync_matrix();
         matrix_container
+    }
+}
+
+impl MatrixTrait for MatrixContainer {
+    fn get_matrix(&self) -> Mat4 {
+        self.mat4.clone()
+    }
+    fn set_matrix(&mut self, matrix: Mat4) {
+        self.mat4 = matrix;
+        self.sync_fields();
     }
 }
 

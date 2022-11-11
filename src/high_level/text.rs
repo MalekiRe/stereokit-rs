@@ -2,7 +2,7 @@ use glam::{EulerRot, Mat4, Quat, Vec2, Vec3};
 use prisma::Rgb;
 use crate::lifecycle::DrawContext;
 use crate::{StereoKit, text};
-use crate::high_level::math_traits::MatrixContainer;
+use crate::high_level::math_traits::{MatrixContainer, MatrixTrait, PosTrait, RotationTrait, ScaleTrait};
 use crate::text::{TextAlign, TextFit, TextStyle};
 use crate::values::Color128;
 
@@ -37,5 +37,53 @@ impl Text {
     }
     pub fn draw_at(&self, ctx: &DrawContext) {
         text::draw_at(ctx, &self.text, self.matrix.get_matrix(), &self.text_style, self.text_align_pos, self.text_align, self.offset, self.tint);
+    }
+}
+impl PosTrait for Text {
+    fn get_pos_vec(&self) -> Vec3 {
+        self.matrix.get_pos_vec()
+    }
+
+    fn set_pos_vec(&mut self, pos: impl Into<crate::values::Vec3>) {
+        self.matrix.set_pos_vec(pos)
+    }
+
+    fn translate_vec(&mut self, translation: impl Into<crate::values::Vec3>) {
+        self.matrix.translate_vec(translation)
+    }
+}
+impl RotationTrait for Text {
+    fn get_rotation_vec(&self) -> Vec3 {
+        self.matrix.get_rotation_vec()
+    }
+
+    fn set_rotation_vec(&mut self, rotation: impl Into<crate::values::Vec3>) {
+        self.matrix.set_rotation_vec(rotation)
+    }
+
+    fn rotate_vec(&mut self, rotation: impl Into<crate::values::Vec3>) {
+        self.matrix.rotate_vec(rotation)
+    }
+}
+impl ScaleTrait for Text {
+    fn get_scale_vec(&self) -> Vec3 {
+        self.matrix.get_scale_vec()
+    }
+
+    fn set_scale_vec(&mut self, scale: impl Into<crate::values::Vec3>) {
+        self.matrix.set_scale_vec(scale)
+    }
+
+    fn scale_vec(&mut self, scale: impl Into<crate::values::Vec3>) {
+        self.matrix.scale_vec(scale)
+    }
+}
+impl MatrixTrait for Text {
+    fn get_matrix(&self) -> Mat4 {
+        self.matrix.get_matrix()
+    }
+
+    fn set_matrix(&mut self, matrix: Mat4) {
+        self.matrix.set_matrix(matrix)
     }
 }

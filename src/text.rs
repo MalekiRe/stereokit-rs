@@ -39,11 +39,11 @@ impl_serde_for_bitflags!(TextAlign);
 #[derive(Debug, Clone, Copy, TryFromPrimitive, Deserialize_repr, Serialize_repr)]
 #[repr(u32)]
 pub enum TextFit {
-	Wrap = 1 << 0,
-	Clip = 1 << 1,
-	Squeeze = 1 << 2,
-	Exact = 1 << 3,
-	Overflow = 1 << 4,
+	Wrap = 1,
+	Clip = 2,
+	Squeeze = 4,
+	Exact = 8,
+	Overflow = 16,
 }
 
 #[derive(Clone)]
