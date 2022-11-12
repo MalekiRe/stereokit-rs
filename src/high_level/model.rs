@@ -19,6 +19,7 @@ use crate::high_level::text::Text;
 use crate::input::Handed::Right;
 use crate::bounds::Bounds;
 use crate::high_level::collider::{CapsuleCollider, Collider, ColliderType};
+use crate::shader::Shader;
 
 pub struct Model {
     pub model: crate::model::Model,
@@ -32,6 +33,16 @@ impl Model {
 
     pub fn from_mesh(sk: &StereoKit, mesh: &Mesh, material: &Material) -> Result<Self> {
         let model = crate::model::Model::from_mesh(sk, mesh, material).context("Unable to create model from mesh")?;
+        Ok(Self {
+            model,
+            matrix: MatrixContainer::new(Vec3::default(), Vec3::new(0f32, 0f32, 0f32), [1f32, 1f32, 1f32]),
+            tint: Rgba::new(Rgb::new(1.0, 1.0, 1.0), 1.0),
+            render_layer: RenderLayer::Layer0,
+            collider: None
+        })
+    }
+    pub fn from_memory(sk: &StereoKit, file_name: &str, memory: &[u8], shader: Option<&Shader>) -> Result<Self> {
+        let model = crate::model::Model::from_mem(sk, file_name, memory, shader).context("unabled to create model from memory")?;
         Ok(Self {
             model,
             matrix: MatrixContainer::new(Vec3::default(), Vec3::new(0f32, 0f32, 0f32), [1f32, 1f32, 1f32]),
@@ -72,15 +83,12 @@ impl Model {
     pub fn set_collider(&mut self, sk: &StereoKit, collider: ColliderType) {
         self.collider = Some(Collider::CapsuleCollider(CapsuleCollider::from(sk, self)));
     }
-    pub fn get_collider(&self) -> Option<&Collider> {
-        match &self.collider {
-            None => {
-                None
-            }
-            Some(collider) => {
-                Some(collider)
-            }
+    pub fn get_collider(&mut self, sk: &StereoKit) -> Option<Collider> {
+        if self.collider.is_none() {
+            return None;
         }
+        self.set_collider(sk, self.collider.unwrap().get_type());
+        Some(self.collider.unwrap().clone())
     }
 }
 

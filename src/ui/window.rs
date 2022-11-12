@@ -5,11 +5,12 @@ use crate::{
 };
 use num_enum::TryFromPrimitive;
 use std::{ffi::CString, marker::PhantomData};
-use stereokit_sys::{
-	bool32_t, pose_t, text_align_, ui_label, ui_move_, ui_sameline, ui_settings, ui_space, ui_text,
-	ui_win_,
-};
+use stereokit_sys::{bool32_t, pose_t, text_align_, text_make_style, text_style_get_material, text_style_t, ui_button, ui_hslider, ui_label, ui_move_, ui_pop_text_style, ui_push_text_style, ui_sameline, ui_settings, ui_space, ui_text, ui_win_};
 use ustr::ustr;
+use crate::font::Font;
+use crate::high_level::text::Text;
+use crate::text::TextStyle;
+
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::prelude::Component))]
@@ -73,4 +74,27 @@ impl WindowContext {
 		let text = ustr(text);
 		unsafe { ui_label(text.as_char_ptr(), use_padding as bool32_t) }
 	}
+	pub fn button(&self, text: &str) -> bool {
+		let text = ustr(text);
+		unsafe {ui_button(text.as_char_ptr()) != 0}
+	}
+	pub fn slider(&self, text: &str, val: &mut f32, min: f32, max: f32, step: f32, width: f32, confirm_method: ConfirmMethod) {
+		unsafe {
+			ui_hslider(ustr(text).as_char_ptr(), val as *mut f32, min, max, step, width,confirm_method as u32, 0);
+		}
+	}
+	pub fn text_style(&self, text_style: TextStyle, window_context: &WindowContext, content_closure: impl FnOnce(&WindowContext)) {
+		unsafe {
+			ui_push_text_style(text_style.text_style)
+		}
+		content_closure(&window_context);
+		unsafe {
+			ui_pop_text_style();
+		}
+	}
+}
+pub enum ConfirmMethod {
+	Push = 0,
+	Pinch = 1,
+	VariablePinch = 2,
 }

@@ -5,14 +5,24 @@ use crate::{StereoKit, values};
 use crate::high_level::math_traits::{MatrixContainer, MatrixTrait};
 use crate::high_level::model::Model;
 
+#[derive(Debug, Clone, Copy)]
 pub enum Collider {
     CapsuleCollider(CapsuleCollider),
     //add Sphere Collider later
 }
+impl Collider {
+    pub fn get_type(&self) -> ColliderType {
+        match self {
+            Collider::CapsuleCollider(_) => {
+                ColliderType::CapsuleCollider
+            }
+        }
+    }
+}
 pub enum ColliderType {
     CapsuleCollider
 }
-
+#[derive(Debug, Clone, Copy)]
 pub struct CapsuleCollider {
     pub point1: Vec3,
     pub point2: Vec3,

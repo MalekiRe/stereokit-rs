@@ -1,6 +1,7 @@
 use crate::pose::Pose;
 use prisma::{FromTuple, Rgba};
 use std::fmt::Pointer;
+use mint::{ColumnMatrix4, RowMatrix4};
 use stereokit_sys::{color128, color32, matrix, quat, text_style_t, vec2, vec3, vec4};
 
 pub(crate) type Vec2 = mint::Vector2<f32>;
@@ -115,10 +116,10 @@ pub(crate) fn matrix_to(m: matrix) -> Matrix {
 	unsafe {
 		match m {
 			matrix { m: ma } => Matrix::from(ma),
-			matrix { row: r } => Matrix::from([
+			matrix { row: r } => ColumnMatrix4::from(RowMatrix4::from([
 				r[0].x, r[0].y, r[0].z, r[0].w, r[1].x, r[1].y, r[1].z, r[1].w, r[2].x, r[2].y,
 				r[2].z, r[2].w, r[3].x, r[3].y, r[3].z, r[3].w,
-			]),
+			])),
 		}
 	}
 }

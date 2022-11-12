@@ -26,7 +26,7 @@ impl Text {
             text_align_pos: TextAlign::Center,
             text_fit: TextFit::Overflow,
             text: text.as_ref().to_string(),
-            size: Default::default(),
+            size: Vec2::new(1.0, 1.0),
             tint: Color128::new(Rgb::new(1.0, 1.0, 1.0), 1.0),
             offset: Default::default(),
             matrix: MatrixContainer::new(pos, rot, scale)

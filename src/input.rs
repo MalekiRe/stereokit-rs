@@ -12,7 +12,7 @@ use num_enum::TryFromPrimitive;
 use std::ops::Deref;
 use std::slice::Iter;
 use std::{fmt::Pointer, mem::transmute};
-use stereokit_sys::{button_state_, input_key, key_};
+use stereokit_sys::{bool32_t, button_state_, input_hand_visible, input_key, key_};
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
@@ -237,5 +237,8 @@ impl StereoKit {
 	}
 	pub fn input_controller_menu(&self) -> ButtonState {
 		unsafe { std::mem::transmute(stereokit_sys::input_controller_menu()) }
+	}
+	pub fn input_hand_visible(&self, handed: Handed, visible: bool) {
+		unsafe { input_hand_visible(handed as u32, visible as bool32_t)}
 	}
 }

@@ -5,8 +5,9 @@ use std::{
 	ptr::NonNull,
 	rc::{Rc, Weak},
 };
-use stereokit_sys::_shader_t;
+use stereokit_sys::{_shader_t, font_find, shader_find};
 use ustr::ustr;
+use crate::font::Font;
 
 pub struct Shader {
 	pub(crate) sk: StereoKitInstanceWrapper,
@@ -32,6 +33,22 @@ impl Shader {
 					memory.len() as u64,
 				)
 			})?,
+		})
+	}
+	pub fn default(sk: &StereoKit) -> Self {
+		let default_id = ustr("default/shader");
+		Shader {
+			sk: sk.get_wrapper(),
+			shader: NonNull::new(unsafe { shader_find(default_id.as_char_ptr()) }).unwrap(),
+		}
+	}
+	pub fn p_b_r(sk: &StereoKit) -> Self {
+		Shader::from_name(sk, "default/shader_pbr").unwrap()
+	}
+	pub fn from_name(sk: &StereoKit, name: &str) -> Option<Self> {
+		Some(Shader {
+			sk: sk.get_wrapper(),
+			shader: NonNull::new(unsafe { shader_find(ustr(name).as_char_ptr()) })?,
 		})
 	}
 }
