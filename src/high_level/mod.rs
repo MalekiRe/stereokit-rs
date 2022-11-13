@@ -46,6 +46,9 @@ impl From<Vec3> for Pos {
 pub fn quat_from_angles(x: f32, y: f32, z: f32) -> Quat {
     Quat::from_euler(EulerRot::XYZ, x.to_radians(), y.to_radians(), z.to_radians())
 }
+pub fn quat_from_vec(vec: Vec3) -> Quat {
+    quat_from_angles(vec.x, vec.y, vec.z)
+}
 pub fn angles_from_quat(quat: Quat) -> (f32, f32, f32) {
     let radians_version = quat.to_euler(XYZ);
     (radians_version.0.to_degrees(), radians_version.1.to_degrees(), radians_version.2.to_degrees())

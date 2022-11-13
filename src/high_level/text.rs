@@ -32,6 +32,9 @@ impl Text {
             matrix: MatrixContainer::new(pos, rot, scale)
         }
     }
+    pub fn from(sk: &StereoKit, text: impl AsRef<str>) -> Self {
+        Self::new(sk, text, Vec3::default(), Vec3::new(0.0, 180.0, 0.0), Vec3::new(1.0, 1.0, 1.0))
+    }
     pub fn draw_in(&self, ctx: &DrawContext) {
         text::draw_in(ctx, &self.text, self.matrix.get_matrix(), self.size, self.text_fit, &self.text_style, self.text_align_pos, self.text_align, self.offset, self.tint);
     }
