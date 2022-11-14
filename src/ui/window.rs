@@ -5,12 +5,13 @@ use crate::{
 };
 use num_enum::TryFromPrimitive;
 use std::{ffi::CString, marker::PhantomData};
-use stereokit_sys::{bool32_t, pose_t, text_align_, text_make_style, text_style_get_material, text_style_t, ui_btn_layout_, ui_button, ui_button_img, ui_button_img_16, ui_button_img_sz, ui_hslider, ui_label, ui_move_, ui_pop_text_style, ui_push_text_style, ui_sameline, ui_settings, ui_space, ui_text, ui_win_};
+use stereokit_sys::{bool32_t, pose_t, text_align_, text_make_style, text_style_get_material, text_style_t, ui_btn_layout_, ui_button, ui_button_at, ui_button_img, ui_button_img_16, ui_button_img_at, ui_button_img_sz, ui_hslider, ui_label, ui_move_, ui_pop_text_style, ui_push_text_style, ui_sameline, ui_settings, ui_space, ui_text, ui_win_};
 use ustr::ustr;
 use crate::sprite::Sprite;
 use crate::font::Font;
 use crate::high_level::text::Text;
 use crate::text::TextStyle;
+use crate::values::{Vec3, vec3_from};
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
@@ -110,6 +111,16 @@ impl WindowContext {
 	pub fn button_image(&self, text: &str, sprite: &Sprite, layout: ButtonLayout) -> bool {
 		unsafe {
 			ui_button_img(ustr(text).as_char_ptr(), sprite.sprite.as_ptr(), layout as u32) != 0
+		}
+	}
+	pub fn button_at(&self, text: &str, window_relative_pos: Vec3, size: Vec2) -> bool {
+		unsafe {
+			ui_button_at(ustr(text).as_char_ptr(), vec3_from(window_relative_pos), vec2_from(size)) != 0
+		}
+	}
+	pub fn button_image_at(&self, text: &str, sprite: &Sprite, layout: ButtonLayout, window_relative_pos: Vec3, size: Vec2) -> bool {
+		unsafe {
+			ui_button_img_at(ustr(text).as_char_ptr(), sprite.sprite.as_ptr(), layout as u32, vec3_from(window_relative_pos), vec2_from(size)) != 0
 		}
 	}
 	pub fn slider(&self, text: &str, val: &mut f32, min: f32, max: f32, step: f32, width: f32, confirm_method: ConfirmMethod) {
