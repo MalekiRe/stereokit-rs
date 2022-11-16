@@ -3,13 +3,14 @@
 use crate::lifecycle::StereoKitInstanceWrapper;
 use crate::render::SphericalHarmonics;
 use crate::values::{
-	color128_from, color128_to, color32_from, color32_to, Color128, Color32, Vec3,
+	color128_from, color128_to, color32_from, color32_to, Color128, Color32, Vec3, IntType,
 };
 use crate::StereoKit;
 use bitflags::bitflags;
 use num_enum::TryFromPrimitive;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
+use std::mem::transmute;
 use std::path::Path;
 use std::ptr::NonNull;
 use std::rc::{Rc, Weak};
@@ -193,7 +194,7 @@ impl Texture {
 		Some(Texture {
 			sk: sk.get_wrapper(),
 			tex: NonNull::new(unsafe {
-				stereokit_sys::tex_create(texture_type.bits(), format as u32)
+				stereokit_sys::tex_create(transmute::<u32,IntType>(texture_type.bits() as u32), transmute::<u32,IntType>(format as u32))
 			})?,
 		})
 	}
@@ -306,7 +307,7 @@ impl Texture {
 		stereokit_sys::tex_set_surface(
 			self.tex.as_ptr(),
 			native_texture as *mut c_void,
-			texture_type.bits(),
+			transmute::<u32,IntType>(texture_type.bits() as u32),
 			native_format,
 			width as i32,
 			height as i32,
@@ -316,10 +317,10 @@ impl Texture {
 	}
 
 	pub unsafe fn set_sample(&self, sample: TextureSample) {
-		stereokit_sys::tex_set_sample(self.tex.as_ptr(), sample as u32);
+		stereokit_sys::tex_set_sample(self.tex.as_ptr(), transmute::<u32,IntType>(sample as u32));
 	}
 	pub unsafe fn set_address_mode(&self, address_mode: TextureAddress) {
-		stereokit_sys::tex_set_address(self.tex.as_ptr(), address_mode as u32);
+		stereokit_sys::tex_set_address(self.tex.as_ptr(), transmute::<u32,IntType>(address_mode as u32));
 	}
 	pub unsafe fn set_anisotropy_level(&self, anisotropy_level: i32) {
 		stereokit_sys::tex_set_anisotropy(self.tex.as_ptr(), anisotropy_level);

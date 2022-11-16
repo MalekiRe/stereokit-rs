@@ -135,3 +135,8 @@ pub(crate) fn quat_from(q: Quat) -> quat {
 pub(crate) fn quat_to(q: quat) -> Quat {
 	Quat::from([q.x, q.y, q.z, q.w])
 }
+
+#[cfg(target_os="windows")]
+pub type IntType = i32;
+#[cfg(not(target_os="windows"))]
+pub type IntType = u32;

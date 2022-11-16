@@ -4,7 +4,7 @@ use crate::font::Font;
 use crate::lifecycle::{DrawContext, StereoKitInstanceWrapper};
 use crate::values::{
 	color128_from, color32_from, matrix_from, vec2_from, vec2_to, Color128, Color32, Matrix, Vec2,
-	Vec3,
+	Vec3, IntType,
 };
 use crate::StereoKit;
 use bitflags::bitflags;
@@ -12,6 +12,7 @@ use bitflags_serde_shim::impl_serde_for_bitflags;
 use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use std::mem::transmute;
 use std::rc::{Rc, Weak};
 use stereokit_sys::{text_add_at, text_add_in, text_make_style, text_size, text_style_t};
 
@@ -95,8 +96,8 @@ pub fn draw_at(
 			text.as_char_ptr(),
 			&matrix_from(transform.into()),
 			style.text_style,
-			position.bits(),
-			align.bits(),
+			transmute::<u32,IntType>(position.bits() as u32),
+			transmute::<u32,IntType>(align.bits() as u32),
 			offset.x,
 			offset.y,
 			offset.z,
@@ -124,10 +125,10 @@ pub fn draw_in(
 			text.as_char_ptr(),
 			&matrix_from(transform.into()),
 			vec2_from(size.into()),
-			fit as u32,
+			transmute::<u32,IntType>(fit as u32),
 			style.text_style,
-			position.bits(),
-			align.bits(),
+			transmute::<u32,IntType>(position.bits() as u32),
+			transmute::<u32,IntType>(align.bits() as u32),
 			offset.x,
 			offset.y,
 			offset.z,

@@ -4,14 +4,16 @@ use crate::{
 	values::{vec2_from, Vec2},
 };
 use num_enum::TryFromPrimitive;
-use std::{ffi::CString, marker::PhantomData};
+use std::{ffi::CString, marker::PhantomData, mem::transmute};
 use stereokit_sys::{bool32_t, pose_t, text_align_, text_make_style, text_style_get_material, text_style_t, ui_btn_layout_, ui_button, ui_button_at, ui_button_img, ui_button_img_16, ui_button_img_at, ui_button_img_sz, ui_hslider, ui_label, ui_move_, ui_pop_text_style, ui_push_text_style, ui_sameline, ui_settings, ui_space, ui_text, ui_win_};
 use ustr::ustr;
 use crate::sprite::Sprite;
 use crate::font::Font;
+#[cfg(feature = "high-level")]
 use crate::high_level::text::Text;
 use crate::text::TextStyle;
 use crate::values::{Vec3, vec3_from};
+use crate::values::IntType;
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
@@ -98,7 +100,7 @@ impl WindowContext {
 	}
 	pub fn text(&self, text: &str, text_align: TextAlign) {
 		let text = ustr(text);
-		unsafe { ui_text(text.as_char_ptr(), text_align.bits()) }
+		unsafe { ui_text(text.as_char_ptr(), transmute::<u32,IntType>(text_align.bits() as u32)) }
 	}
 	pub fn label(&self, text: &str, use_padding: bool) {
 		let text = ustr(text);
@@ -110,7 +112,7 @@ impl WindowContext {
 	}
 	pub fn button_image(&self, text: &str, sprite: &Sprite, layout: ButtonLayout) -> bool {
 		unsafe {
-			ui_button_img(ustr(text).as_char_ptr(), sprite.sprite.as_ptr(), layout as u32) != 0
+			ui_button_img(ustr(text).as_char_ptr(), sprite.sprite.as_ptr(), transmute::<u32,IntType>(layout as u32)) != 0
 		}
 	}
 	pub fn button_at(&self, text: &str, window_relative_pos: Vec3, size: Vec2) -> bool {
@@ -120,12 +122,12 @@ impl WindowContext {
 	}
 	pub fn button_image_at(&self, text: &str, sprite: &Sprite, layout: ButtonLayout, window_relative_pos: Vec3, size: Vec2) -> bool {
 		unsafe {
-			ui_button_img_at(ustr(text).as_char_ptr(), sprite.sprite.as_ptr(), layout as u32, vec3_from(window_relative_pos), vec2_from(size)) != 0
+			ui_button_img_at(ustr(text).as_char_ptr(), sprite.sprite.as_ptr(), transmute::<u32,IntType>(layout as u32), vec3_from(window_relative_pos), vec2_from(size)) != 0
 		}
 	}
 	pub fn slider(&self, text: &str, val: &mut f32, min: f32, max: f32, step: f32, width: f32, confirm_method: ConfirmMethod) {
 		unsafe {
-			ui_hslider(ustr(text).as_char_ptr(), val as *mut f32, min, max, step, width,confirm_method as u32, 0);
+			ui_hslider(ustr(text).as_char_ptr(), val as *mut f32, min, max, step, width,transmute::<u32,IntType>(confirm_method as u32), 0);
 		}
 	}
 	pub fn text_style(&self, text_style: TextStyle, content_closure: impl FnOnce(&WindowContext)) {

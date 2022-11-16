@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use stereokit_sys::sk_system_info;
 
-use crate::StereoKit;
+use crate::{StereoKit, values::IntType};
 
 // pub const display__display_none: display_ = 0;
 // pub const display__display_opaque: display_ = 1;
@@ -39,7 +39,7 @@ impl StereoKit {
 	pub fn system_info(&self) -> SystemInfo {
 		let info = unsafe { sk_system_info() };
 		SystemInfo {
-			display_type: Display::try_from_primitive(info.display_type).unwrap(),
+			display_type: Display::try_from_primitive(info.display_type as u32).unwrap(),
 			display_width: info.display_width as u32,
 			display_height: info.display_height as u32,
 			spatial_bridge_present: info.spatial_bridge_present > 0,

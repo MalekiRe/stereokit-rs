@@ -2,7 +2,7 @@
 
 use crate::{
 	pose::Pose,
-	values::{Quat, Vec2, Vec3},
+	values::{Quat, Vec2, Vec3, IntType},
 	StereoKit,
 };
 use bitflags::bitflags;
@@ -132,7 +132,7 @@ bitflags! {
 }
 impl StereoKit {
 	pub fn input_key(&self, key: Key) -> ButtonState {
-		ButtonState::from_bits_truncate(unsafe { input_key(key as key_) })
+		ButtonState::from_bits_truncate(unsafe { input_key(key as key_) } as u32)
 	}
 }
 
@@ -230,15 +230,15 @@ pub struct Controller {
 
 impl StereoKit {
 	pub fn input_hand(&self, handed: Handed) -> &Hand {
-		unsafe { std::mem::transmute(&*stereokit_sys::input_hand(handed as u32)) }
+		unsafe { std::mem::transmute(&*stereokit_sys::input_hand(handed as i32)) }
 	}
 	pub fn input_controller(&self, handed: Handed) -> &Controller {
-		unsafe { std::mem::transmute(&*stereokit_sys::input_controller(handed as u32)) }
+		unsafe { std::mem::transmute(&*stereokit_sys::input_controller(transmute::<u32,IntType>(handed as u32))) }
 	}
 	pub fn input_controller_menu(&self) -> ButtonState {
 		unsafe { std::mem::transmute(stereokit_sys::input_controller_menu()) }
 	}
 	pub fn input_hand_visible(&self, handed: Handed, visible: bool) {
-		unsafe { input_hand_visible(handed as u32, visible as bool32_t)}
+		unsafe { input_hand_visible(transmute::<u32,IntType>(handed as u32), visible as bool32_t)}
 	}
 }

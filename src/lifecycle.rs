@@ -8,12 +8,12 @@ use std::cell::{Ref, RefCell};
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
 use std::marker::PhantomData;
-use std::os::unix::thread;
 use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 use std::sync::Mutex;
+use std::thread;
 use std::{mem, ptr};
 use stereokit_sys::{
 	assets_releaseref_threadsafe, bool32_t, color32, depth_mode_, display_blend_, display_mode_,

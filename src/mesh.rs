@@ -2,10 +2,10 @@ use crate::{
 	lifecycle::{DrawContext, StereoKitInstanceWrapper},
 	material::Material,
 	render::RenderLayer,
-	values::{color128_from, matrix_from, vec2_from, vec3_from, Color128, Matrix, Vec2, Vec3},
+	values::{color128_from, matrix_from, vec2_from, vec3_from, Color128, Matrix, Vec2, Vec3, IntType},
 	StereoKit,
 };
-use std::rc::{Rc, Weak};
+use std::{rc::{Rc, Weak}, mem::transmute};
 use std::{fmt::Error, ptr::NonNull};
 use stereokit_sys::{_mesh_t, bool32_t, mesh_draw};
 use crate::bounds::Bounds;
@@ -59,7 +59,7 @@ impl Mesh {
 				material.material.as_ptr(),
 				matrix_from(matrix),
 				color128_from(color_linear),
-				layer.bits(),
+				transmute::<u32,IntType>(layer.bits() as u32),
 			)
 		}
 	}

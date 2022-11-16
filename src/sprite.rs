@@ -1,8 +1,10 @@
+use std::mem::transmute;
 use std::ptr::{NonNull, null_mut};
 use stereokit_sys::{_model_t, _sprite_t};
 use ustr::ustr;
 use crate::lifecycle::StereoKitInstanceWrapper;
 use crate::StereoKit;
+use crate::values::IntType;
 
 pub struct Sprite {
     sk: StereoKitInstanceWrapper,
@@ -24,7 +26,7 @@ impl Sprite {
         Self {
             sk: sk.get_wrapper(),
             sprite: NonNull::new(unsafe {
-                stereokit_sys::sprite_create_file(ustr(file).as_char_ptr(), sprite_type as u32, ustr("").as_char_ptr())
+                stereokit_sys::sprite_create_file(ustr(file).as_char_ptr(), transmute::<u32,IntType>(sprite_type as u32), ustr("").as_char_ptr())
             }).unwrap()
         }
     }

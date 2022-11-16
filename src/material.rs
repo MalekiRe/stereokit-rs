@@ -1,11 +1,12 @@
 use crate::lifecycle::StereoKitInstanceWrapper;
 use crate::shader::Shader;
 use crate::texture::Texture;
-use crate::values::{vec2_from, Color128, Matrix, Vec2, Vec3, Vec4};
+use crate::values::{vec2_from, Color128, Matrix, Vec2, Vec3, Vec4, IntType};
 use crate::StereoKit;
 use num_enum::TryFromPrimitive;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
+use std::mem::transmute;
 use std::ptr::NonNull;
 use std::rc::{Rc, Weak};
 use stereokit_sys::{
@@ -34,21 +35,21 @@ pub trait MaterialParameter {
 }
 
 impl MaterialParameter for Vec2 {
-	const SK_TYPE: u32 = material_param__material_param_vector2;
+	const SK_TYPE: u32 = unsafe { transmute::<IntType, u32>(material_param__material_param_vector2) };
 
 	fn as_raw(&self) -> *const c_void {
 		&self as *const _ as *const c_void
 	}
 }
 impl MaterialParameter for Vec3 {
-	const SK_TYPE: u32 = material_param__material_param_vector3;
+	const SK_TYPE: u32 = unsafe { transmute::<IntType, u32>(material_param__material_param_vector3) };
 
 	fn as_raw(&self) -> *const c_void {
 		&self as *const _ as *const c_void
 	}
 }
 impl MaterialParameter for Texture {
-	const SK_TYPE: u32 = material_param__material_param_texture;
+	const SK_TYPE: u32 = unsafe { transmute::<IntType, u32>(material_param__material_param_texture) };
 
 	fn as_raw(&self) -> *const c_void {
 		self.tex.as_ptr() as *const c_void
@@ -124,17 +125,17 @@ impl Material {
 		}
 	}
 	pub fn set_transparency(&self, mode: Transparency) {
-		unsafe { stereokit_sys::material_set_transparency(self.material.as_ptr(), mode as u32) }
+		unsafe { stereokit_sys::material_set_transparency(self.material.as_ptr(), transmute::<u32,IntType>(mode as u32)) }
 	}
 	pub fn set_cull(&self, mode: Cull) {
-		unsafe { stereokit_sys::material_set_cull(self.material.as_ptr(), mode as u32) }
+		unsafe { stereokit_sys::material_set_cull(self.material.as_ptr(), transmute::<u32,IntType>(mode as u32)) }
 	}
 	pub fn set_wireframe(&self, wireframe: bool) {
-		unsafe { stereokit_sys::material_set_wireframe(self.material.as_ptr(), wireframe as i32) }
+		unsafe { stereokit_sys::material_set_wireframe(self.material.as_ptr(), transmute::<u32,IntType>(wireframe as u32)) }
 	}
 	pub fn set_depth_test(&self, depth_test_mode: DepthTest) {
 		unsafe {
-			stereokit_sys::material_set_depth_test(self.material.as_ptr(), depth_test_mode as u32)
+			stereokit_sys::material_set_depth_test(self.material.as_ptr(), transmute::<u32,IntType>(depth_test_mode as u32))
 		}
 	}
 	pub fn set_depth_write(&self, write_enabled: bool) {
@@ -174,7 +175,7 @@ impl Material {
 			material_set_param(
 				self.material.as_ptr(),
 				ustr::ustr(name).as_char_ptr(),
-				P::SK_TYPE,
+				transmute::<u32,IntType>(P::SK_TYPE),
 				value.as_raw(),
 			);
 		}

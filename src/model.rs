@@ -4,10 +4,11 @@ use crate::mesh::Mesh;
 use crate::pose::Pose;
 use crate::render::RenderLayer;
 use crate::shader::Shader;
-use crate::values::{color128_from, matrix_from, Color128, Matrix, Vec3, vec3_from, vec3_to};
+use crate::values::{color128_from, matrix_from, Color128, Matrix, Vec3, vec3_from, vec3_to, IntType};
 use crate::StereoKit;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
+use std::mem::transmute;
 use std::path::Path;
 use std::ptr::{null, null_mut, NonNull};
 use std::rc::{Rc, Weak};
@@ -79,7 +80,7 @@ impl Model {
 				self.model.as_ptr(),
 				matrix_from(matrix),
 				color128_from(color_linear),
-				layer.bits(),
+				transmute::<u32,IntType>(layer.bits() as u32),
 			)
 		}
 	}
