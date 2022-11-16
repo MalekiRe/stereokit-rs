@@ -9,7 +9,6 @@ use stereokit_sys::{bool32_t, pose_t, text_align_, text_make_style, text_style_g
 use ustr::ustr;
 use crate::sprite::Sprite;
 use crate::font::Font;
-use crate::high_level::text::Text;
 use crate::text::TextStyle;
 use crate::values::{Vec3, vec3_from};
 

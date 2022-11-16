@@ -39,8 +39,8 @@ pub mod bounds;
 #[allow(unused)]
 pub mod sprite;
 
-#[cfg(feature = "high-level")]
 #[allow(unused)]
+#[cfg(feature = "high-level")]
 pub mod high_level;
 
 #[test]
