@@ -2,6 +2,8 @@ pub use lifecycle::{Settings, StereoKit};
 pub use stereokit_sys as sys;
 
 #[allow(unused)]
+pub mod bounds;
+#[allow(unused)]
 pub mod font;
 #[allow(unused)]
 pub mod info;
@@ -9,6 +11,8 @@ pub mod info;
 pub mod input;
 #[allow(unused)]
 pub mod lifecycle;
+#[allow(unused)]
+pub mod lines;
 #[allow(unused)]
 pub mod material;
 #[allow(unused)]
@@ -24,6 +28,8 @@ pub mod richtext;
 #[allow(unused)]
 pub mod shader;
 #[allow(unused)]
+pub mod sprite;
+#[allow(unused)]
 pub mod structs;
 #[allow(unused)]
 pub mod text;
@@ -34,10 +40,6 @@ mod time;
 pub mod ui;
 #[allow(unused)]
 pub mod values;
-#[allow(unused)]
-pub mod bounds;
-#[allow(unused)]
-pub mod sprite;
 
 #[allow(unused)]
 #[cfg(feature = "high-level")]
