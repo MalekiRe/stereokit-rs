@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use crate::{texture::Texture, StereoKit};
 use bitflags::bitflags;
 use stereokit_sys::{_gradient_t, vec3};
+use crate::values::{Matrix, matrix_from};
 
 bitflags! {
 	pub struct RenderLayer: u32 {
@@ -59,6 +60,18 @@ impl StereoKit {
 	pub fn set_skytex(&mut self, tex: &Texture) {
 		unsafe {
 			stereokit_sys::render_set_skytex(tex.tex.as_ptr());
+		}
+	}
+}
+
+pub struct Camera {
+
+}
+impl Camera {
+	pub fn set_root(matrix: Matrix) {
+		let matrix = matrix_from(matrix);
+		unsafe {
+			stereokit_sys::render_set_cam_root(&matrix);
 		}
 	}
 }

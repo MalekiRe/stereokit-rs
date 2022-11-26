@@ -44,6 +44,9 @@ pub enum TextFit {
 	Squeeze = 4,
 	Exact = 8,
 	Overflow = 16,
+	//TODO remove maybe?
+	WrapSqueeze = 4 | 1,
+	WrapExact = 1 | 8,
 }
 
 #[derive(Clone)]

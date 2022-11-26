@@ -71,10 +71,10 @@ pub struct MatrixContainer {
 
 
 impl MatrixContainer {
-    fn sync_matrix(&mut self) {
+    pub fn sync_matrix(&mut self) {
         self.mat4 = Mat4::from_scale_rotation_translation(self.scale, quat_from_angles(self.rotation.x, self.rotation.y, self.rotation.z), self.pos);
     }
-    fn sync_fields(&mut self) {
+    pub fn sync_fields(&mut self) {
         let (a, b, c) = self.mat4.to_scale_rotation_translation();
         self.scale = a; self.pos = c;
         let r = b.to_euler(EulerRot::XYZ);

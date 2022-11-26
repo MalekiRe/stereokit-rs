@@ -8,7 +8,7 @@ pub(crate) type Vec2 = mint::Vector2<f32>;
 pub type Vec3 = mint::Vector3<f32>;
 pub(crate) type Vec4 = mint::Vector4<f32>;
 pub(crate) type Quat = mint::Quaternion<f32>;
-pub(crate) type Matrix = mint::ColumnMatrix4<f32>;
+pub type Matrix = mint::ColumnMatrix4<f32>;
 pub type Color32 = Rgba<u8>;
 pub type Color128 = Rgba<f32>;
 
@@ -45,14 +45,14 @@ pub(crate) fn vec2_to(var: vec2) -> Vec2 {
 	Vec2 { x: var.x, y: var.y }
 }
 
-pub(crate) fn vec3_from(var: Vec3) -> vec3 {
+pub fn vec3_from(var: Vec3) -> vec3 {
 	vec3 {
 		x: var.x,
 		y: var.y,
 		z: var.z,
 	}
 }
-pub(crate) fn vec3_to(var: vec3) -> Vec3 {
+pub fn vec3_to(var: vec3) -> Vec3 {
 	Vec3 {
 		x: var.x,
 		y: var.y,
@@ -102,7 +102,7 @@ pub(crate) fn color128_to(c: color128) -> Color128 {
 }
 
 //TODO: Get someone really smart to figure out why this doesn't work
-pub(crate) fn matrix_from(m: Matrix) -> matrix {
+pub fn matrix_from(m: Matrix) -> matrix {
 	matrix {
 		row: [
 			vec4_from(m.x),
@@ -112,7 +112,7 @@ pub(crate) fn matrix_from(m: Matrix) -> matrix {
 		],
 	}
 }
-pub(crate) fn matrix_to(m: matrix) -> Matrix {
+pub fn matrix_to(m: matrix) -> Matrix {
 	unsafe {
 		match m {
 			matrix { m: ma } => Matrix::from(ma),

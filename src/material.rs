@@ -86,7 +86,7 @@ pub enum Cull {
 
 pub struct Material {
 	pub(crate) sk: StereoKitInstanceWrapper,
-	pub(crate) material: NonNull<_material_t>,
+	pub material: NonNull<_material_t>,
 }
 impl Material {
 	pub fn create(sk: &StereoKit, shader: &Shader) -> Option<Self> {
@@ -100,7 +100,7 @@ impl Material {
 	pub fn find(id: &str) -> Option<Self> {
 		unimplemented!()
 	}
-	pub fn copy(&self) -> Option<Self> {
+	pub fn builtin_copy(&self) -> Option<Self> {
 		self.sk.valid().ok()?;
 		Some(Material {
 			sk: self.sk.clone(),

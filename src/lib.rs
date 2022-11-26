@@ -44,6 +44,8 @@ pub mod values;
 #[allow(unused)]
 #[cfg(feature = "high-level")]
 pub mod high_level;
+pub mod sound;
+pub mod world;
 
 #[test]
 fn basic() {

@@ -2,7 +2,7 @@ use crate::values::{matrix_to, quat_from, vec3_from, Matrix, Quat, Vec3};
 use std::fmt::Error;
 use stereokit_sys::{pose_identity, pose_matrix, pose_t, quat_identity, vec3_zero};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Pose {
 	pub position: Vec3,
 	pub orientation: Quat,

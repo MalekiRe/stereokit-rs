@@ -23,7 +23,7 @@ use crate::shader::Shader;
 
 pub struct Model {
     pub model: crate::model::Model,
-    matrix: MatrixContainer,
+    pub matrix: MatrixContainer,
     pub tint: Color128,
     pub render_layer: RenderLayer,
     pub collider: Option<Collider>,
@@ -139,7 +139,8 @@ impl MatrixTrait for Model {
     }
 
     fn set_matrix(&mut self, matrix: Mat4) {
-        self.matrix.set_matrix(matrix)
+        self.matrix.set_matrix(matrix);
+        // self.matrix.sync_matrix();
     }
 }
 
