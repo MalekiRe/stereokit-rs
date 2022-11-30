@@ -1,6 +1,6 @@
 #![allow(non_upper_case_globals)]
 
-use crate::lifecycle::StereoKitInstanceWrapper;
+use crate::lifecycle::{StereoKitContext};
 use crate::render::SphericalHarmonics;
 use crate::values::{
 	color128_from, color128_to, color32_from, color32_to, Color128, Color32, Vec3,
@@ -167,39 +167,35 @@ impl Gradient {
 }
 
 pub struct Texture {
-	sk: StereoKitInstanceWrapper,
 	pub(super) tex: NonNull<_tex_t>,
 }
 impl Texture {
 	pub fn from_file(
-		sk: &StereoKit,
+		_sk: impl StereoKitContext,
 		file_path: impl AsRef<Path>,
 		is_srgb: bool,
 		priority: i32,
 	) -> Option<Self> {
 		let file_path = ustr(file_path.as_ref().as_os_str().to_str()?);
 		Some(Texture {
-			sk: sk.get_wrapper(),
 			tex: NonNull::new(unsafe {
 				stereokit_sys::tex_create_file(file_path.as_char_ptr(), is_srgb as i32, priority)
 			})?,
 		})
 	}
 	pub fn create(
-		sk: &StereoKit,
+		_sk: impl StereoKitContext,
 		texture_type: TextureType,
 		format: TextureFormat,
 	) -> Option<Self> {
 		Some(Texture {
-			sk: sk.get_wrapper(),
 			tex: NonNull::new(unsafe {
 				stereokit_sys::tex_create(texture_type.bits(), format as u32)
 			})?,
 		})
 	}
-	pub fn from_mem(sk: &StereoKit, memory: &[u8], srgb_data: bool, priority: i32) -> Option<Self> {
+	pub fn from_mem(_sk: impl StereoKitContext, memory: &[u8], srgb_data: bool, priority: i32) -> Option<Self> {
 		Some(Texture {
-			sk: sk.get_wrapper(),
 			tex: NonNull::new(unsafe {
 				stereokit_sys::tex_create_mem(
 					memory.as_ptr() as *mut c_void,
@@ -211,14 +207,13 @@ impl Texture {
 		})
 	}
 	pub fn from_color32(
-		sk: &StereoKit,
+		_sk: impl StereoKitContext,
 		data: Color32,
 		width: i32,
 		height: i32,
 		uses_srgb_data: bool,
 	) -> Option<Self> {
 		Some(Texture {
-			sk: sk.get_wrapper(),
 			tex: NonNull::new(unsafe {
 				stereokit_sys::tex_create_color32(
 					&mut color32_from(data),
@@ -230,7 +225,7 @@ impl Texture {
 		})
 	}
 	pub fn from_cubemap_equirectangular(
-		sk: &StereoKit,
+		_sk: impl StereoKitContext,
 		file_path: impl AsRef<Path>,
 		uses_srgb_data: bool,
 		load_priority: i32,
@@ -247,21 +242,19 @@ impl Texture {
 		})?;
 		Some((
 			Texture {
-				sk: sk.get_wrapper(),
 				tex,
 			},
 			spherical_harmonics,
 		))
 	}
 	pub fn cubemap_from_gradient(
-		sk: &StereoKit,
+		_sk: impl StereoKitContext,
 		gradient: &Gradient,
 		direction: Vec3,
 		resolution: u32,
 		spherical_harmonics_info: Option<&mut SphericalHarmonics>,
 	) -> Option<Self> {
 		Some(Texture {
-			sk: sk.get_wrapper(),
 			tex: NonNull::new(unsafe {
 				stereokit_sys::tex_gen_cubemap(
 					std::mem::transmute(gradient),
@@ -275,14 +268,13 @@ impl Texture {
 		})
 	}
 	pub fn cubemap_from_spherical_harmonics(
-		sk: &StereoKit,
+		_sk: impl StereoKitContext,
 		spherical_harmonics: &SphericalHarmonics,
 		resolution: u32,
 		light_spot_size_pct: f32,
 		light_spot_intensity: f32,
 	) -> Option<Self> {
 		Some(Texture {
-			sk: sk.get_wrapper(),
 			tex: NonNull::new(unsafe {
 				stereokit_sys::tex_gen_cubemap_sh(
 					&spherical_harmonics.spherical_harmonics,

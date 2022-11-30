@@ -1,7 +1,7 @@
 #![allow(non_upper_case_globals)]
 
 use crate::font::Font;
-use crate::lifecycle::{DrawContext, StereoKitInstanceWrapper};
+use crate::lifecycle::{DrawContext, StereoKitContext};
 use crate::values::{
 	color128_from, color32_from, matrix_from, vec2_from, vec2_to, Color128, Color32, Matrix, Vec2,
 	Vec3,
@@ -51,19 +51,17 @@ pub enum TextFit {
 
 #[derive(Clone)]
 pub struct TextStyle {
-	sk: StereoKitInstanceWrapper,
 	pub(crate) text_style: text_style_t,
 }
 
 impl TextStyle {
 	pub fn new(
-		sk: &StereoKit,
+		sk: impl StereoKitContext,
 		font: Font,
 		character_height: f32,
 		color_gamma: Color128,
 	) -> TextStyle {
 		TextStyle {
-			sk: sk.get_wrapper(),
 			text_style: unsafe {
 				text_make_style(
 					font.font.as_ptr(),
@@ -73,9 +71,8 @@ impl TextStyle {
 			},
 		}
 	}
-	pub fn default(sk: &StereoKit) -> TextStyle {
+	pub fn default(_sk: impl StereoKitContext) -> TextStyle {
 		TextStyle {
-			sk: sk.get_wrapper(),
 			text_style: 0 as text_style_t,
 		}
 	}

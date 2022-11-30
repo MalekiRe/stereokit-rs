@@ -1,4 +1,4 @@
-use crate::lifecycle::StereoKitInstanceWrapper;
+use crate::lifecycle::{StereoKitContext};
 use crate::shader::Shader;
 use crate::texture::Texture;
 use crate::values::{vec2_from, Color128, Matrix, Vec2, Vec3, Vec4};
@@ -85,13 +85,11 @@ pub enum Cull {
 }
 
 pub struct Material {
-	pub(crate) sk: StereoKitInstanceWrapper,
 	pub material: NonNull<_material_t>,
 }
 impl Material {
-	pub fn create(sk: &StereoKit, shader: &Shader) -> Option<Self> {
+	pub fn create(_sk: impl StereoKitContext, shader: &Shader) -> Option<Self> {
 		Some(Material {
-			sk: sk.get_wrapper(),
 			material: NonNull::new(unsafe {
 				stereokit_sys::material_create(shader.shader.as_ptr())
 			})?,
@@ -100,24 +98,21 @@ impl Material {
 	pub fn find(id: &str) -> Option<Self> {
 		unimplemented!()
 	}
-	pub fn builtin_copy(&self) -> Option<Self> {
-		self.sk.valid().ok()?;
+	pub fn builtin_copy(&self, _sk: impl StereoKitContext) -> Option<Self> {
 		Some(Material {
-			sk: self.sk.clone(),
 			material: NonNull::new(unsafe {
 				stereokit_sys::material_copy(self.material.as_ptr())
 			})?,
 		})
 	}
-	pub fn copy_from_id(sk: &StereoKit, id: &str) -> Option<Self> {
+	pub fn copy_from_id(_sk: impl StereoKitContext, id: &str) -> Option<Self> {
 		Some(Material {
-			sk: sk.get_wrapper(),
 			material: NonNull::new(unsafe {
 				stereokit_sys::material_copy_id(ustr(id).as_char_ptr())
 			})?,
 		})
 	}
-	pub fn set_id(&self, id: &str) {
+	pub fn set_id(&self, _sk: impl StereoKitContext, id: &str) {
 		let id = ustr(id);
 		unsafe {
 			stereokit_sys::material_set_id(self.material.as_ptr(), id.as_char_ptr());
@@ -202,9 +197,8 @@ impl Material {
 	pub fn set_shader(&self, shader: Shader) {
 		unimplemented!()
 	}
-	pub fn get_shader(&self) -> Shader {
+	pub fn get_shader(&self, _sk: impl StereoKitContext) -> Shader {
 		Shader {
-			sk: self.sk.clone(),
 			shader: unsafe { NonNull::new(material_get_shader(self.material.as_ptr())).unwrap() },
 		}
 	}
@@ -213,7 +207,6 @@ impl Clone for Material {
 	fn clone(&self) -> Self {
 		let material = unsafe { stereokit_sys::material_copy(self.material.as_ptr()) };
 		Self {
-			sk: self.sk.clone(),
 			material: NonNull::new(material).unwrap(),
 		}
 	}

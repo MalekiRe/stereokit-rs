@@ -1,6 +1,7 @@
 pub use lifecycle::{Settings, StereoKit};
 pub use stereokit_sys as sys;
-
+#[macro_use]
+pub mod macros;
 #[allow(unused)]
 pub mod bounds;
 #[allow(unused)]

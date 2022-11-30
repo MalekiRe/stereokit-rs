@@ -15,10 +15,12 @@ use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 use std::sync::Mutex;
 use std::{mem, ptr};
+
 use stereokit_sys::{
 	assets_releaseref_threadsafe, bool32_t, color32, depth_mode_, display_blend_, display_mode_,
 	log_, material_t, model_t, pose_t, sk_settings_t,
 };
+use crate::render::StereoKitRender;
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
@@ -131,7 +133,6 @@ impl Settings {
 				GLOBAL_STATE.with(|f| *f.borrow_mut() = true);
 				Some(StereoKit {
 					ran: OnceCell::new(),
-					handle: Rc::new(StereoKitInstance),
 					lifetime_constraint: PhantomData,
 				})
 			} else {
@@ -141,23 +142,15 @@ impl Settings {
 	}
 }
 
-pub(crate) struct StereoKitInstance;
-
-#[derive(Clone)]
-pub(crate) struct StereoKitInstanceWrapper(Weak<StereoKitInstance>);
-
-impl StereoKitInstanceWrapper {
-	pub(crate) fn valid(&self) -> Result<(), Error> {
-		self.0.upgrade().map(|_| ()).ok_or(Error)
-	}
-}
-
 pub struct StereoKit {
 	ran: OnceCell<()>,
-	handle: Rc<StereoKitInstance>,
 	lifetime_constraint: PhantomData<*const ()>,
 }
 pub struct DrawContext(PhantomData<*const ()>);
+
+pub trait StereoKitContext {}
+
+stereokit_trait_impl!(StereoKitContext);
 
 type PanicPayload = Box<dyn Any + Send + 'static>;
 
@@ -288,10 +281,6 @@ impl StereoKit {
 
 	pub fn quit(&self) {
 		unsafe { stereokit_sys::sk_quit() };
-	}
-
-	pub(crate) fn get_wrapper(&self) -> StereoKitInstanceWrapper {
-		StereoKitInstanceWrapper(Rc::downgrade(&self.handle))
 	}
 }
 

@@ -1,5 +1,4 @@
 use std::ptr::NonNull;
-use crate::lifecycle::StereoKitInstanceWrapper;
 use crate::values::{Vec3, vec3_from};
 use stereokit_sys::{bounds_t, vec3};
 pub struct Bounds {

@@ -50,18 +50,21 @@ impl Debug for SphericalHarmonics {
 	}
 }
 
-impl StereoKit {
-	pub fn set_skylight(&mut self, light: &SphericalHarmonics) {
+pub trait StereoKitRender {
+	fn set_skylight(&self, light: &SphericalHarmonics) {
 		unsafe {
 			stereokit_sys::render_set_skylight(&light.spherical_harmonics);
 		}
 	}
 
-	pub fn set_skytex(&mut self, tex: &Texture) {
+	fn set_skytex(&self, tex: &Texture) {
 		unsafe {
 			stereokit_sys::render_set_skytex(tex.tex.as_ptr());
 		}
 	}
+}
+stereokit_trait_impl!(StereoKitRender);
+impl StereoKit {
 }
 
 pub struct Camera {

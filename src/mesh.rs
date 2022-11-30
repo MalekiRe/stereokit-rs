@@ -1,5 +1,5 @@
 use crate::{
-	lifecycle::{DrawContext, StereoKitInstanceWrapper},
+	lifecycle::{DrawContext},
 	material::Material,
 	render::RenderLayer,
 	values::{color128_from, matrix_from, vec2_from, vec3_from, Color128, Matrix, Vec2, Vec3},
@@ -9,17 +9,16 @@ use std::rc::{Rc, Weak};
 use std::{fmt::Error, ptr::NonNull};
 use stereokit_sys::{_mesh_t, bool32_t, mesh_draw};
 use crate::bounds::Bounds;
+use crate::lifecycle::StereoKitContext;
 use crate::values::vec3_to;
 
 pub struct Mesh {
-	sk: StereoKitInstanceWrapper,
 	pub(crate) mesh: NonNull<_mesh_t>,
 }
 
 impl Mesh {
-	pub fn gen_cube(sk: &StereoKit, size: impl Into<Vec3>, subdivisions: i32) -> Option<Self> {
+	pub fn gen_cube(_sk: impl StereoKitContext, size: impl Into<Vec3>, subdivisions: i32) -> Option<Self> {
 		Some(Mesh {
-			sk: sk.get_wrapper(),
 			mesh: NonNull::new(unsafe {
 				stereokit_sys::mesh_gen_cube(vec3_from(size.into()), subdivisions)
 			})?,
@@ -33,7 +32,6 @@ impl Mesh {
 		subdivisions: i32,
 	) -> Option<Self> {
 		Some(Mesh {
-			sk: sk.get_wrapper(),
 			mesh: NonNull::new(unsafe {
 				stereokit_sys::mesh_gen_plane(
 					vec2_from(dimensions),
@@ -82,7 +80,6 @@ impl Clone for Mesh {
 	fn clone(&self) -> Self {
 		let mesh = unsafe { stereokit_sys::mesh_copy(self.mesh.as_ptr()) };
 		Self {
-			sk: self.sk.clone(),
 			mesh: NonNull::new(mesh).unwrap(),
 		}
 	}

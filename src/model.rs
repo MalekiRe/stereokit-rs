@@ -1,4 +1,4 @@
-use crate::lifecycle::{DrawContext, StereoKitInstanceWrapper};
+use crate::lifecycle::{DrawContext, StereoKitContext};
 use crate::material::Material;
 use crate::mesh::Mesh;
 use crate::pose::Pose;
@@ -16,18 +16,16 @@ use ustr::ustr;
 use crate::bounds::Bounds;
 
 pub struct Model {
-	sk: StereoKitInstanceWrapper,
 	pub(crate) model: NonNull<_model_t>,
 }
 impl Model {
 	pub fn from_file(
-		sk: &StereoKit,
+		_sk: impl StereoKitContext,
 		file_path: impl AsRef<Path>,
 		shader: Option<&Shader>,
 	) -> Option<Self> {
 		let file_path = ustr(file_path.as_ref().as_os_str().to_str()?);
 		Some(Model {
-			sk: sk.get_wrapper(),
 			model: NonNull::new(unsafe {
 				stereokit_sys::model_create_file(
 					file_path.as_char_ptr(),
@@ -39,14 +37,13 @@ impl Model {
 		})
 	}
 	pub fn from_mem(
-		sk: &StereoKit,
+		_sk: impl StereoKitContext,
 		file_name: &str,
 		memory: &[u8],
 		shader: Option<&Shader>,
 	) -> Option<Self> {
 		let file_name = ustr(file_name);
 		Some(Model {
-			sk: sk.get_wrapper(),
 			model: NonNull::new(unsafe {
 				stereokit_sys::model_create_mem(
 					file_name.as_char_ptr(),
@@ -59,9 +56,8 @@ impl Model {
 			})?,
 		})
 	}
-	pub fn from_mesh(sk: &StereoKit, mesh: &Mesh, material: &Material) -> Option<Self> {
+	pub fn from_mesh(_sk: impl StereoKitContext, mesh: &Mesh, material: &Material) -> Option<Self> {
 		Some(Model {
-			sk: sk.get_wrapper(),
 			model: NonNull::new(unsafe {
 				stereokit_sys::model_create_mesh(mesh.mesh.as_ptr(), material.material.as_ptr())
 			})?,
@@ -83,15 +79,14 @@ impl Model {
 			)
 		}
 	}
-	pub fn get_material(&self, sk: &StereoKit, subset: i32) -> Option<Material> {
+	pub fn get_material(&self, _sk: impl StereoKitContext, subset: i32) -> Option<Material> {
 		Some(Material {
-			sk: sk.get_wrapper(),
 			material: NonNull::new(unsafe {
 				stereokit_sys::model_get_material(self.model.as_ptr(), subset)
 			})?,
 		})
 	}
-	pub fn set_material(&self, subset: i32, material: &Material) {
+	pub fn set_material(&self, _sk: impl StereoKitContext, subset: i32, material: &Material) {
 		unsafe {
 			stereokit_sys::model_set_material(
 				self.model.as_ptr(),
@@ -100,7 +95,7 @@ impl Model {
 			);
 		}
 	}
-	pub fn get_bounds(&self, _sk: &StereoKit) -> Bounds {
+	pub fn get_bounds(&self, _sk: impl StereoKitContext) -> Bounds {
 		let b = unsafe {stereokit_sys::model_get_bounds(self.model.as_ptr())};
 		Bounds::new(vec3_to(b.center), vec3_to(b.dimensions))
 	}
@@ -109,7 +104,6 @@ impl Clone for Model {
 	fn clone(&self) -> Self {
 		let model = unsafe { stereokit_sys::model_copy(self.model.as_ptr()) };
 		Self {
-			sk: self.sk.clone(),
 			model: NonNull::new(model).unwrap(),
 		}
 	}
