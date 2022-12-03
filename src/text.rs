@@ -1,10 +1,10 @@
 #![allow(non_upper_case_globals)]
 
 use crate::font::Font;
-use crate::lifecycle::{DrawContext, StereoKitContext};
+use crate::lifecycle::{StereoKitDraw, StereoKitContext};
 use crate::values::{
-	color128_from, color32_from, matrix_from, vec2_from, vec2_to, Color128, Color32, Matrix, Vec2,
-	Vec3,
+	matrix_from, vec2_from, vec2_to, Color128, Color32, MMatrix, MVec2,
+	MVec3,
 };
 use crate::StereoKit;
 use bitflags::bitflags;
@@ -56,22 +56,22 @@ pub struct TextStyle {
 
 impl TextStyle {
 	pub fn new(
-		sk: impl StereoKitContext,
+		sk: &impl StereoKitContext,
 		font: Font,
 		character_height: f32,
-		color_gamma: Color128,
+		color_gamma: impl Into<Color128>,
 	) -> TextStyle {
 		TextStyle {
 			text_style: unsafe {
 				text_make_style(
 					font.font.as_ptr(),
 					character_height,
-					color128_from(color_gamma),
+					color_gamma.into(),
 				)
 			},
 		}
 	}
-	pub fn default(_sk: impl StereoKitContext) -> TextStyle {
+	pub fn default(_sk: &impl StereoKitContext) -> TextStyle {
 		TextStyle {
 			text_style: 0 as text_style_t,
 		}
@@ -79,14 +79,14 @@ impl TextStyle {
 }
 
 pub fn draw_at(
-	_draw_ctx: &DrawContext,
+	_draw_ctx: &StereoKitDraw,
 	text: impl AsRef<str>,
-	transform: impl Into<Matrix>,
+	transform: impl Into<MMatrix>,
 	style: &TextStyle,
 	position: TextAlign,
 	align: TextAlign,
-	offset: impl Into<Vec3>,
-	vertex_tint_linear: Color128,
+	offset: impl Into<MVec3>,
+	vertex_tint_linear: impl Into<Color128>,
 ) {
 	let text = ustr::ustr(text.as_ref());
 	let offset = offset.into();
@@ -100,22 +100,22 @@ pub fn draw_at(
 			offset.x,
 			offset.y,
 			offset.z,
-			color128_from(vertex_tint_linear),
+			vertex_tint_linear.into(),
 		);
 	}
 }
 
 pub fn draw_in(
-	_draw_ctx: &DrawContext,
+	_draw_ctx: &StereoKitDraw,
 	text: impl AsRef<str>,
-	transform: impl Into<Matrix>,
-	size: impl Into<Vec2>,
+	transform: impl Into<MMatrix>,
+	size: impl Into<MVec2>,
 	fit: TextFit,
 	style: &TextStyle,
 	position: TextAlign,
 	align: TextAlign,
-	offset: impl Into<Vec3>,
-	vertex_tint_linear: Color128,
+	offset: impl Into<MVec3>,
+	vertex_tint_linear: impl Into<Color128>,
 ) -> f32 {
 	let text = ustr::ustr(text.as_ref());
 	let offset = offset.into();
@@ -131,12 +131,12 @@ pub fn draw_in(
 			offset.x,
 			offset.y,
 			offset.z,
-			color128_from(vertex_tint_linear),
+			vertex_tint_linear.into(),
 		)
 	}
 }
 
-pub fn size(text: impl AsRef<str>, style: &TextStyle) -> Vec2 {
+pub fn size(text: impl AsRef<str>, style: &TextStyle) -> MVec2 {
 	let text = ustr::ustr(text.as_ref());
 	unsafe { vec2_to(text_size(text.as_char_ptr(), style.text_style)) }
 }

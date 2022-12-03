@@ -8,12 +8,12 @@ pub struct World {
 }
 
 impl World {
-    pub fn has_bounds(_sk: impl StereoKitContext) -> bool {
+    pub fn has_bounds(_sk: &impl StereoKitContext) -> bool {
         unsafe {
             stereokit_sys::world_has_bounds() != 0
         }
     }
-    pub fn get_bounds_pose(sk: impl StereoKitContext) -> Option<Pose> {
+    pub fn get_bounds_pose(sk: &impl StereoKitContext) -> Option<Pose> {
         if !Self::has_bounds(sk) {
             return None;
         }

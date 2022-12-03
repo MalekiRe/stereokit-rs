@@ -1,7 +1,7 @@
 use std::ops::{AddAssign, Deref, MulAssign};
 use glam::{EulerRot, Mat4, Quat};
 use crate::high_level::quat_from_angles;
-use crate::values::Vec3;
+use crate::values::MVec3;
 
 pub trait PosTrait {
     fn get_pos(&self) -> (f32, f32, f32) {
@@ -13,12 +13,12 @@ pub trait PosTrait {
     fn set_pos(&mut self, x: f32, y: f32, z: f32) {
         self.set_pos_vec([x, y, z]);
     }
-    fn set_pos_vec(&mut self, pos: impl Into<Vec3>);
+    fn set_pos_vec(&mut self, pos: impl Into<MVec3>);
 
     fn translate(&mut self, x: f32, y: f32, z: f32) {
         self.translate_vec([x, y, z])
     }
-    fn translate_vec(&mut self, translation: impl Into<Vec3>);
+    fn translate_vec(&mut self, translation: impl Into<MVec3>);
 }
 
 pub trait ScaleTrait {
@@ -31,12 +31,12 @@ pub trait ScaleTrait {
     fn set_scale(&mut self, x: f32, y: f32, z: f32) {
         self.set_scale_vec([x, y, z])
     }
-    fn set_scale_vec(&mut self, scale: impl Into<Vec3>);
+    fn set_scale_vec(&mut self, scale: impl Into<MVec3>);
 
     fn scale(&mut self, x: f32, y: f32, z: f32) {
         self.scale_vec([x, y, z]);
     }
-    fn scale_vec(&mut self, scale: impl Into<Vec3>);
+    fn scale_vec(&mut self, scale: impl Into<MVec3>);
 }
 
 pub trait RotationTrait {
@@ -49,12 +49,12 @@ pub trait RotationTrait {
     fn set_rotation(&mut self, x: f32, y: f32, z: f32) {
         self.set_rotation_vec([x, y, z]);
     }
-    fn set_rotation_vec(&mut self, rotation: impl Into<Vec3>);
+    fn set_rotation_vec(&mut self, rotation: impl Into<MVec3>);
 
     fn rotate(&mut self, x: f32, y: f32, z: f32) {
         self.rotate_vec([x, y, z]);
     }
-    fn rotate_vec(&mut self, rotation: impl Into<Vec3>);
+    fn rotate_vec(&mut self, rotation: impl Into<MVec3>);
 }
 
 pub trait MatrixTrait {
@@ -78,9 +78,9 @@ impl MatrixContainer {
         let (a, b, c) = self.mat4.to_scale_rotation_translation();
         self.scale = a; self.pos = c;
         let r = b.to_euler(EulerRot::XYZ);
-        self.rotation = Vec3::from([r.0.to_degrees(), r.1.to_degrees(), r.2.to_degrees()]).into();
+        self.rotation = MVec3::from([r.0.to_degrees(), r.1.to_degrees(), r.2.to_degrees()]).into();
     }
-    pub fn new(pos: impl Into<Vec3>, rotation: impl Into<Vec3>, scale: impl Into<Vec3>) -> Self {
+    pub fn new(pos: impl Into<MVec3>, rotation: impl Into<MVec3>, scale: impl Into<MVec3>) -> Self {
         let mut matrix_container = MatrixContainer {
             mat4: Default::default(),
             pos: glam::Vec3::from(pos.into()),
@@ -107,12 +107,12 @@ impl PosTrait for MatrixContainer {
         self.pos
     }
 
-    fn set_pos_vec(&mut self, pos: impl Into<Vec3>) {
+    fn set_pos_vec(&mut self, pos: impl Into<MVec3>) {
         self.pos = glam::Vec3::from(pos.into());
         self.sync_matrix();
     }
 
-    fn translate_vec(&mut self, translation: impl Into<Vec3>) {
+    fn translate_vec(&mut self, translation: impl Into<MVec3>) {
         self.pos.add_assign(glam::Vec3::from(translation.into()));
         self.sync_matrix();
     }
@@ -123,12 +123,12 @@ impl RotationTrait for MatrixContainer {
         self.rotation
     }
 
-    fn set_rotation_vec(&mut self, rotation: impl Into<Vec3>) {
+    fn set_rotation_vec(&mut self, rotation: impl Into<MVec3>) {
         self.rotation = glam::Vec3::from(rotation.into());
         self.sync_matrix();
     }
 
-    fn rotate_vec(&mut self, rotation: impl Into<Vec3>) {
+    fn rotate_vec(&mut self, rotation: impl Into<MVec3>) {
         self.rotation.add_assign(glam::Vec3::from(rotation.into()));
         self.sync_matrix();
     }
@@ -139,12 +139,12 @@ impl ScaleTrait for MatrixContainer {
         self.scale
     }
 
-    fn set_scale_vec(&mut self, scale: impl Into<Vec3>) {
+    fn set_scale_vec(&mut self, scale: impl Into<MVec3>) {
         self.scale = glam::Vec3::from(scale.into());
         self.sync_matrix();
     }
 
-    fn scale_vec(&mut self, scale: impl Into<Vec3>) {
+    fn scale_vec(&mut self, scale: impl Into<MVec3>) {
         self.scale.add_assign(glam::Vec3::from(scale.into()));
         self.sync_matrix();
     }

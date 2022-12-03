@@ -15,11 +15,13 @@ use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 use std::sync::Mutex;
 use std::{mem, ptr};
+use color_eyre::{Help, Report, Result};
 
 use stereokit_sys::{
 	assets_releaseref_threadsafe, bool32_t, color32, depth_mode_, display_blend_, display_mode_,
 	log_, material_t, model_t, pose_t, sk_settings_t,
 };
+use crate::input::StereoKitInput;
 use crate::render::StereoKitRender;
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
@@ -64,7 +66,7 @@ thread_local! {
 }
 
 #[derive(Builder)]
-#[builder(name = "Settings", pattern = "owned", setter(into), build_fn(skip))]
+#[builder(name = "StereoKitSettings", pattern = "owned", setter(into), build_fn(skip), derive(Debug))]
 pub struct SKSettingsBuilt {
 	app_name: String,
 	assets_folder: String,
@@ -84,10 +86,11 @@ pub struct SKSettingsBuilt {
 	disable_unfocused_sleep: bool,
 }
 
-impl Settings {
-	pub fn init(self) -> Option<StereoKit> {
+impl StereoKitSettings {
+	pub fn init(self) -> Result<StereoKit> {
+		color_eyre::install()?;
 		if GLOBAL_STATE.with(|f| *f.borrow()) {
-			return None;
+			return Err(Report::msg("Stereokit is already running").suggestion("Only run 1 instance of StereoKit at a time in a single process"));
 		}
 		let (vm_pointer, jobject_pointer) = (null_mut::<c_void>(), null_mut::<c_void>());
 		#[cfg(target_os = "android")]
@@ -97,16 +100,15 @@ impl Settings {
 				(context.vm(), context.context())
 			}
 		};
+		let possible_err_message = Report::msg(format!("Stereokit failed to init with args: {:?}", self));
 		let c_settings = sk_settings_t {
 			app_name: CString::new(
 				self.app_name
 					.unwrap_or_else(|| "sk_app".to_owned())
 					.as_str(),
-			)
-			.ok()?
+			)?
 			.into_raw(),
-			assets_folder: CString::new(self.assets_folder.unwrap_or_default().as_str())
-				.ok()?
+			assets_folder: CString::new(self.assets_folder.unwrap_or_default().as_str())?
 				.into_raw(),
 			display_preference: self.display_preference.unwrap_or(DisplayMode::MixedReality)
 				as display_mode_,
@@ -131,12 +133,12 @@ impl Settings {
 		unsafe {
 			if stereokit_sys::sk_init(c_settings) != 0 {
 				GLOBAL_STATE.with(|f| *f.borrow_mut() = true);
-				Some(StereoKit {
+				Ok(StereoKit {
 					ran: OnceCell::new(),
 					lifetime_constraint: PhantomData,
 				})
 			} else {
-				None
+				Err(possible_err_message)
 			}
 		}
 	}
@@ -146,9 +148,13 @@ pub struct StereoKit {
 	ran: OnceCell<()>,
 	lifetime_constraint: PhantomData<*const ()>,
 }
-pub struct DrawContext(PhantomData<*const ()>);
+pub struct StereoKitDraw(PhantomData<*const ()>);
 
-pub trait StereoKitContext {}
+pub trait StereoKitContext: StereoKitInput + StereoKitRender {
+	fn quit(&self) {
+		unsafe { stereokit_sys::sk_quit() };
+	}
+}
 
 stereokit_trait_impl!(StereoKitContext);
 
@@ -191,19 +197,19 @@ where
 impl StereoKit {
 	pub fn run(
 		self,
-		mut on_update: impl FnMut(&mut StereoKit, &DrawContext),
+		mut on_update: impl FnMut(&StereoKitDraw),
 		mut on_close: impl FnMut(&mut StereoKit),
 	) {
 		self._run(
 			&mut (),
-			|(), (sk, dc)| on_update(*sk, dc),
+			|(), (sk, dc)| on_update(dc),
 			|_, (sk, _)| on_close(sk),
 		);
 	}
 	pub fn run_stateful<ST>(
 		self,
 		state: &mut ST,
-		mut on_update: impl FnMut(&mut ST, &mut StereoKit, &DrawContext),
+		mut on_update: impl FnMut(&mut ST, &mut StereoKit, &StereoKitDraw),
 		mut on_close: impl FnMut(&mut ST, &mut StereoKit),
 	) {
 		self._run(
@@ -215,10 +221,10 @@ impl StereoKit {
 
 	fn _run<ST, U, S>(mut self, state: &mut ST, mut update: U, mut shutdown: S)
 	where
-		U: FnMut(&mut ST, &mut (&mut StereoKit, &DrawContext)),
-		S: FnMut(&mut ST, &mut (&mut StereoKit, &DrawContext)),
+		U: FnMut(&mut ST, &mut (&mut StereoKit, &StereoKitDraw)),
+		S: FnMut(&mut ST, &mut (&mut StereoKit, &StereoKitDraw)),
 	{
-		let draw_context = DrawContext(PhantomData);
+		let draw_context = StereoKitDraw(PhantomData);
 
 		// use one variable so shutdown doesn't run if update panics
 		let mut caught_panic = Option::<PanicPayload>::None;
@@ -226,7 +232,7 @@ impl StereoKit {
 		let mut update_ref: (
 			&mut U,
 			&mut ST,
-			&mut (&mut StereoKit, &DrawContext),
+			&mut (&mut StereoKit, &StereoKitDraw),
 			&mut Option<PanicPayload>,
 		) = (
 			&mut update,
@@ -236,16 +242,16 @@ impl StereoKit {
 		);
 		let update_raw = &mut update_ref
 			as *mut (
-				&mut U,
-				&mut ST,
-				&mut (&mut StereoKit, &DrawContext),
-				&mut Option<PanicPayload>,
+			&mut U,
+			&mut ST,
+			&mut (&mut StereoKit, &StereoKitDraw),
+			&mut Option<PanicPayload>,
 			) as *mut c_void;
 
 		let mut shutdown_ref: (
 			&mut S,
 			&mut ST,
-			&mut (&mut StereoKit, &DrawContext),
+			&mut (&mut StereoKit, &StereoKitDraw),
 			&mut Option<PanicPayload>,
 		) = (
 			&mut shutdown,
@@ -255,10 +261,10 @@ impl StereoKit {
 		);
 		let shutdown_raw = &mut shutdown_ref
 			as *mut (
-				&mut S,
-				&mut ST,
-				&mut (&mut StereoKit, &DrawContext),
-				&mut Option<PanicPayload>,
+			&mut S,
+			&mut ST,
+			&mut (&mut StereoKit, &StereoKitDraw),
+			&mut Option<PanicPayload>,
 			) as *mut c_void;
 
 		if self.ran.set(()).is_err() {
@@ -267,9 +273,9 @@ impl StereoKit {
 
 		unsafe {
 			stereokit_sys::sk_run_data(
-				Some(callback_trampoline::<U, ST, (&mut StereoKit, &DrawContext)>),
+				Some(callback_trampoline::<U, ST, (&mut StereoKit, &StereoKitDraw)>),
 				update_raw,
-				Some(callback_trampoline::<S, ST, (&mut StereoKit, &DrawContext)>),
+				Some(callback_trampoline::<S, ST, (&mut StereoKit, &StereoKitDraw)>),
 				shutdown_raw,
 			);
 		}
@@ -277,10 +283,6 @@ impl StereoKit {
 		if let Some(panic_payload) = caught_panic {
 			std::panic::resume_unwind(panic_payload);
 		}
-	}
-
-	pub fn quit(&self) {
-		unsafe { stereokit_sys::sk_quit() };
 	}
 }
 

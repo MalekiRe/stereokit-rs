@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use crate::{texture::Texture, StereoKit};
 use bitflags::bitflags;
 use stereokit_sys::{_gradient_t, vec3};
-use crate::values::{Matrix, matrix_from};
+use crate::values::{MMatrix, matrix_from};
 
 bitflags! {
 	pub struct RenderLayer: u32 {
@@ -71,10 +71,10 @@ pub struct Camera {
 
 }
 impl Camera {
-	pub fn set_root(matrix: Matrix) {
-		let matrix = matrix_from(matrix);
+	pub fn set_root(matrix: impl Into<MMatrix>) {
+		let matrix = matrix.into();
 		unsafe {
-			stereokit_sys::render_set_cam_root(&matrix);
+			stereokit_sys::render_set_cam_root(&matrix.into());
 		}
 	}
 }

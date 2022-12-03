@@ -1,6 +1,6 @@
 use crate::material::Material;
 use crate::render::RenderLayer;
-use crate::values::{vec3_from, Vec3};
+use crate::values::{vec3_from, MVec3};
 use core::fmt::Error;
 use std::ffi::{c_void, CString, NulError};
 use std::fmt;

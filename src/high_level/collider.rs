@@ -4,6 +4,7 @@ use crate::mesh::Mesh;
 use crate::{StereoKit, values};
 use crate::high_level::math_traits::{MatrixContainer, MatrixTrait};
 use crate::high_level::model::Model;
+use crate::lifecycle::StereoKitContext;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Collider {
@@ -30,14 +31,14 @@ pub struct CapsuleCollider {
 }
 
 impl CapsuleCollider {
-    pub fn new(point1: impl Into<values::Vec3>, point2: impl Into<values::Vec3>, radius: f32) -> Self {
+    pub fn new(point1: impl Into<values::MVec3>, point2: impl Into<values::MVec3>, radius: f32) -> Self {
         Self {
             point1: point1.into().into(),
             point2: point2.into().into(),
             radius
         }
     }
-    pub fn from(sk: &StereoKit, model: &Model) -> Self {
+    pub fn from(sk: &impl StereoKitContext, model: &Model) -> Self {
         //this scales the box size to the proper scale
         let dims = model.get_bounds(sk).dimensions;
         //this scales the center as well

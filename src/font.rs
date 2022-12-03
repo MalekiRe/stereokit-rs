@@ -11,14 +11,14 @@ pub struct Font {
 }
 
 impl Font {
-	pub fn from_file(_sk: impl StereoKitContext, file: impl AsRef<Path>) -> Option<Self> {
+	pub fn from_file(_sk: &impl StereoKitContext, file: impl AsRef<Path>) -> Option<Self> {
 		let file_path = ustr(file.as_ref().as_os_str().to_str()?);
 
 		Some(Font {
 			font: NonNull::new(unsafe { stereokit_sys::font_create(file_path.as_char_ptr()) })?,
 		})
 	}
-	pub fn default(_sk: impl StereoKitContext) -> Self {
+	pub fn default(_sk: &impl StereoKitContext) -> Self {
 		let default_id = ustr("default/font");
 
 		Font {

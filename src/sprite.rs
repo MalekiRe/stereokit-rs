@@ -1,8 +1,10 @@
 use std::ptr::{NonNull, null_mut};
+use color_eyre::Report;
 use stereokit_sys::{_model_t, _sprite_t};
 use ustr::ustr;
 use crate::lifecycle::{StereoKitContext};
 use crate::StereoKit;
+use color_eyre::Result;
 
 pub struct Sprite {
     pub(crate) sprite: NonNull<_sprite_t>,
@@ -19,11 +21,11 @@ impl Drop for Sprite {
     }
 }
 impl Sprite {
-    pub fn from_file(sk: impl StereoKitContext, file: &str, sprite_type: SpriteType) -> Self {
-        Self {
+    pub fn from_file(sk: &impl StereoKitContext, file: &str, sprite_type: SpriteType) -> Result<Self> {
+        Ok(Self {
             sprite: NonNull::new(unsafe {
                 stereokit_sys::sprite_create_file(ustr(file).as_char_ptr(), sprite_type as u32, ustr("").as_char_ptr())
-            }).unwrap()
-        }
+            }).ok_or(Report::msg(format!("Unable to create sprite from file '{}'", file)))?
+        })
     }
 }

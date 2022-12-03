@@ -1,7 +1,7 @@
 use crate::{
-	lifecycle::DrawContext,
+	lifecycle::StereoKitDraw,
 	text::TextAlign,
-	values::{vec2_from, Vec2},
+	values::{vec2_from, MVec2},
 };
 use num_enum::TryFromPrimitive;
 use std::{ffi::CString, marker::PhantomData};
@@ -10,7 +10,7 @@ use ustr::ustr;
 use crate::sprite::Sprite;
 use crate::font::Font;
 use crate::text::TextStyle;
-use crate::values::{Vec3, vec3_from};
+use crate::values::{MVec3, vec3_from};
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
@@ -34,10 +34,10 @@ pub enum MoveType {
 pub struct WindowContext(PhantomData<*const ()>);
 
 pub fn window(
-	_ctx: &DrawContext,
+	_ctx: &StereoKitDraw,
 	window_title: &str,
 	pose: &mut crate::pose::Pose,
-	size: Vec2,
+	size: MVec2,
 	window_type: WindowType,
 	move_type: MoveType,
 	content_closure: impl FnOnce(&WindowContext),
@@ -61,10 +61,10 @@ pub fn window(
 }
 
 pub fn try_window<Res, Er>(
-	_ctx: &DrawContext,
+	_ctx: &StereoKitDraw,
 	window_title: &str,
 	pose: &mut crate::pose::Pose,
-	size: Vec2,
+	size: MVec2,
 	window_type: WindowType,
 	move_type: MoveType,
 	content_closure: impl FnOnce(&WindowContext) -> Result<Res, Er>,
@@ -112,12 +112,12 @@ impl WindowContext {
 			ui_button_img(ustr(text).as_char_ptr(), sprite.sprite.as_ptr(), layout as u32) != 0
 		}
 	}
-	pub fn button_at(&self, text: &str, window_relative_pos: Vec3, size: Vec2) -> bool {
+	pub fn button_at(&self, text: &str, window_relative_pos: MVec3, size: MVec2) -> bool {
 		unsafe {
 			ui_button_at(ustr(text).as_char_ptr(), vec3_from(window_relative_pos), vec2_from(size)) != 0
 		}
 	}
-	pub fn button_image_at(&self, text: &str, sprite: &Sprite, layout: ButtonLayout, window_relative_pos: Vec3, size: Vec2) -> bool {
+	pub fn button_image_at(&self, text: &str, sprite: &Sprite, layout: ButtonLayout, window_relative_pos: MVec3, size: MVec2) -> bool {
 		unsafe {
 			ui_button_img_at(ustr(text).as_char_ptr(), sprite.sprite.as_ptr(), layout as u32, vec3_from(window_relative_pos), vec2_from(size)) != 0
 		}

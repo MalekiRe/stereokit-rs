@@ -2,7 +2,7 @@
 
 use crate::{
 	pose::Pose,
-	values::{Quat, Vec2, Vec3},
+	values::{MQuat, MVec2, MVec3},
 	StereoKit,
 };
 use bitflags::bitflags;
@@ -130,11 +130,6 @@ bitflags! {
 		const Changed = 6;
 	}
 }
-impl StereoKit {
-	pub fn input_key(&self, key: Key) -> ButtonState {
-		ButtonState::from_bits_truncate(unsafe { input_key(key as key_) })
-	}
-}
 
 #[derive(Debug, Copy, Clone, is_enum_variant, TryFromPrimitive)]
 #[repr(u32)]
@@ -145,14 +140,14 @@ pub enum TrackState {
 }
 
 pub struct Ray {
-	pub pos: Vec3,
-	pub dir: Vec3,
+	pub pos: MVec3,
+	pub dir: MVec3,
 }
 impl Ray {
 	pub fn from_mouse(mouse: &Mouse) -> Option<Self> {
 		let mut ray = Ray {
-			pos: Vec3::from([0.0, 0.0, 0.0]),
-			dir: Vec3::from([0.0, 0.0, 0.0]),
+			pos: MVec3::from([0.0, 0.0, 0.0]),
+			dir: MVec3::from([0.0, 0.0, 0.0]),
 		};
 
 		unsafe { stereokit_sys::ray_from_mouse(transmute(mouse.pos), transmute(&mut ray)) != 0 }
@@ -162,23 +157,14 @@ impl Ray {
 
 pub struct Mouse {
 	available: i32,
-	pub pos: Vec2,
-	pub pos_change: Vec2,
+	pub pos: MVec2,
+	pub pos_change: MVec2,
 	pub scroll: f32,
 	pub scroll_change: f32,
 }
 impl Mouse {
 	pub fn available(&self) -> bool {
 		self.available != 0
-	}
-}
-impl StereoKit {
-	pub fn input_head(&self) -> &Pose {
-		unsafe { transmute(&*stereokit_sys::input_head()) }
-	}
-
-	pub fn input_mouse(&self) -> &Mouse {
-		unsafe { transmute(&*stereokit_sys::input_mouse()) }
 	}
 }
 
@@ -191,8 +177,8 @@ pub enum Handed {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Joint {
-	pub position: Vec3,
-	pub orientation: Quat,
+	pub position: MVec3,
+	pub orientation: MQuat,
 	pub radius: f32,
 }
 
@@ -202,7 +188,7 @@ pub struct Hand {
 	pub fingers: [[Joint; 5]; 5],
 	pub wrist: Pose,
 	pub palm: Pose,
-	pub pinch_point: Vec3,
+	pub pinch_point: MVec3,
 	pub handedness: Handed,
 	pub tracked_state: ButtonState,
 	pub pinch_state: ButtonState,
@@ -225,20 +211,32 @@ pub struct Controller {
 	pub x2: ButtonState,
 	pub trigger: f32,
 	pub grip: f32,
-	pub stick: Vec2,
+	pub stick: MVec2,
 }
 
-impl StereoKit {
-	pub fn input_hand(&self, handed: Handed) -> &Hand {
+pub trait StereoKitInput {
+	fn input_hand(&self, handed: Handed) -> &Hand {
 		unsafe { std::mem::transmute(&*stereokit_sys::input_hand(handed as u32)) }
 	}
-	pub fn input_controller(&self, handed: Handed) -> &Controller {
+	fn input_controller(&self, handed: Handed) -> &Controller {
 		unsafe { std::mem::transmute(&*stereokit_sys::input_controller(handed as u32)) }
 	}
-	pub fn input_controller_menu(&self) -> ButtonState {
+	fn input_controller_menu(&self) -> ButtonState {
 		unsafe { std::mem::transmute(stereokit_sys::input_controller_menu()) }
 	}
-	pub fn input_hand_visible(&self, handed: Handed, visible: bool) {
+	fn input_hand_visible(&self, handed: Handed, visible: bool) {
 		unsafe { input_hand_visible(handed as u32, visible as bool32_t)}
 	}
+	fn input_head(&self) -> &Pose {
+		unsafe { transmute(&*stereokit_sys::input_head()) }
+	}
+
+	fn input_mouse(&self) -> &Mouse {
+		unsafe { transmute(&*stereokit_sys::input_mouse()) }
+	}
+
+	fn input_key(&self, key: Key) -> ButtonState {
+		ButtonState::from_bits_truncate(unsafe { input_key(key as key_) })
+	}
 }
+stereokit_trait_impl!(StereoKitInput);

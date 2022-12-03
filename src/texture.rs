@@ -3,7 +3,7 @@
 use crate::lifecycle::{StereoKitContext};
 use crate::render::SphericalHarmonics;
 use crate::values::{
-	color128_from, color128_to, color32_from, color32_to, Color128, Color32, Vec3,
+    Color128, Color32, MVec3,
 };
 use crate::StereoKit;
 use bitflags::bitflags;
@@ -208,7 +208,7 @@ impl Texture {
 	}
 	pub fn from_color32(
 		_sk: impl StereoKitContext,
-		data: Color32,
+		data: impl Into<Color32>,
 		width: i32,
 		height: i32,
 		uses_srgb_data: bool,
@@ -216,7 +216,7 @@ impl Texture {
 		Some(Texture {
 			tex: NonNull::new(unsafe {
 				stereokit_sys::tex_create_color32(
-					&mut color32_from(data),
+					&mut data.into(),
 					width,
 					height,
 					uses_srgb_data as i32,
@@ -225,7 +225,7 @@ impl Texture {
 		})
 	}
 	pub fn from_cubemap_equirectangular(
-		_sk: impl StereoKitContext,
+		_sk: &impl StereoKitContext,
 		file_path: impl AsRef<Path>,
 		uses_srgb_data: bool,
 		load_priority: i32,
@@ -248,11 +248,11 @@ impl Texture {
 		))
 	}
 	pub fn cubemap_from_gradient(
-		_sk: impl StereoKitContext,
-		gradient: &Gradient,
-		direction: Vec3,
-		resolution: u32,
-		spherical_harmonics_info: Option<&mut SphericalHarmonics>,
+        _sk: impl StereoKitContext,
+        gradient: &Gradient,
+        direction: MVec3,
+        resolution: u32,
+        spherical_harmonics_info: Option<&mut SphericalHarmonics>,
 	) -> Option<Self> {
 		Some(Texture {
 			tex: NonNull::new(unsafe {

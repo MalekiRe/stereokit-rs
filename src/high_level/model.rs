@@ -6,20 +6,21 @@ use glam::{DQuat, EulerRot, Mat4, Quat, Vec3};
 use mint::{EulerAngles, Quaternion};
 use prisma::{Color, Rgb, Rgba};
 use stereokit_sys::{matrix, render_layer_};
-use crate::lifecycle::DrawContext;
+use crate::lifecycle::{StereoKitContext, StereoKitDraw};
 use crate::material::{DEFAULT_ID_MATERIAL, Material};
 use crate::mesh::Mesh;
 use crate::render::RenderLayer;
-use crate::{Settings, StereoKit};
+use crate::{StereoKit};
 use crate::values::{Color128, vec3_to};
-use anyhow::{Context, Result};
-use crate::high_level::{Pos, quat_from_angles, Scale};
+use crate::high_level::{Pos, quat_from_angles, Scale, WHITE};
 use crate::high_level::math_traits::{MatrixContainer, MatrixTrait, PosTrait, RotationTrait, ScaleTrait};
 use crate::high_level::text::Text;
 use crate::input::Handed::Right;
 use crate::bounds::Bounds;
 use crate::high_level::collider::{CapsuleCollider, Collider, ColliderType};
 use crate::shader::Shader;
+use color_eyre::Result;
+
 
 pub struct Model {
     pub model: crate::model::Model,
@@ -31,59 +32,59 @@ pub struct Model {
 
 impl Model {
 
-    pub fn from_mesh(sk: &StereoKit, mesh: &Mesh, material: &Material) -> Result<Self> {
-        let model = crate::model::Model::from_mesh(sk, mesh, material).context("Unable to create model from mesh")?;
+    pub fn from_mesh(sk: &impl StereoKitContext, mesh: &Mesh, material: &Material) -> Result<Self> {
+        let model = crate::model::Model::from_mesh(sk, mesh, material)?;
         Ok(Self {
             model,
             matrix: MatrixContainer::new(Vec3::default(), Vec3::new(0f32, 0f32, 0f32), [1f32, 1f32, 1f32]),
-            tint: Rgba::new(Rgb::new(1.0, 1.0, 1.0), 1.0),
+            tint: WHITE,
             render_layer: RenderLayer::Layer0,
             collider: None
         })
     }
-    pub fn from_memory(sk: &StereoKit, file_name: &str, memory: &[u8], shader: Option<&Shader>) -> Result<Self> {
-        let model = crate::model::Model::from_mem(sk, file_name, memory, shader).context("unabled to create model from memory")?;
+    pub fn from_memory(sk: &impl StereoKitContext, file_name: &str, memory: &[u8], shader: Option<&Shader>) -> Result<Self> {
+        let model = crate::model::Model::from_mem(sk, file_name, memory, shader)?;
         Ok(Self {
             model,
             matrix: MatrixContainer::new(Vec3::default(), Vec3::new(0f32, 0f32, 0f32), [1f32, 1f32, 1f32]),
-            tint: Rgba::new(Rgb::new(1.0, 1.0, 1.0), 1.0),
+            tint: WHITE,
             render_layer: RenderLayer::Layer0,
             collider: None
         })
     }
 
-    pub fn draw(&self, ctx: &DrawContext) {
-        self.model.draw(ctx, self.get_matrix().into(), self.tint, self.render_layer)
+    pub fn draw(&self, draw: &StereoKitDraw) {
+        self.model.draw(draw, self.get_matrix().into(), self.tint, self.render_layer)
     }
 
-    pub fn contains(&self, sk: &StereoKit, point: Vec3) -> bool {
+    pub fn contains(&self, sk: &impl StereoKitContext, point: Vec3) -> bool {
         let inverted_matrix = self.get_matrix().inverse();
         let new_point = inverted_matrix.transform_point3(point);
         self.get_bounds(sk).bounds_point_contains(new_point.into())
     }
-    pub fn collider_intersects(&self, sk: &StereoKit, collider: &Collider) -> bool {
+    pub fn collider_intersects(&self, sk: &StereoKitDraw, collider: &Collider) -> bool {
         match collider {
             Collider::CapsuleCollider(c) => {
                 self.capsule_intersects(sk, c)
             }
         }
     }
-    pub fn capsule_intersects(&self, sk: &StereoKit, capsule_collider: &CapsuleCollider) -> bool {
+    pub fn capsule_intersects(&self, sk: &impl StereoKitContext, capsule_collider: &CapsuleCollider) -> bool {
         let inverted_matrix = Mat4::from_rotation_translation(self.get_matrix().to_scale_rotation_translation().1, self.get_matrix().to_scale_rotation_translation().2).inverse();
         let mut pt1 = inverted_matrix.transform_point3(capsule_collider.point1);
         let mut pt2 = inverted_matrix.transform_point3(capsule_collider.point2);
         self.get_bounds(sk).bounds_capsule_contains(pt1.into(), pt2.into(), capsule_collider.radius)
     }
-    pub fn get_bounds(&self, sk: &StereoKit) -> Bounds {
+    pub fn get_bounds(&self, sk: &impl StereoKitContext) -> Bounds {
         let mut b = self.model.get_bounds(sk);
         b.center = glam::Vec3::from(b.center).mul(self.get_scale_vec()).into();
         b.dimensions = glam::Vec3::from(b.dimensions).mul(self.get_scale_vec()).into();
         b
     }
-    pub fn set_collider(&mut self, sk: &StereoKit, collider: ColliderType) {
+    pub fn set_collider(&mut self, sk: &impl StereoKitContext, collider: ColliderType) {
         self.collider = Some(Collider::CapsuleCollider(CapsuleCollider::from(sk, self)));
     }
-    pub fn get_collider(&mut self, sk: &StereoKit) -> Option<Collider> {
+    pub fn get_collider(&mut self, sk: &impl StereoKitContext) -> Option<Collider> {
         if self.collider.is_none() {
             return None;
         }
@@ -97,11 +98,11 @@ impl PosTrait for Model {
         self.matrix.get_pos_vec()
     }
 
-    fn set_pos_vec(&mut self, pos: impl Into<crate::values::Vec3>) {
+    fn set_pos_vec(&mut self, pos: impl Into<crate::values::MVec3>) {
         self.matrix.set_pos_vec(pos)
     }
 
-    fn translate_vec(&mut self, translation: impl Into<crate::values::Vec3>) {
+    fn translate_vec(&mut self, translation: impl Into<crate::values::MVec3>) {
         self.matrix.translate_vec(translation)
     }
 }
@@ -111,11 +112,11 @@ impl ScaleTrait for Model {
         self.matrix.get_scale_vec()
     }
 
-    fn set_scale_vec(&mut self, scale: impl Into<crate::values::Vec3>) {
+    fn set_scale_vec(&mut self, scale: impl Into<crate::values::MVec3>) {
         self.matrix.set_scale_vec(scale)
     }
 
-    fn scale_vec(&mut self, scale: impl Into<crate::values::Vec3>) {
+    fn scale_vec(&mut self, scale: impl Into<crate::values::MVec3>) {
         self.matrix.scale_vec(scale)
     }
 }
@@ -125,11 +126,11 @@ impl RotationTrait for Model {
         self.matrix.get_rotation_vec()
     }
 
-    fn set_rotation_vec(&mut self, rotation: impl Into<crate::values::Vec3>) {
+    fn set_rotation_vec(&mut self, rotation: impl Into<crate::values::MVec3>) {
         self.matrix.set_rotation_vec(rotation)
     }
 
-    fn rotate_vec(&mut self, rotation: impl Into<crate::values::Vec3>) {
+    fn rotate_vec(&mut self, rotation: impl Into<crate::values::MVec3>) {
         self.matrix.rotate_vec(rotation)
     }
 }

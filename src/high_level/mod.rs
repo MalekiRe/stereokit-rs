@@ -11,6 +11,8 @@ pub mod math_traits;
 #[allow(unused)]
 pub mod collider;
 
+const WHITE: crate::values::Color128 = crate::values::Color128::new_rgb(1.0, 1.0, 1.0);
+
 pub struct Scale(pub Vec3);
 
 impl Deref for Scale {

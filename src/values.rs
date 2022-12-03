@@ -4,26 +4,26 @@ use std::fmt::Pointer;
 use mint::{ColumnMatrix4, RowMatrix4};
 use stereokit_sys::{color128, color32, matrix, quat, text_style_t, vec2, vec3, vec4};
 
-pub(crate) type Vec2 = mint::Vector2<f32>;
-pub type Vec3 = mint::Vector3<f32>;
-pub(crate) type Vec4 = mint::Vector4<f32>;
-pub(crate) type Quat = mint::Quaternion<f32>;
-pub type Matrix = mint::ColumnMatrix4<f32>;
-pub type Color32 = Rgba<u8>;
-pub type Color128 = Rgba<f32>;
+pub type MVec4 = mint::Vector4<f32>;
+pub type MVec3 = mint::Vector3<f32>;
+pub type MVec2 = mint::Vector2<f32>;
+pub type MQuat = mint::Quaternion<f32>;
+pub type MMatrix = mint::ColumnMatrix4<f32>;
+pub type Color32 = color32;
+pub type Color128 = color128;
 
 pub struct SKMatrix {
-	matrix: Matrix,
-	inverse: Option<Matrix>
+	matrix: MMatrix,
+	inverse: Option<MMatrix>
 }
 impl SKMatrix {
-	pub fn new(matrix: Matrix) -> Self {
+	pub fn new(matrix: MMatrix) -> Self {
 		Self {
 			matrix,
 			inverse: None
 		}
 	}
-	pub fn transform_point(&mut self, pt: Vec3) -> Vec3 {
+	pub fn transform_point(&mut self, pt: MVec3) -> MVec3 {
 		if self.inverse.is_none() {
 			self.inverse = Some(matrix_to(
 				unsafe {
@@ -38,29 +38,29 @@ impl SKMatrix {
 	}
 }
 
-pub(crate) fn vec2_from(var: Vec2) -> vec2 {
+pub(crate) fn vec2_from(var: MVec2) -> vec2 {
 	vec2 { x: var.x, y: var.y }
 }
-pub(crate) fn vec2_to(var: vec2) -> Vec2 {
-	Vec2 { x: var.x, y: var.y }
+pub(crate) fn vec2_to(var: vec2) -> MVec2 {
+	MVec2 { x: var.x, y: var.y }
 }
 
-pub fn vec3_from(var: Vec3) -> vec3 {
+pub fn vec3_from(var: MVec3) -> vec3 {
 	vec3 {
 		x: var.x,
 		y: var.y,
 		z: var.z,
 	}
 }
-pub fn vec3_to(var: vec3) -> Vec3 {
-	Vec3 {
+pub fn vec3_to(var: vec3) -> MVec3 {
+	MVec3 {
 		x: var.x,
 		y: var.y,
 		z: var.z,
 	}
 }
 
-pub(crate) fn vec4_from(var: Vec4) -> vec4 {
+pub(crate) fn vec4_from(var: MVec4) -> vec4 {
 	vec4 {
 		x: var.x,
 		y: var.y,
@@ -68,8 +68,8 @@ pub(crate) fn vec4_from(var: Vec4) -> vec4 {
 		w: var.w,
 	}
 }
-pub(crate) fn vec4_to(var: vec4) -> Vec4 {
-	Vec4 {
+pub(crate) fn vec4_to(var: vec4) -> MVec4 {
+	MVec4 {
 		x: var.x,
 		y: var.y,
 		z: var.z,
@@ -77,32 +77,8 @@ pub(crate) fn vec4_to(var: vec4) -> Vec4 {
 	}
 }
 
-pub(crate) fn color32_from(var: Color32) -> color32 {
-	color32 {
-		r: var.red(),
-		g: var.green(),
-		b: var.blue(),
-		a: var.alpha(),
-	}
-}
-pub(crate) fn color32_to(color: color32) -> Color32 {
-	Color32::from_tuple(((color.r, color.g, color.b), color.a))
-}
-
-pub(crate) fn color128_from(var: Color128) -> color128 {
-	color128 {
-		r: var.red(),
-		g: var.green(),
-		b: var.blue(),
-		a: var.alpha(),
-	}
-}
-pub(crate) fn color128_to(c: color128) -> Color128 {
-	Color128::from_tuple(((c.r, c.g, c.b), c.a))
-}
-
 //TODO: Get someone really smart to figure out why this doesn't work
-pub fn matrix_from(m: Matrix) -> matrix {
+pub fn matrix_from(m: MMatrix) -> matrix {
 	matrix {
 		row: [
 			vec4_from(m.x),
@@ -112,10 +88,10 @@ pub fn matrix_from(m: Matrix) -> matrix {
 		],
 	}
 }
-pub fn matrix_to(m: matrix) -> Matrix {
+pub fn matrix_to(m: matrix) -> MMatrix {
 	unsafe {
 		match m {
-			matrix { m: ma } => Matrix::from(ma),
+			matrix { m: ma } => MMatrix::from(ma),
 			matrix { row: r } => ColumnMatrix4::from(RowMatrix4::from([
 				r[0].x, r[0].y, r[0].z, r[0].w, r[1].x, r[1].y, r[1].z, r[1].w, r[2].x, r[2].y,
 				r[2].z, r[2].w, r[3].x, r[3].y, r[3].z, r[3].w,
@@ -124,7 +100,7 @@ pub fn matrix_to(m: matrix) -> Matrix {
 	}
 }
 
-pub(crate) fn quat_from(q: Quat) -> quat {
+pub(crate) fn quat_from(q: MQuat) -> quat {
 	quat {
 		x: q.v.x,
 		y: q.v.y,
@@ -132,6 +108,6 @@ pub(crate) fn quat_from(q: Quat) -> quat {
 		w: q.s,
 	}
 }
-pub(crate) fn quat_to(q: quat) -> Quat {
-	Quat::from([q.x, q.y, q.z, q.w])
+pub(crate) fn quat_to(q: quat) -> MQuat {
+	MQuat::from([q.x, q.y, q.z, q.w])
 }

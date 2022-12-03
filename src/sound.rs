@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::ptr::NonNull;
 use stereokit_sys::{_sound_t, sound_inst_t, sound_t};
 use ustr::ustr;
-use crate::values::{Vec3, vec3_from};
+use crate::values::{MVec3, vec3_from};
 
 pub struct Sound {
     sound: NonNull<_sound_t>,
@@ -17,7 +17,7 @@ impl Sound {
             })?
         })
     }
-    pub fn play_sound(&self, position: impl Into<Vec3>, volume: f32) -> SoundInstance {
+    pub fn play_sound(&self, position: impl Into<MVec3>, volume: f32) -> SoundInstance {
         SoundInstance{
             sound_instance: unsafe {
                 stereokit_sys::sound_play(self.sound.as_ptr(), vec3_from(position.into()), volume)
