@@ -1,7 +1,6 @@
 use crate::pose::Pose;
-use prisma::{FromTuple, Rgba};
-use std::fmt::Pointer;
 use mint::{ColumnMatrix4, RowMatrix4};
+use std::fmt::Pointer;
 use stereokit_sys::{color128, color32, matrix, quat, text_style_t, vec2, vec3, vec4};
 
 pub type MVec4 = mint::Vector4<f32>;
@@ -14,27 +13,23 @@ pub type Color128 = color128;
 
 pub struct SKMatrix {
 	matrix: MMatrix,
-	inverse: Option<MMatrix>
+	inverse: Option<MMatrix>,
 }
 impl SKMatrix {
 	pub fn new(matrix: MMatrix) -> Self {
 		Self {
 			matrix,
-			inverse: None
+			inverse: None,
 		}
 	}
 	pub fn transform_point(&mut self, pt: MVec3) -> MVec3 {
 		if self.inverse.is_none() {
-			self.inverse = Some(matrix_to(
-				unsafe {
-					stereokit_sys::matrix_invert(&matrix_from(self.matrix))
-				}
-			))
+			self.inverse = Some(matrix_to(unsafe {
+				stereokit_sys::matrix_invert(&matrix_from(self.matrix))
+			}))
 		}
 		let inverse = self.inverse.unwrap();
-		vec3_to(unsafe {
-			stereokit_sys::matrix_transform_pt(matrix_from(inverse), vec3_from(pt))
-		})
+		vec3_to(unsafe { stereokit_sys::matrix_transform_pt(matrix_from(inverse), vec3_from(pt)) })
 	}
 }
 

@@ -1,5 +1,6 @@
 use crate::model::Model;
 use crate::pose::Pose;
+use color_eyre::{Help, Report, Result};
 use derive_builder::Builder;
 use num_enum::TryFromPrimitive;
 use once_cell::unsync::OnceCell;
@@ -15,14 +16,13 @@ use std::ptr::{null, null_mut};
 use std::rc::{Rc, Weak};
 use std::sync::Mutex;
 use std::{mem, ptr};
-use color_eyre::{Help, Report, Result};
 
+use crate::input::StereoKitInput;
+use crate::render::StereoKitRender;
 use stereokit_sys::{
 	assets_releaseref_threadsafe, bool32_t, color32, depth_mode_, display_blend_, display_mode_,
 	log_, material_t, model_t, pose_t, sk_settings_t,
 };
-use crate::input::StereoKitInput;
-use crate::render::StereoKitRender;
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
@@ -66,7 +66,13 @@ thread_local! {
 }
 
 #[derive(Builder)]
-#[builder(name = "StereoKitSettings", pattern = "owned", setter(into), build_fn(skip), derive(Debug))]
+#[builder(
+	name = "Settings",
+	pattern = "owned",
+	setter(into),
+	build_fn(skip),
+	derive(Debug)
+)]
 pub struct SKSettingsBuilt {
 	app_name: String,
 	assets_folder: String,
@@ -86,11 +92,12 @@ pub struct SKSettingsBuilt {
 	disable_unfocused_sleep: bool,
 }
 
-impl StereoKitSettings {
+impl Settings {
 	pub fn init(self) -> Result<StereoKit> {
 		color_eyre::install()?;
 		if GLOBAL_STATE.with(|f| *f.borrow()) {
-			return Err(Report::msg("Stereokit is already running").suggestion("Only run 1 instance of StereoKit at a time in a single process"));
+			return Err(Report::msg("Stereokit is already running")
+				.suggestion("Only run 1 instance of StereoKit at a time in a single process"));
 		}
 		let (vm_pointer, jobject_pointer) = (null_mut::<c_void>(), null_mut::<c_void>());
 		#[cfg(target_os = "android")]
@@ -100,7 +107,8 @@ impl StereoKitSettings {
 				(context.vm(), context.context())
 			}
 		};
-		let possible_err_message = Report::msg(format!("Stereokit failed to init with args: {:?}", self));
+		let possible_err_message =
+			Report::msg(format!("Stereokit failed to init with args: {:?}", self));
 		let c_settings = sk_settings_t {
 			app_name: CString::new(
 				self.app_name
@@ -242,10 +250,10 @@ impl StereoKit {
 		);
 		let update_raw = &mut update_ref
 			as *mut (
-			&mut U,
-			&mut ST,
-			&mut (&mut StereoKit, &StereoKitDraw),
-			&mut Option<PanicPayload>,
+				&mut U,
+				&mut ST,
+				&mut (&mut StereoKit, &StereoKitDraw),
+				&mut Option<PanicPayload>,
 			) as *mut c_void;
 
 		let mut shutdown_ref: (
@@ -261,10 +269,10 @@ impl StereoKit {
 		);
 		let shutdown_raw = &mut shutdown_ref
 			as *mut (
-			&mut S,
-			&mut ST,
-			&mut (&mut StereoKit, &StereoKitDraw),
-			&mut Option<PanicPayload>,
+				&mut S,
+				&mut ST,
+				&mut (&mut StereoKit, &StereoKitDraw),
+				&mut Option<PanicPayload>,
 			) as *mut c_void;
 
 		if self.ran.set(()).is_err() {

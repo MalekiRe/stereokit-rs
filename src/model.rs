@@ -1,11 +1,13 @@
-use crate::lifecycle::{StereoKitDraw, StereoKitContext};
+use crate::bounds::Bounds;
+use crate::lifecycle::{StereoKitContext, StereoKitDraw};
 use crate::material::Material;
 use crate::mesh::Mesh;
 use crate::pose::Pose;
 use crate::render::RenderLayer;
 use crate::shader::Shader;
-use crate::values::{matrix_from, Color128, MMatrix, MVec3, vec3_from, vec3_to};
+use crate::values::{matrix_from, vec3_from, vec3_to, Color128, MMatrix, MVec3};
 use crate::StereoKit;
+use color_eyre::{Report, Result};
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
 use std::path::Path;
@@ -13,9 +15,6 @@ use std::ptr::{null, null_mut, NonNull};
 use std::rc::{Rc, Weak};
 use stereokit_sys::_model_t;
 use ustr::ustr;
-use crate::bounds::Bounds;
-use color_eyre::{Report, Result};
-use palette::Srgba;
 
 pub struct Model {
 	pub(crate) model: NonNull<_model_t>,
@@ -26,7 +25,13 @@ impl Model {
 		file_path: impl AsRef<Path>,
 		shader: Option<&Shader>,
 	) -> Result<Self> {
-		let file_path = ustr(file_path.as_ref().as_os_str().to_str().ok_or(Report::msg("failed string conversion in Model::from_file"))?);
+		let file_path = ustr(
+			file_path
+				.as_ref()
+				.as_os_str()
+				.to_str()
+				.ok_or(Report::msg("failed string conversion in Model::from_file"))?,
+		);
 		Ok(Model {
 			model: NonNull::new(unsafe {
 				stereokit_sys::model_create_file(
@@ -35,7 +40,11 @@ impl Model {
 						.map(|shader| shader.shader.as_ptr())
 						.unwrap_or(null_mut()),
 				)
-			}).ok_or(Report::msg(format!("Unable to create model from file path '{}'.", file_path)))?,
+			})
+			.ok_or(Report::msg(format!(
+				"Unable to create model from file path '{}'.",
+				file_path
+			)))?,
 		})
 	}
 	pub fn from_mem(
@@ -55,14 +64,23 @@ impl Model {
 						.map(|shader| shader.shader.as_ptr())
 						.unwrap_or(null_mut()),
 				)
-			}).ok_or(Report::msg(format!("Unable to create model '{}' from memory", file_name)))?,
+			})
+			.ok_or(Report::msg(format!(
+				"Unable to create model '{}' from memory",
+				file_name
+			)))?,
 		})
 	}
-	pub fn from_mesh(_sk: &impl StereoKitContext, mesh: &Mesh, material: &Material) -> Result<Self> {
+	pub fn from_mesh(
+		_sk: &impl StereoKitContext,
+		mesh: &Mesh,
+		material: &Material,
+	) -> Result<Self> {
 		Ok(Model {
 			model: NonNull::new(unsafe {
 				stereokit_sys::model_create_mesh(mesh.mesh.as_ptr(), material.material.as_ptr())
-			}).ok_or(Report::msg("Failed to create model from mesh and material"))?,
+			})
+			.ok_or(Report::msg("Failed to create model from mesh and material"))?,
 		})
 	}
 	pub fn draw(
@@ -98,7 +116,7 @@ impl Model {
 		}
 	}
 	pub fn get_bounds(&self, _sk: &impl StereoKitContext) -> Bounds {
-		let b = unsafe {stereokit_sys::model_get_bounds(self.model.as_ptr())};
+		let b = unsafe { stereokit_sys::model_get_bounds(self.model.as_ptr()) };
 		Bounds::new(vec3_to(b.center), vec3_to(b.dimensions))
 	}
 }

@@ -1,3 +1,7 @@
+use crate::font::Font;
+use crate::sprite::Sprite;
+use crate::text::TextStyle;
+use crate::values::{vec3_from, MVec3};
 use crate::{
 	lifecycle::StereoKitDraw,
 	text::TextAlign,
@@ -5,12 +9,13 @@ use crate::{
 };
 use num_enum::TryFromPrimitive;
 use std::{ffi::CString, marker::PhantomData};
-use stereokit_sys::{bool32_t, pose_t, text_align_, text_make_style, text_style_get_material, text_style_t, ui_btn_layout_, ui_button, ui_button_at, ui_button_img, ui_button_img_16, ui_button_img_at, ui_button_img_sz, ui_hslider, ui_label, ui_move_, ui_pop_text_style, ui_push_text_style, ui_sameline, ui_settings, ui_space, ui_text, ui_win_};
+use stereokit_sys::{
+	bool32_t, pose_t, text_align_, text_make_style, text_style_get_material, text_style_t,
+	ui_btn_layout_, ui_button, ui_button_at, ui_button_img, ui_button_img_16, ui_button_img_at,
+	ui_button_img_sz, ui_hslider, ui_label, ui_move_, ui_pop_text_style, ui_push_text_style,
+	ui_sameline, ui_settings, ui_space, ui_text, ui_win_,
+};
 use ustr::ustr;
-use crate::sprite::Sprite;
-use crate::font::Font;
-use crate::text::TextStyle;
-use crate::values::{MVec3, vec3_from};
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
@@ -68,7 +73,7 @@ pub fn try_window<Res, Er>(
 	window_type: WindowType,
 	move_type: MoveType,
 	content_closure: impl FnOnce(&WindowContext) -> Result<Res, Er>,
-) -> Result<Res, Er>{
+) -> Result<Res, Er> {
 	let window_title = ustr(window_title);
 	unsafe {
 		stereokit_sys::ui_window_begin(
@@ -105,41 +110,80 @@ impl WindowContext {
 	}
 	pub fn button(&self, text: &str) -> bool {
 		let text = ustr(text);
-		unsafe {ui_button(text.as_char_ptr()) != 0}
+		unsafe { ui_button(text.as_char_ptr()) != 0 }
 	}
 	pub fn button_image(&self, text: &str, sprite: &Sprite, layout: ButtonLayout) -> bool {
 		unsafe {
-			ui_button_img(ustr(text).as_char_ptr(), sprite.sprite.as_ptr(), layout as u32) != 0
+			ui_button_img(
+				ustr(text).as_char_ptr(),
+				sprite.sprite.as_ptr(),
+				layout as u32,
+			) != 0
 		}
 	}
 	pub fn button_at(&self, text: &str, window_relative_pos: MVec3, size: MVec2) -> bool {
 		unsafe {
-			ui_button_at(ustr(text).as_char_ptr(), vec3_from(window_relative_pos), vec2_from(size)) != 0
+			ui_button_at(
+				ustr(text).as_char_ptr(),
+				vec3_from(window_relative_pos),
+				vec2_from(size),
+			) != 0
 		}
 	}
-	pub fn button_image_at(&self, text: &str, sprite: &Sprite, layout: ButtonLayout, window_relative_pos: MVec3, size: MVec2) -> bool {
+	pub fn button_image_at(
+		&self,
+		text: &str,
+		sprite: &Sprite,
+		layout: ButtonLayout,
+		window_relative_pos: MVec3,
+		size: MVec2,
+	) -> bool {
 		unsafe {
-			ui_button_img_at(ustr(text).as_char_ptr(), sprite.sprite.as_ptr(), layout as u32, vec3_from(window_relative_pos), vec2_from(size)) != 0
+			ui_button_img_at(
+				ustr(text).as_char_ptr(),
+				sprite.sprite.as_ptr(),
+				layout as u32,
+				vec3_from(window_relative_pos),
+				vec2_from(size),
+			) != 0
 		}
 	}
-	pub fn slider(&self, text: &str, val: &mut f32, min: f32, max: f32, step: f32, width: f32, confirm_method: ConfirmMethod) {
+	pub fn slider(
+		&self,
+		text: &str,
+		val: &mut f32,
+		min: f32,
+		max: f32,
+		step: f32,
+		width: f32,
+		confirm_method: ConfirmMethod,
+	) {
 		unsafe {
-			ui_hslider(ustr(text).as_char_ptr(), val as *mut f32, min, max, step, width,confirm_method as u32, 0);
+			ui_hslider(
+				ustr(text).as_char_ptr(),
+				val as *mut f32,
+				min,
+				max,
+				step,
+				width,
+				confirm_method as u32,
+				0,
+			);
 		}
 	}
 	pub fn text_style(&self, text_style: TextStyle, content_closure: impl FnOnce(&WindowContext)) {
-		unsafe {
-			ui_push_text_style(text_style.text_style)
-		}
+		unsafe { ui_push_text_style(text_style.text_style) }
 		content_closure(&self);
 		unsafe {
 			ui_pop_text_style();
 		}
 	}
-	pub fn try_text_style<Res, Er>(&self, text_style: TextStyle, content_closure: impl FnOnce(&WindowContext) -> Result<Res, Er>) -> Result<Res, Er> {
-		unsafe {
-			ui_push_text_style(text_style.text_style)
-		}
+	pub fn try_text_style<Res, Er>(
+		&self,
+		text_style: TextStyle,
+		content_closure: impl FnOnce(&WindowContext) -> Result<Res, Er>,
+	) -> Result<Res, Er> {
+		unsafe { ui_push_text_style(text_style.text_style) }
 		let result = content_closure(&self);
 		unsafe {
 			ui_pop_text_style();

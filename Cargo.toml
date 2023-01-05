@@ -8,10 +8,8 @@ keywords = ["stereokit", "XR", "VR", "AR"]
 license = "MIT"
 repository = "https://github.com/MalekiRe/stereokit-rs"
 
-
 [lib]
 crate-type = ["lib", "cdylib"]
-
 exclude = [
     ".idea"
 ]
@@ -19,17 +17,16 @@ exclude = [
 [features]
 default = []
 linux-egl = ["stereokit-sys/linux-egl"]
-high-level = ["dep:glam", "dep:anyhow"]
+high-level = ["dep:glam"]
+prisma = ["stereokit-sys/prisma"]
 color_named = []
 
 [dependencies]
 mint = { version = "0.5.9", features = ["serde"] }
-num = "0.4.0"
 num-derive = "0.3.3"
-num-traits = "0.2.15"
 derive_is_enum_variant = "0.1.1"
-derive_builder = "0.11.2"
-stereokit-sys = {path = "../stereokit-sys"}
+derive_builder = "0.12.0"
+stereokit-sys = "2.2.0"
 once_cell = "1.16.0"
 bitflags = "1.3.2"
 ustr = "0.9.0"
@@ -38,18 +35,13 @@ serde_repr = "0.1.9"
 bitflags_serde_shim = "0.2.2"
 num_enum = "0.5.7"
 glam = {version = "0.22.0", features = ["mint"], optional = true}
-anyhow = {version = "1.0.66", optional = true}
-palette = {version = "0.6.1", default-features = false, features = ["std"]}
 color-eyre = "0.6.2"
-prisma = "0.1.1" #todo remove
 
 [target.'cfg(target_os = "android")'.dependencies]
 ndk-context = "0.1.1"
 
 [dev-dependencies]
-anyhow = "1.0.61"
 glam = {version = "0.22.0", features = ["mint"]}
-#palette = {version = "0.6.1", features = ["named"]}
 
 [profile.dev.package.backtrace]
 opt-level = 3

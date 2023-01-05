@@ -1,11 +1,8 @@
 #![allow(non_upper_case_globals)]
 
 use crate::font::Font;
-use crate::lifecycle::{StereoKitDraw, StereoKitContext};
-use crate::values::{
-	matrix_from, vec2_from, vec2_to, Color128, Color32, MMatrix, MVec2,
-	MVec3,
-};
+use crate::lifecycle::{StereoKitContext, StereoKitDraw};
+use crate::values::{matrix_from, vec2_from, vec2_to, Color128, Color32, MMatrix, MVec2, MVec3};
 use crate::StereoKit;
 use bitflags::bitflags;
 use bitflags_serde_shim::impl_serde_for_bitflags;
@@ -63,11 +60,7 @@ impl TextStyle {
 	) -> TextStyle {
 		TextStyle {
 			text_style: unsafe {
-				text_make_style(
-					font.font.as_ptr(),
-					character_height,
-					color_gamma.into(),
-				)
+				text_make_style(font.font.as_ptr(), character_height, color_gamma.into())
 			},
 		}
 	}

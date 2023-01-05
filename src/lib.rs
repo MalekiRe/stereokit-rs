@@ -1,10 +1,5 @@
-pub use lifecycle::{StereoKitSettings, StereoKit};
+pub use lifecycle::{Settings, StereoKit};
 pub use stereokit_sys as sys;
-use crate::info::Display;
-use crate::lifecycle::DisplayMode;
-use crate::shader::Shader;
-use color_eyre::Result;
-use crate::color_named::WHITE;
 
 #[macro_use]
 pub mod macros;
@@ -48,16 +43,16 @@ pub mod ui;
 #[allow(unused)]
 pub mod values;
 
+pub mod color_named;
 #[allow(unused)]
 #[cfg(feature = "high-level")]
 pub mod high_level;
 pub mod sound;
 pub mod world;
-pub mod color_named;
 
 #[test]
 fn basic() {
-	let stereokit = StereoKitSettings::default().init().unwrap();
+	let stereokit = Settings::default().init().unwrap();
 	stereokit.run(|_| {}, |_| {});
 }
 
@@ -77,11 +72,10 @@ fn init_error() -> color_eyre::Result<()> {
  */
 
 #[test]
-fn test() -> Result<()> {
+fn test() -> color_eyre::eyre::Result<()> {
 	use glam::{vec3, Mat4, Quat};
-	use prisma::{Rgb, Rgba};
 
-	let stereokit = StereoKitSettings::default().init()?;
+	let stereokit = Settings::default().init()?;
 
 	let mut window_pose = pose::Pose::IDENTITY;
 	let cube_mesh = mesh::Mesh::gen_cube(
@@ -93,7 +87,8 @@ fn test() -> Result<()> {
 		},
 		1,
 	)?;
-	let cube_material = material::Material::copy_from_id(&stereokit, material::DEFAULT_ID_MATERIAL)?;
+	let cube_material =
+		material::Material::copy_from_id(&stereokit, material::DEFAULT_ID_MATERIAL)?;
 
 	let cube_model = model::Model::from_mesh(&stereokit, &cube_mesh, &cube_material)?;
 	stereokit.run(

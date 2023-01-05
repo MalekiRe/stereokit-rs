@@ -225,7 +225,7 @@ pub trait StereoKitInput {
 		unsafe { std::mem::transmute(stereokit_sys::input_controller_menu()) }
 	}
 	fn input_hand_visible(&self, handed: Handed, visible: bool) {
-		unsafe { input_hand_visible(handed as u32, visible as bool32_t)}
+		unsafe { input_hand_visible(handed as u32, visible as bool32_t) }
 	}
 	fn input_head(&self) -> &Pose {
 		unsafe { transmute(&*stereokit_sys::input_head()) }

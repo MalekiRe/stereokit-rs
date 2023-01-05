@@ -14,12 +14,12 @@ pub struct LinePoint {
 }
 
 pub fn line_add(
-    _draw_ctx: &StereoKitDraw,
-    start: MVec3,
-    end: MVec3,
-    color_start: impl Into<Color32>,
-    color_end: impl Into<Color32>,
-    thickness: f32,
+	_draw_ctx: &StereoKitDraw,
+	start: MVec3,
+	end: MVec3,
+	color_start: impl Into<Color32>,
+	color_end: impl Into<Color32>,
+	thickness: f32,
 ) {
 	unsafe {
 		stereokit_sys::line_add(

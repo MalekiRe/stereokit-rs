@@ -2,10 +2,10 @@
 
 use std::fmt::Debug;
 
+use crate::values::{matrix_from, MMatrix};
 use crate::{texture::Texture, StereoKit};
 use bitflags::bitflags;
 use stereokit_sys::{_gradient_t, vec3};
-use crate::values::{MMatrix, matrix_from};
 
 bitflags! {
 	pub struct RenderLayer: u32 {
@@ -64,12 +64,9 @@ pub trait StereoKitRender {
 	}
 }
 stereokit_trait_impl!(StereoKitRender);
-impl StereoKit {
-}
+impl StereoKit {}
 
-pub struct Camera {
-
-}
+pub struct Camera {}
 impl Camera {
 	pub fn set_root(matrix: impl Into<MMatrix>) {
 		let matrix = matrix.into();

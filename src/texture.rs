@@ -1,10 +1,8 @@
 #![allow(non_upper_case_globals)]
 
-use crate::lifecycle::{StereoKitContext};
+use crate::lifecycle::StereoKitContext;
 use crate::render::SphericalHarmonics;
-use crate::values::{
-    Color128, Color32, MVec3,
-};
+use crate::values::{Color128, Color32, MVec3};
 use crate::StereoKit;
 use bitflags::bitflags;
 use num_enum::TryFromPrimitive;
@@ -171,7 +169,7 @@ pub struct Texture {
 }
 impl Texture {
 	pub fn from_file(
-		_sk: impl StereoKitContext,
+		_sk: &impl StereoKitContext,
 		file_path: impl AsRef<Path>,
 		is_srgb: bool,
 		priority: i32,
@@ -184,7 +182,7 @@ impl Texture {
 		})
 	}
 	pub fn create(
-		_sk: impl StereoKitContext,
+		_sk: &impl StereoKitContext,
 		texture_type: TextureType,
 		format: TextureFormat,
 	) -> Option<Self> {
@@ -194,7 +192,12 @@ impl Texture {
 			})?,
 		})
 	}
-	pub fn from_mem(_sk: impl StereoKitContext, memory: &[u8], srgb_data: bool, priority: i32) -> Option<Self> {
+	pub fn from_mem(
+		_sk: &impl StereoKitContext,
+		memory: &[u8],
+		srgb_data: bool,
+		priority: i32,
+	) -> Option<Self> {
 		Some(Texture {
 			tex: NonNull::new(unsafe {
 				stereokit_sys::tex_create_mem(
@@ -207,7 +210,7 @@ impl Texture {
 		})
 	}
 	pub fn from_color32(
-		_sk: impl StereoKitContext,
+		_sk: &impl StereoKitContext,
 		data: impl Into<Color32>,
 		width: i32,
 		height: i32,
@@ -240,19 +243,14 @@ impl Texture {
 				load_priority,
 			)
 		})?;
-		Some((
-			Texture {
-				tex,
-			},
-			spherical_harmonics,
-		))
+		Some((Texture { tex }, spherical_harmonics))
 	}
 	pub fn cubemap_from_gradient(
-        _sk: impl StereoKitContext,
-        gradient: &Gradient,
-        direction: MVec3,
-        resolution: u32,
-        spherical_harmonics_info: Option<&mut SphericalHarmonics>,
+		_sk: &impl StereoKitContext,
+		gradient: &Gradient,
+		direction: MVec3,
+		resolution: u32,
+		spherical_harmonics_info: Option<&mut SphericalHarmonics>,
 	) -> Option<Self> {
 		Some(Texture {
 			tex: NonNull::new(unsafe {
@@ -268,7 +266,7 @@ impl Texture {
 		})
 	}
 	pub fn cubemap_from_spherical_harmonics(
-		_sk: impl StereoKitContext,
+		_sk: &impl StereoKitContext,
 		spherical_harmonics: &SphericalHarmonics,
 		resolution: u32,
 		light_spot_size_pct: f32,

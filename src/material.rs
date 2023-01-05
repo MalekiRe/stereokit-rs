@@ -1,8 +1,9 @@
-use crate::lifecycle::{StereoKitContext};
+use crate::lifecycle::StereoKitContext;
 use crate::shader::Shader;
 use crate::texture::Texture;
 use crate::values::{vec2_from, Color128, MMatrix, MVec2, MVec3, MVec4};
 use crate::StereoKit;
+use color_eyre::{Report, Result};
 use num_enum::TryFromPrimitive;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
@@ -14,7 +15,6 @@ use stereokit_sys::{
 	material_set_float, material_set_param, material_set_queue_offset, material_set_texture,
 };
 use ustr::ustr;
-use color_eyre::{Report, Result};
 
 pub const DEFAULT_ID_MATERIAL: &str = "default/material";
 pub const DEFAULT_ID_MATERIAL_PBR: &str = "default/material_pbr";
@@ -93,7 +93,8 @@ impl Material {
 		Ok(Material {
 			material: NonNull::new(unsafe {
 				stereokit_sys::material_create(shader.shader.as_ptr())
-			}).ok_or(Report::msg("Unable to create material from shader."))?,
+			})
+			.ok_or(Report::msg("Unable to create material from shader."))?,
 		})
 	}
 	pub fn find(_sk: &impl StereoKitContext, id: &str) -> Result<Self> {
@@ -101,16 +102,19 @@ impl Material {
 	}
 	pub fn builtin_copy(&self, _sk: &impl StereoKitContext) -> Result<Self> {
 		Ok(Material {
-			material: NonNull::new(unsafe {
-				stereokit_sys::material_copy(self.material.as_ptr())
-			}).ok_or(Report::msg("Copy of material failed."))?,
+			material: NonNull::new(unsafe { stereokit_sys::material_copy(self.material.as_ptr()) })
+				.ok_or(Report::msg("Copy of material failed."))?,
 		})
 	}
 	pub fn copy_from_id(_sk: &impl StereoKitContext, id: &str) -> Result<Self> {
 		Ok(Material {
 			material: NonNull::new(unsafe {
 				stereokit_sys::material_copy_id(ustr(id).as_char_ptr())
-			}).ok_or(Report::msg(format!("Material of ID '{}' not found, or copy otherwise failed", id)))?,
+			})
+			.ok_or(Report::msg(format!(
+				"Material of ID '{}' not found, or copy otherwise failed",
+				id
+			)))?,
 		})
 	}
 	pub fn set_id(&self, _sk: &impl StereoKitContext, id: &str) {
@@ -159,7 +163,12 @@ impl Material {
 	pub fn get_queue_offset(&self, _sk: &impl StereoKitContext) -> i32 {
 		unimplemented!()
 	}
-	pub fn has_parameter(&self, _sk: &impl StereoKitContext, name: &str, type_: impl MaterialParameter) -> bool {
+	pub fn has_parameter(
+		&self,
+		_sk: &impl StereoKitContext,
+		name: &str,
+		type_: impl MaterialParameter,
+	) -> bool {
 		unimplemented!()
 	}
 	pub fn set_parameter<P>(&self, _sk: &impl StereoKitContext, name: &str, value: &P)

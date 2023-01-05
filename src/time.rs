@@ -1,5 +1,3 @@
-use crate::StereoKit;
-
 pub trait StereoKitTime {
 	fn time_elapsed(&self) -> f64 {
 		unsafe { stereokit_sys::time_elapsed() }

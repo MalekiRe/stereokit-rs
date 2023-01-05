@@ -5,7 +5,6 @@ use crate::values::{matrix_from, Color128, MMatrix, MVec3};
 use crate::StereoKit;
 use std::ffi::CString;
 use std::rc::{Rc, Weak};
-use prisma::FromTuple;
 use stereokit_sys::{text_add_at, text_align_, text_size};
 
 pub struct RichText {
@@ -45,24 +44,24 @@ impl RichText {
 	}
 
 	pub fn draw(&mut self, ctx: &StereoKitDraw) {
-		let white = Color128{
+		let white = Color128 {
 			r: 1.0,
 			g: 1.0,
 			b: 1.0,
-			a: 1.0
+			a: 1.0,
 		};
 		let mut last: Option<&TextModule> = None;
 		let mut total_offset = 0.0f32;
 		for text_module in &self.text_modules {
 			text::draw_at(
-                ctx,
-                &text_module.text,
-                self.transform,
-                &text_module.text_style,
-                TextAlign::TopLeft,
-                TextAlign::TopLeft,
-                MVec3::from([-total_offset, 0.0, 0.0]),
-                white,
+				ctx,
+				&text_module.text,
+				self.transform,
+				&text_module.text_style,
+				TextAlign::TopLeft,
+				TextAlign::TopLeft,
+				MVec3::from([-total_offset, 0.0, 0.0]),
+				white,
 			);
 			total_offset += text::size(&text_module.text, &text_module.text_style).x;
 		}
