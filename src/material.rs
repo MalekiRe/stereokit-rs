@@ -38,14 +38,14 @@ impl MaterialParameter for MVec2 {
 	const SK_TYPE: u32 = material_param__material_param_vector2;
 
 	fn as_raw(&self) -> *const c_void {
-		&self as *const _ as *const c_void
+		self as *const _ as *const c_void
 	}
 }
 impl MaterialParameter for MVec3 {
 	const SK_TYPE: u32 = material_param__material_param_vector3;
 
 	fn as_raw(&self) -> *const c_void {
-		&self as *const _ as *const c_void
+		self as *const _ as *const c_void
 	}
 }
 impl MaterialParameter for Texture {
