@@ -1,6 +1,6 @@
 [package]
 name = "stereokit"
-version = "0.9.0"
+version = "0.10.0"
 edition = "2021"
 description = "Higher-Level wrapper around stereokit-sys bindings for StereoKitC library for XR"
 homepage = "https://stereokit.net/"
