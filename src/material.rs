@@ -4,15 +4,23 @@ use crate::texture::Texture;
 use crate::values::{vec2_from, Color128, MMatrix, MVec2, MVec3, MVec4};
 use crate::StereoKit;
 use color_eyre::{Report, Result};
+use mint::{Vector2, Vector3, Vector4};
 use num_enum::TryFromPrimitive;
-use std::ffi::{c_void, CString};
+use std::ffi::{c_char, c_void, CString};
 use std::fmt::Error;
 use std::ptr::NonNull;
 use std::rc::{Rc, Weak};
 use stereokit_sys::{
-	_material_t, material_get_shader, material_param__material_param_texture,
+	_material_t, material_get_cull, material_get_depth_test, material_get_depth_write,
+	material_get_param_count, material_get_queue_offset, material_get_shader,
+	material_get_transparency, material_get_wireframe, material_has_param,
+	material_param__material_param_float, material_param__material_param_texture,
 	material_param__material_param_vector2, material_param__material_param_vector3,
-	material_set_float, material_set_param, material_set_queue_offset, material_set_texture,
+	material_set_bool, material_set_color, material_set_float, material_set_int, material_set_int2,
+	material_set_int3, material_set_int4, material_set_matrix, material_set_param,
+	material_set_queue_offset, material_set_shader, material_set_texture, material_set_uint,
+	material_set_uint2, material_set_uint3, material_set_uint4, material_set_vector2,
+	material_set_vector3, material_set_vector4, material_t,
 };
 use ustr::ustr;
 
@@ -29,30 +37,87 @@ pub const DEFAULT_ID_MATERIAL_UI_BOX: &str = "default/material_ui_box";
 pub const DEFAULT_ID_MATERIAL_UI_QUADRANT: &str = "default/material_ui_quadrant";
 
 pub trait MaterialParameter {
-	const SK_TYPE: u32;
-
-	fn as_raw(&self) -> *const c_void;
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char);
 }
 
+impl MaterialParameter for f32 {
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_float(material, name, *self);
+	}
+}
 impl MaterialParameter for MVec2 {
-	const SK_TYPE: u32 = material_param__material_param_vector2;
-
-	fn as_raw(&self) -> *const c_void {
-		self as *const _ as *const c_void
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_vector2(material, name, (*self).into());
 	}
 }
 impl MaterialParameter for MVec3 {
-	const SK_TYPE: u32 = material_param__material_param_vector3;
-
-	fn as_raw(&self) -> *const c_void {
-		self as *const _ as *const c_void
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_vector3(material, name, (*self).into());
+	}
+}
+impl MaterialParameter for MVec4 {
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_vector4(material, name, (*self).into());
+	}
+}
+impl MaterialParameter for Color128 {
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_color(material, name, *self);
+	}
+}
+impl MaterialParameter for i32 {
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_int(material, name, *self);
+	}
+}
+impl MaterialParameter for Vector2<i32> {
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_int2(material, name, self.x, self.y);
+	}
+}
+impl MaterialParameter for Vector3<i32> {
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_int3(material, name, self.x, self.y, self.z);
+	}
+}
+impl MaterialParameter for Vector4<i32> {
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_int4(material, name, self.w, self.x, self.y, self.z);
+	}
+}
+impl MaterialParameter for bool {
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_bool(material, name, *self as i32);
+	}
+}
+impl MaterialParameter for u32 {
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_uint(material, name, *self);
+	}
+}
+impl MaterialParameter for Vector2<u32> {
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_uint2(material, name, self.x, self.y);
+	}
+}
+impl MaterialParameter for Vector3<u32> {
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_uint3(material, name, self.x, self.y, self.z);
+	}
+}
+impl MaterialParameter for Vector4<u32> {
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_uint4(material, name, self.w, self.x, self.y, self.z);
+	}
+}
+impl MaterialParameter for MMatrix {
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_matrix(material, name, (*self).into());
 	}
 }
 impl MaterialParameter for Texture {
-	const SK_TYPE: u32 = material_param__material_param_texture;
-
-	fn as_raw(&self) -> *const c_void {
-		self.tex.as_ptr() as *const c_void
+	unsafe fn material_set_param(&self, material: material_t, name: *const c_char) {
+		material_set_texture(material, name, self.tex.as_ptr());
 	}
 }
 
@@ -98,7 +163,10 @@ impl Material {
 		})
 	}
 	pub fn find(_sk: &impl StereoKitContext, id: &str) -> Result<Self> {
-		unimplemented!()
+		Ok(Material {
+			material: NonNull::new(unsafe { stereokit_sys::material_find(ustr(id).as_char_ptr()) })
+				.ok_or(Report::msg("Unable to find material."))?,
+		})
 	}
 	pub fn builtin_copy(&self, _sk: &impl StereoKitContext) -> Result<Self> {
 		Ok(Material {
@@ -146,66 +214,37 @@ impl Material {
 		unsafe { material_set_queue_offset(self.material.as_ptr(), offset) }
 	}
 	pub fn get_transparency(&self, _sk: &impl StereoKitContext) -> Transparency {
-		unimplemented!()
+		Transparency::try_from(unsafe { material_get_transparency(self.material.as_ptr()) })
+			.unwrap()
 	}
 	pub fn get_cull(&self, _sk: &impl StereoKitContext) -> Cull {
-		unimplemented!()
+		Cull::try_from(unsafe { material_get_cull(self.material.as_ptr()) }).unwrap()
 	}
 	pub fn get_wireframe(&self, _sk: &impl StereoKitContext) -> bool {
-		unimplemented!()
+		unsafe { material_get_wireframe(self.material.as_ptr()) > 0 }
 	}
 	pub fn get_depth_test(&self, _sk: &impl StereoKitContext) -> DepthTest {
-		unimplemented!()
+		DepthTest::try_from(unsafe { material_get_depth_test(self.material.as_ptr()) }).unwrap()
 	}
 	pub fn get_depth_write(&self, _sk: &impl StereoKitContext) -> bool {
-		unimplemented!()
+		unsafe { material_get_depth_write(self.material.as_ptr()) > 0 }
 	}
 	pub fn get_queue_offset(&self, _sk: &impl StereoKitContext) -> i32 {
-		unimplemented!()
-	}
-	pub fn has_parameter(
-		&self,
-		_sk: &impl StereoKitContext,
-		name: &str,
-		type_: impl MaterialParameter,
-	) -> bool {
-		unimplemented!()
+		unsafe { material_get_queue_offset(self.material.as_ptr()) }
 	}
 	pub fn set_parameter<P>(&self, _sk: &impl StereoKitContext, name: &str, value: &P)
 	where
 		P: MaterialParameter,
 	{
 		unsafe {
-			material_set_param(
-				self.material.as_ptr(),
-				ustr::ustr(name).as_char_ptr(),
-				P::SK_TYPE,
-				value.as_raw(),
-			);
+			value.material_set_param(self.material.as_ptr(), ustr::ustr(name).as_char_ptr());
 		}
 	}
-	pub fn set_parameter_id(&self, id: u64, type_: impl MaterialParameter, value: c_void) {
-		unimplemented!()
-	}
-	pub fn get_parameter(&self, id: u64, type_: impl MaterialParameter, value: c_void) {
-		unimplemented!()
-	}
-	pub fn get_param_id(&self, id: u64, type_: impl MaterialParameter, out_value: c_void) {
-		unimplemented!()
-	}
-	pub fn get_param_info(
-		&self,
-		index: i32,
-		out_name: Vec<&str>,
-		out_type: &mut impl MaterialParameter,
-	) {
-		unimplemented!()
-	}
 	pub fn get_param_count(&self) -> i32 {
-		unimplemented!()
+		unsafe { material_get_param_count(self.material.as_ptr()) }
 	}
 	pub fn set_shader(&self, shader: Shader) {
-		unimplemented!()
+		unsafe { material_set_shader(self.material.as_ptr(), shader.shader.as_ptr()) }
 	}
 	pub fn get_shader(&self, _sk: impl StereoKitContext) -> Shader {
 		Shader {
