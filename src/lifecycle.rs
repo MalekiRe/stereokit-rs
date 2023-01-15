@@ -6,7 +6,7 @@ use num_enum::TryFromPrimitive;
 use once_cell::unsync::OnceCell;
 use std::any::Any;
 use std::cell::{Ref, RefCell};
-use std::ffi::{c_void, CString};
+use std::ffi::{c_char, c_void, CStr, CString};
 use std::fmt::Error;
 use std::marker::PhantomData;
 use std::os::unix::thread;
@@ -21,7 +21,8 @@ use crate::input::StereoKitInput;
 use crate::render::StereoKitRender;
 use stereokit_sys::{
 	assets_releaseref_threadsafe, bool32_t, color32, depth_mode_, display_blend_, display_mode_,
-	log_, material_t, model_t, pose_t, sk_settings_t,
+	log_, log__log_diagnostic, log__log_error, log__log_inform, log__log_warning, log_subscribe,
+	material_t, model_t, pose_t, sk_settings_t,
 };
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
@@ -94,7 +95,7 @@ pub struct SKSettingsBuilt {
 
 impl Settings {
 	pub fn init(self) -> Result<StereoKit> {
-		color_eyre::install()?;
+		unsafe { log_subscribe(Some(tracing_log)) };
 		if GLOBAL_STATE.with(|f| *f.borrow()) {
 			return Err(Report::msg("Stereokit is already running")
 				.suggestion("Only run 1 instance of StereoKit at a time in a single process"));
@@ -148,6 +149,19 @@ impl Settings {
 			} else {
 				Err(possible_err_message)
 			}
+		}
+	}
+}
+
+extern "C" fn tracing_log(level: log_, message: *const c_char) {
+	if let Ok(message) = unsafe { CStr::from_ptr(message) }.to_str() {
+		#[allow(non_upper_case_globals)]
+		match level {
+			log__log_error => tracing::error!(target: "StereoKit", message),
+			log__log_warning => tracing::warn!(target: "StereoKit", message),
+			log__log_inform => tracing::info!(target: "StereoKit", message),
+			log__log_diagnostic => tracing::debug!(target: "StereoKit", message),
+			_ => (),
 		}
 	}
 }

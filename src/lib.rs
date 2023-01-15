@@ -73,9 +73,16 @@ fn init_error() -> color_eyre::Result<()> {
 
 #[test]
 fn test() -> color_eyre::eyre::Result<()> {
+	color_eyre::install()?;
+	tracing_subscriber::fmt()
+		.with_max_level(tracing::Level::DEBUG)
+		.init();
+
 	use glam::{vec3, Mat4, Quat};
 
-	let stereokit = Settings::default().init()?;
+	let stereokit = Settings::default()
+		.log_filter(crate::lifecycle::LogFilter::None)
+		.init()?;
 
 	let mut window_pose = pose::Pose::IDENTITY;
 	let cube_mesh = mesh::Mesh::gen_cube(

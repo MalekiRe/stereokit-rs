@@ -1,6 +1,6 @@
 [package]
 name = "stereokit"
-version = "0.11.0"
+version = "0.11.1"
 edition = "2021"
 description = "Higher-Level wrapper around stereokit-sys bindings for StereoKitC library for XR"
 homepage = "https://stereokit.net/"
@@ -36,12 +36,14 @@ bitflags_serde_shim = "0.2.2"
 num_enum = "0.5.7"
 glam = {version = "0.22.0", features = ["mint"], optional = true}
 color-eyre = "0.6.2"
+tracing = "0.1.37"
 
 [target.'cfg(target_os = "android")'.dependencies]
 ndk-context = "0.1.1"
 
 [dev-dependencies]
 glam = {version = "0.22.0", features = ["mint"]}
+tracing-subscriber = "0.3.16"
 
 [profile.dev.package.backtrace]
 opt-level = 3
