@@ -1,4 +1,4 @@
-use crate::values::{vec3_from, MVec3};
+use crate::values::{vec3_from, MVec3, vec3_to};
 use std::path::PathBuf;
 use std::ptr::NonNull;
 use stereokit_sys::{_sound_t, sound_inst_t};
@@ -27,11 +27,18 @@ impl Sound {
 pub struct SoundInstance {
 	sound_instance: sound_inst_t,
 }
+
 impl SoundInstance {
 	pub fn stop(self) {
 		unsafe { stereokit_sys::sound_inst_stop(self.sound_instance) }
 	}
 	pub fn set_volume(&mut self, volume: f32) {
 		unsafe { stereokit_sys::sound_inst_set_volume(self.sound_instance, volume) }
+	}
+	pub fn set_position(&mut self, position: impl Into<MVec3>) {
+		unsafe { stereokit_sys::sound_inst_set_pos(self.sound_instance, vec3_from(position.into()))}
+	}
+	pub fn get_position(&mut self) -> MVec3 {
+		unsafe { vec3_to(stereokit_sys::sound_inst_get_pos(self.sound_instance)) }
 	}
 }
