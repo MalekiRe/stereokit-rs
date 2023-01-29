@@ -35,10 +35,10 @@ impl SoundInstance {
 	pub fn set_volume(&mut self, volume: f32) {
 		unsafe { stereokit_sys::sound_inst_set_volume(self.sound_instance, volume) }
 	}
-	pub fn set_position(&mut self, position: impl Into<MVec3>) {
+	pub fn set_position(&self, position: impl Into<MVec3>) {
 		unsafe { stereokit_sys::sound_inst_set_pos(self.sound_instance, vec3_from(position.into()))}
 	}
-	pub fn get_position(&mut self) -> MVec3 {
+	pub fn get_position(&self) -> MVec3 {
 		unsafe { vec3_to(stereokit_sys::sound_inst_get_pos(self.sound_instance)) }
 	}
 }
