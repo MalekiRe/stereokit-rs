@@ -37,10 +37,7 @@ impl Shader {
 	pub fn from_mem(sk: &impl StereoKitContext, memory: &[u8]) -> Result<Self> {
 		Ok(Shader {
 			shader: NonNull::new(unsafe {
-				stereokit_sys::shader_create_mem(
-					memory.as_ptr() as *mut c_void,
-					memory.len() as u64,
-				)
+				stereokit_sys::shader_create_mem(memory.as_ptr() as *mut c_void, memory.len())
 			})
 			.ok_or(Report::msg("Unable to create shader from memory"))?,
 		})

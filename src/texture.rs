@@ -202,7 +202,7 @@ impl Texture {
 			tex: NonNull::new(unsafe {
 				stereokit_sys::tex_create_mem(
 					memory.as_ptr() as *mut c_void,
-					memory.len() as u64,
+					memory.len(),
 					srgb_data as i32,
 					priority,
 				)

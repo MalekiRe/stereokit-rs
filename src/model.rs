@@ -59,7 +59,7 @@ impl Model {
 				stereokit_sys::model_create_mem(
 					file_name.as_char_ptr(),
 					memory.as_ptr() as *mut c_void,
-					memory.len() as u64,
+					memory.len(),
 					shader
 						.map(|shader| shader.shader.as_ptr())
 						.unwrap_or(null_mut()),

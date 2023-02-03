@@ -91,6 +91,8 @@ pub struct SKSettingsBuilt {
 	disable_flatscreen_mr_sim: bool,
 	disable_desktop_input_window: bool,
 	disable_unfocused_sleep: bool,
+	render_scaling: f32,
+	render_multisample: u32,
 }
 
 impl Settings {
@@ -138,6 +140,8 @@ impl Settings {
 			disable_unfocused_sleep: self.disable_unfocused_sleep.unwrap_or_default() as bool32_t,
 			android_java_vm: vm_pointer,
 			android_activity: jobject_pointer,
+			render_scaling: self.render_scaling.unwrap_or(1.0),
+			render_multisample: self.render_multisample.unwrap_or(1) as i32,
 		};
 		unsafe {
 			if stereokit_sys::sk_init(c_settings) != 0 {
