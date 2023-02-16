@@ -12,7 +12,8 @@ use num_enum::TryFromPrimitive;
 use std::ops::Deref;
 use std::slice::Iter;
 use std::{fmt::Pointer, mem::transmute};
-use stereokit_sys::{bool32_t, button_state_, input_hand_visible, input_key, key_};
+use stereokit_sys::{bool32_t, button_state_, controller_t, hand_t, input_hand_visible, input_key, key_, quat, vec3};
+use crate::values::{pose_to, quat_to, vec2_to, vec3_to};
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
@@ -139,6 +140,17 @@ pub enum TrackState {
 	Known = 2,
 }
 
+impl TrackState {
+	pub fn try_from(val: u32) -> Option<Self> {
+		return Some(match val {
+			0 => TrackState::Lost,
+			1 => TrackState::Inferred,
+			2 => TrackState::Known,
+			_ => return None,
+		})
+	}
+}
+
 pub struct Ray {
 	pub pos: MVec3,
 	pub dir: MVec3,
@@ -175,11 +187,31 @@ pub enum Handed {
 	Right = 1,
 }
 
+impl Handed {
+	pub(crate) fn from_sk(val: u32) -> Option<Self> {
+		Some(match val {
+			0 => Handed::Left,
+			1 => Handed::Right,
+			_ => return None
+		})
+	}
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Joint {
 	pub position: MVec3,
 	pub orientation: MQuat,
 	pub radius: f32,
+}
+
+impl Joint {
+	pub(crate) fn from_sk_vals(pos: vec3, orientation: quat, radius: f32) -> Self {
+		Self {
+			position: vec3_to(pos),
+			orientation: quat_to(orientation),
+			radius,
+		}
+	}
 }
 
 /// The fingers go thumb to little, metacarpal to tip
@@ -215,20 +247,62 @@ pub struct Controller {
 }
 
 pub trait StereoKitInput {
-	fn input_hand(&self, handed: Handed) -> &Hand {
-		unsafe { std::mem::transmute(&*stereokit_sys::input_hand(handed as u32)) }
+	fn input_hand(&self, handed: Handed) -> Hand {
+		let input_hand = unsafe { *stereokit_sys::input_hand(handed as u32) };
+		match input_hand {
+			hand_t { fingers, wrist, palm, pinch_pt, handedness, tracked_state, pinch_state, grip_state, size, pinch_activation, grip_activation } => {
+				Hand {
+					fingers: fingers.map(|t| {
+						t.map(|a| Joint::from_sk_vals(a.position, a.orientation, a.radius))
+					}),
+					wrist: pose_to(wrist),
+					palm: pose_to(palm),
+					pinch_point: vec3_to(pinch_pt),
+					handedness: Handed::from_sk(handedness).unwrap(),
+					tracked_state: ButtonState::from_bits(tracked_state).unwrap(),
+					pinch_state: ButtonState::from_bits(pinch_state).unwrap(),
+					grip_state: ButtonState::from_bits(grip_state).unwrap(),
+					size,
+					pinch_activation,
+					grip_activation,
+				}
+			}
+		}
 	}
-	fn input_controller(&self, handed: Handed) -> &Controller {
-		unsafe { std::mem::transmute(&*stereokit_sys::input_controller(handed as u32)) }
+	fn input_controller(&self, handed: Handed) -> Controller {
+		let controller = unsafe { *stereokit_sys::input_controller(handed as u32) };
+		match controller {
+			controller_t { pose, palm, aim, tracked, tracked_pos, tracked_rot, stick_click, x1, x2, trigger, grip, stick } => {
+				Controller {
+					pose: pose_to(pose),
+					palm: pose_to(palm),
+					aim: pose_to(aim),
+					tracked: ButtonState::from_bits(tracked).unwrap(),
+					tracked_pos: TrackState::try_from(tracked_pos).unwrap(),
+					tracked_rot: TrackState::try_from(tracked_rot).unwrap(),
+					stick_click: ButtonState::from_bits(stick_click).unwrap(),
+					x1: ButtonState::from_bits(x1).unwrap(),
+					x2: ButtonState::from_bits(x2).unwrap(),
+					trigger,
+					grip,
+					stick: vec2_to(stick),
+				}
+			}
+		}
 	}
 	fn input_controller_menu(&self) -> ButtonState {
-		unsafe { std::mem::transmute(stereokit_sys::input_controller_menu()) }
+		let button_state = unsafe { stereokit_sys::input_controller_menu() };
+		ButtonState::from_bits(button_state).unwrap()
 	}
 	fn input_hand_visible(&self, handed: Handed, visible: bool) {
 		unsafe { input_hand_visible(handed as u32, visible as bool32_t) }
 	}
-	fn input_head(&self) -> &Pose {
-		unsafe { transmute(&*stereokit_sys::input_head()) }
+	fn input_head(&self) -> Pose {
+		let pose = unsafe {*stereokit_sys::input_head()};
+		Pose {
+			position: vec3_to(pose.position),
+			orientation: quat_to(pose.orientation),
+		}
 	}
 
 	fn input_mouse(&self) -> &Mouse {

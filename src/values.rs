@@ -1,7 +1,7 @@
 use crate::pose::Pose;
 use mint::{ColumnMatrix4, RowMatrix4};
 use std::fmt::Pointer;
-use stereokit_sys::{color128, color32, matrix, quat, text_style_t, vec2, vec3, vec4};
+use stereokit_sys::{color128, color32, matrix, pose_t, quat, text_style_t, vec2, vec3, vec4};
 
 pub type MVec4 = mint::Vector4<f32>;
 pub type MVec3 = mint::Vector3<f32>;
@@ -105,4 +105,14 @@ pub(crate) fn quat_from(q: MQuat) -> quat {
 }
 pub(crate) fn quat_to(q: quat) -> MQuat {
 	MQuat::from([q.x, q.y, q.z, q.w])
+}
+pub(crate) fn pose_to(pose: pose_t) -> Pose {
+	match pose {
+		pose_t { position, orientation } => {
+			Pose {
+				position: vec3_to(position),
+				orientation: quat_to(orientation),
+			}
+		}
+	}
 }
