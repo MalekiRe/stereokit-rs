@@ -116,3 +116,13 @@ pub(crate) fn pose_to(pose: pose_t) -> Pose {
 		}
 	}
 }
+pub(crate) fn pose_from(pose: Pose) -> pose_t {
+	match pose {
+		Pose { position, orientation } => {
+			pose_t {
+				position: vec3_from(position),
+				orientation: quat_from(orientation),
+			}
+		}
+	}
+}

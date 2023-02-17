@@ -1,7 +1,7 @@
 use crate::font::Font;
 use crate::sprite::Sprite;
 use crate::text::TextStyle;
-use crate::values::{vec3_from, MVec3};
+use crate::values::{vec3_from, MVec3, pose_from};
 use crate::{
 	lifecycle::StereoKitDraw,
 	text::TextAlign,
@@ -51,7 +51,7 @@ pub fn window(
 	unsafe {
 		stereokit_sys::ui_window_begin(
 			window_title.as_char_ptr(),
-			std::mem::transmute(pose),
+			&mut pose_from(*pose),
 			vec2_from(size),
 			window_type as ui_win_,
 			move_type as ui_move_,
@@ -78,7 +78,7 @@ pub fn try_window<Res, Er>(
 	unsafe {
 		stereokit_sys::ui_window_begin(
 			window_title.as_char_ptr(),
-			std::mem::transmute(pose),
+			&mut pose_from(*pose),
 			vec2_from(size),
 			window_type as ui_win_,
 			move_type as ui_move_,

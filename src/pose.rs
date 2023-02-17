@@ -1,4 +1,4 @@
-use crate::values::{matrix_to, quat_from, vec3_from, MMatrix, MQuat, MVec3};
+use crate::values::{matrix_to, quat_from, vec3_from, MMatrix, MQuat, MVec3, pose_from};
 use std::fmt::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -31,7 +31,7 @@ impl Pose {
 	pub fn pose_matrix(&self, vec3: impl Into<MVec3>) -> MMatrix {
 		unsafe {
 			matrix_to(stereokit_sys::pose_matrix(
-				std::mem::transmute(self),
+				&pose_from(*self),
 				vec3.into().into(),
 			))
 		}
