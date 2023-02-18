@@ -1,7 +1,7 @@
 use crate::font::Font;
 use crate::sprite::Sprite;
 use crate::text::TextStyle;
-use crate::values::{vec3_from, MVec3, pose_from};
+use crate::values::{vec3_from, MVec3, pose_from, IntegerType};
 use crate::{
 	lifecycle::StereoKitDraw,
 	text::TextAlign,
@@ -102,7 +102,7 @@ impl WindowContext {
 	}
 	pub fn text(&self, text: &str, text_align: TextAlign) {
 		let text = ustr(text);
-		unsafe { ui_text(text.as_char_ptr(), text_align.bits()) }
+		unsafe { ui_text(text.as_char_ptr(), text_align.bits() as IntegerType) }
 	}
 	pub fn label(&self, text: &str, use_padding: bool) {
 		let text = ustr(text);
@@ -117,7 +117,7 @@ impl WindowContext {
 			ui_button_img(
 				ustr(text).as_char_ptr(),
 				sprite.sprite.as_ptr(),
-				layout as u32,
+				layout as IntegerType,
 			) != 0
 		}
 	}
@@ -142,7 +142,7 @@ impl WindowContext {
 			ui_button_img_at(
 				ustr(text).as_char_ptr(),
 				sprite.sprite.as_ptr(),
-				layout as u32,
+				layout as IntegerType,
 				vec3_from(window_relative_pos),
 				vec2_from(size),
 			) != 0
@@ -166,7 +166,7 @@ impl WindowContext {
 				max,
 				step,
 				width,
-				confirm_method as u32,
+				confirm_method as IntegerType,
 				0,
 			);
 		}

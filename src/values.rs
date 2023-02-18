@@ -11,6 +11,12 @@ pub type MMatrix = mint::ColumnMatrix4<f32>;
 pub type Color32 = color32;
 pub type Color128 = color128;
 
+#[cfg(target_os = "unix")]
+pub type IntegerType = u32;
+
+#[cfg(target_os = "windows")]
+pub type IntegerType = i32;
+
 pub struct SKMatrix {
 	matrix: MMatrix,
 	inverse: Option<MMatrix>,

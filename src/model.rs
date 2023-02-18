@@ -5,7 +5,7 @@ use crate::mesh::Mesh;
 use crate::pose::Pose;
 use crate::render::RenderLayer;
 use crate::shader::Shader;
-use crate::values::{matrix_from, vec3_from, vec3_to, Color128, MMatrix, MVec3, matrix_to};
+use crate::values::{matrix_from, vec3_from, vec3_to, Color128, MMatrix, MVec3, matrix_to, IntegerType};
 use crate::StereoKit;
 use color_eyre::{Report, Result};
 use std::ffi::{c_void, CStr, CString};
@@ -95,7 +95,7 @@ impl Model {
 				self.model.as_ptr(),
 				matrix_from(matrix),
 				color_linear.into(),
-				layer.bits(),
+				layer.bits() as IntegerType,
 			)
 		}
 	}

@@ -2,7 +2,7 @@
 
 use crate::lifecycle::StereoKitContext;
 use crate::render::SphericalHarmonics;
-use crate::values::{Color128, Color32, MVec3};
+use crate::values::{Color128, Color32, IntegerType, MVec3};
 use crate::StereoKit;
 use bitflags::bitflags;
 use num_enum::TryFromPrimitive;
@@ -154,7 +154,7 @@ pub struct Gradient {
 	gradient: gradient_t,
 }
 impl Gradient {
-	pub fn new(stereokit: &StereoKit) -> Self {
+	pub fn new(_sk: &StereoKit) -> Self {
 		Gradient {
 			gradient: unsafe { stereokit_sys::gradient_create() },
 		}
@@ -188,7 +188,7 @@ impl Texture {
 	) -> Option<Self> {
 		Some(Texture {
 			tex: NonNull::new(unsafe {
-				stereokit_sys::tex_create(texture_type.bits(), format as u32)
+				stereokit_sys::tex_create(texture_type.bits() as IntegerType, format as IntegerType)
 			})?,
 		})
 	}
@@ -296,7 +296,7 @@ impl Texture {
 		stereokit_sys::tex_set_surface(
 			self.tex.as_ptr(),
 			native_texture as *mut c_void,
-			texture_type.bits(),
+			texture_type.bits() as IntegerType,
 			native_format,
 			width as i32,
 			height as i32,
@@ -306,10 +306,10 @@ impl Texture {
 	}
 
 	pub unsafe fn set_sample(&self, sample: TextureSample) {
-		stereokit_sys::tex_set_sample(self.tex.as_ptr(), sample as u32);
+		stereokit_sys::tex_set_sample(self.tex.as_ptr(), sample as IntegerType);
 	}
 	pub unsafe fn set_address_mode(&self, address_mode: TextureAddress) {
-		stereokit_sys::tex_set_address(self.tex.as_ptr(), address_mode as u32);
+		stereokit_sys::tex_set_address(self.tex.as_ptr(), address_mode as IntegerType);
 	}
 	pub unsafe fn set_anisotropy_level(&self, anisotropy_level: i32) {
 		stereokit_sys::tex_set_anisotropy(self.tex.as_ptr(), anisotropy_level);

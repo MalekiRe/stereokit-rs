@@ -9,7 +9,7 @@ use std::cell::{Ref, RefCell};
 use std::ffi::{c_char, c_void, CStr, CString};
 use std::fmt::Error;
 use std::marker::PhantomData;
-use std::os::unix::thread;
+//use std::os::unix::thread;
 use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut};
@@ -161,10 +161,10 @@ extern "C" fn tracing_log(level: log_, message: *const c_char) {
 	if let Ok(message) = unsafe { CStr::from_ptr(message) }.to_str() {
 		#[allow(non_upper_case_globals)]
 		match level {
-			log__log_error => tracing::error!(target: "StereoKit", message),
-			log__log_warning => tracing::warn!(target: "StereoKit", message),
-			log__log_inform => tracing::info!(target: "StereoKit", message),
-			log__log_diagnostic => tracing::debug!(target: "StereoKit", message),
+			_log__log_error => tracing::error!(target: "StereoKit", message),
+			_log__log_warning => tracing::warn!(target: "StereoKit", message),
+			_log__log_inform => tracing::info!(target: "StereoKit", message),
+			_log__log_diagnostic => tracing::debug!(target: "StereoKit", message),
 			_ => (),
 		}
 	}

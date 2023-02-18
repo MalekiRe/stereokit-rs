@@ -5,6 +5,7 @@ use color_eyre::Result;
 use std::ptr::{null_mut, NonNull};
 use stereokit_sys::{_model_t, _sprite_t};
 use ustr::ustr;
+use crate::values::IntegerType;
 
 pub struct Sprite {
 	pub(crate) sprite: NonNull<_sprite_t>,
@@ -22,7 +23,7 @@ impl Drop for Sprite {
 }
 impl Sprite {
 	pub fn from_file(
-		sk: &impl StereoKitContext,
+		_sk: &impl StereoKitContext,
 		file: &str,
 		sprite_type: SpriteType,
 	) -> Result<Self> {
@@ -30,7 +31,7 @@ impl Sprite {
 			sprite: NonNull::new(unsafe {
 				stereokit_sys::sprite_create_file(
 					ustr(file).as_char_ptr(),
-					sprite_type as u32,
+					sprite_type as IntegerType,
 					ustr("").as_char_ptr(),
 				)
 			})

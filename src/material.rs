@@ -1,7 +1,7 @@
 use crate::lifecycle::StereoKitContext;
 use crate::shader::Shader;
 use crate::texture::Texture;
-use crate::values::{vec2_from, Color128, MMatrix, MVec2, MVec3, MVec4};
+use crate::values::{vec2_from, Color128, MMatrix, MVec2, MVec3, MVec4, IntegerType};
 use crate::StereoKit;
 use color_eyre::{Report, Result};
 use mint::{Vector2, Vector3, Vector4};
@@ -192,17 +192,17 @@ impl Material {
 		}
 	}
 	pub fn set_transparency(&self, _sk: &impl StereoKitContext, mode: Transparency) {
-		unsafe { stereokit_sys::material_set_transparency(self.material.as_ptr(), mode as u32) }
+		unsafe { stereokit_sys::material_set_transparency(self.material.as_ptr(), mode as IntegerType) }
 	}
 	pub fn set_cull(&self, _sk: &impl StereoKitContext, mode: Cull) {
-		unsafe { stereokit_sys::material_set_cull(self.material.as_ptr(), mode as u32) }
+		unsafe { stereokit_sys::material_set_cull(self.material.as_ptr(), mode as IntegerType) }
 	}
 	pub fn set_wireframe(&self, _sk: &impl StereoKitContext, wireframe: bool) {
 		unsafe { stereokit_sys::material_set_wireframe(self.material.as_ptr(), wireframe as i32) }
 	}
 	pub fn set_depth_test(&self, _sk: &impl StereoKitContext, depth_test_mode: DepthTest) {
 		unsafe {
-			stereokit_sys::material_set_depth_test(self.material.as_ptr(), depth_test_mode as u32)
+			stereokit_sys::material_set_depth_test(self.material.as_ptr(), depth_test_mode as IntegerType)
 		}
 	}
 	pub fn set_depth_write(&self, _sk: &impl StereoKitContext, write_enabled: bool) {
@@ -214,17 +214,17 @@ impl Material {
 		unsafe { material_set_queue_offset(self.material.as_ptr(), offset) }
 	}
 	pub fn get_transparency(&self, _sk: &impl StereoKitContext) -> Transparency {
-		Transparency::try_from(unsafe { material_get_transparency(self.material.as_ptr()) })
+		Transparency::try_from(unsafe { material_get_transparency(self.material.as_ptr()) } as u32)
 			.unwrap()
 	}
 	pub fn get_cull(&self, _sk: &impl StereoKitContext) -> Cull {
-		Cull::try_from(unsafe { material_get_cull(self.material.as_ptr()) }).unwrap()
+		Cull::try_from(unsafe { material_get_cull(self.material.as_ptr()) } as u32).unwrap()
 	}
 	pub fn get_wireframe(&self, _sk: &impl StereoKitContext) -> bool {
 		unsafe { material_get_wireframe(self.material.as_ptr()) > 0 }
 	}
 	pub fn get_depth_test(&self, _sk: &impl StereoKitContext) -> DepthTest {
-		DepthTest::try_from(unsafe { material_get_depth_test(self.material.as_ptr()) }).unwrap()
+		DepthTest::try_from(unsafe { material_get_depth_test(self.material.as_ptr()) } as u32).unwrap()
 	}
 	pub fn get_depth_write(&self, _sk: &impl StereoKitContext) -> bool {
 		unsafe { material_get_depth_write(self.material.as_ptr()) > 0 }

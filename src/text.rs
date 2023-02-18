@@ -2,7 +2,7 @@
 
 use crate::font::Font;
 use crate::lifecycle::{StereoKitContext, StereoKitDraw};
-use crate::values::{matrix_from, vec2_from, vec2_to, Color128, Color32, MMatrix, MVec2, MVec3};
+use crate::values::{matrix_from, vec2_from, vec2_to, Color128, Color32, MMatrix, MVec2, MVec3, IntegerType};
 use crate::StereoKit;
 use bitflags::bitflags;
 use bitflags_serde_shim::impl_serde_for_bitflags;
@@ -53,7 +53,7 @@ pub struct TextStyle {
 
 impl TextStyle {
 	pub fn new(
-		sk: &impl StereoKitContext,
+		_sk: &impl StereoKitContext,
 		font: Font,
 		character_height: f32,
 		color_gamma: impl Into<Color128>,
@@ -88,8 +88,8 @@ pub fn draw_at(
 			text.as_char_ptr(),
 			&matrix_from(transform.into()),
 			style.text_style,
-			position.bits(),
-			align.bits(),
+			position.bits() as IntegerType,
+			align.bits() as IntegerType,
 			offset.x,
 			offset.y,
 			offset.z,
@@ -117,10 +117,10 @@ pub fn draw_in(
 			text.as_char_ptr(),
 			&matrix_from(transform.into()),
 			vec2_from(size.into()),
-			fit as u32,
+			fit as IntegerType,
 			style.text_style,
-			position.bits(),
-			align.bits(),
+			position.bits() as IntegerType,
+			align.bits() as IntegerType,
 			offset.x,
 			offset.y,
 			offset.z,

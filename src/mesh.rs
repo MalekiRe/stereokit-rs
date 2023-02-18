@@ -10,7 +10,7 @@ use std::{fmt::Error, ptr::NonNull};
 // use std::error::Report;
 use crate::bounds::Bounds;
 use crate::lifecycle::StereoKitContext;
-use crate::values::vec3_to;
+use crate::values::{IntegerType, vec3_to};
 use color_eyre::{Report, Result};
 use stereokit_sys::{_mesh_t, bool32_t, mesh_draw};
 
@@ -73,7 +73,7 @@ impl Mesh {
 				material.material.as_ptr(),
 				matrix_from(matrix),
 				color_linear.into(),
-				layer.bits(),
+				layer.bits() as IntegerType,
 			)
 		}
 	}

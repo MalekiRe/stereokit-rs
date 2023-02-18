@@ -1,6 +1,6 @@
 [package]
 name = "stereokit"
-version = "0.14.1"
+version = "0.14.2"
 edition = "2021"
 description = "Higher-Level wrapper around stereokit-sys bindings for StereoKitC library for XR"
 homepage = "https://stereokit.net/"
@@ -17,7 +17,7 @@ exclude = [
 [features]
 default = []
 linux-egl = ["stereokit-sys/linux-egl"]
-high-level = ["dep:glam"]
+high-level = ["glam"]
 prisma = ["stereokit-sys/prisma"]
 color_named = []
 
