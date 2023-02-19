@@ -11,7 +11,7 @@ pub type MMatrix = mint::ColumnMatrix4<f32>;
 pub type Color32 = color32;
 pub type Color128 = color128;
 
-#[cfg(target_os = "unix")]
+#[cfg(target_os = "linux")]
 pub type IntegerType = u32;
 
 #[cfg(target_os = "windows")]
