@@ -17,7 +17,7 @@ impl Microphone {
     }
     pub fn device_name(device_num: u32) -> String {
         unsafe { CStr::from_ptr(
-             stereokit_sys::mic_device_name(device_num as IntegerType)
+             stereokit_sys::mic_device_name(device_num as i32)
         )}.to_str().unwrap().to_string()
     }
     pub fn _start(device_name: &str) -> bool {

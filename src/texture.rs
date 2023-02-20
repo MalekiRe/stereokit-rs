@@ -323,7 +323,7 @@ impl Texture {
 
 	pub fn set_size(&self, width: u32, height: u32) {
 		unsafe {
-			stereokit_sys::tex_set_colors(self.tex.as_ptr(), width as IntegerType, height as IntegerType, null_mut())
+			stereokit_sys::tex_set_colors(self.tex.as_ptr(), width as i32, height as i32, null_mut())
 		}
 	}
 }
