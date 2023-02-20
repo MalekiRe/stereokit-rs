@@ -13,7 +13,7 @@ use std::fmt::Error;
 use std::path::Path;
 use std::ptr::{null, null_mut, NonNull};
 use std::rc::{Rc, Weak};
-use stereokit_sys::{_model_t, model_node_find, model_node_get_name, model_node_get_root, model_node_get_transform_local, model_node_get_transform_model, model_node_set_transform_local, model_node_set_transform_model};
+use stereokit_sys::{_model_t, bool32_t, floor, model_node_child, model_node_find, model_node_get_name, model_node_get_root, model_node_get_transform_local, model_node_get_transform_model, model_node_set_transform_local, model_node_set_transform_model, model_node_set_visible, model_node_sibling};
 use ustr::ustr;
 
 pub struct Model {
@@ -25,6 +25,7 @@ impl Model {
 		file_path: impl AsRef<Path>,
 		shader: Option<&Shader>,
 	) -> Result<Self> {
+		let f = file_path.as_ref();
 		let file_path = ustr(
 			file_path
 				.as_ref()
@@ -43,7 +44,7 @@ impl Model {
 			})
 			.ok_or(Report::msg(format!(
 				"Unable to create model from file path '{}'.",
-				file_path
+				f.canonicalize().unwrap().to_str().unwrap()
 			)))?,
 		})
 	}
@@ -158,6 +159,21 @@ impl Model {
 	pub fn node_get_root(&self) -> Option<NodeId> {
 		NodeId::try_from(unsafe {
 			model_node_get_root(self.model.as_ptr())
+		})
+	}
+	pub fn node_set_visible(&self, node: NodeId, visible: bool) {
+		unsafe {
+			model_node_set_visible(self.model.as_ptr(), node.0, visible as i32)
+		}
+	}
+	pub fn node_sibling(&self, node: NodeId) -> Option<NodeId> {
+		NodeId::try_from(unsafe {
+			model_node_sibling(self.model.as_ptr(), node.0)
+		})
+	}
+	pub fn node_child(&self, node: NodeId) -> Option<NodeId> {
+		NodeId::try_from(unsafe {
+			model_node_child(self.model.as_ptr(), node.0)
 		})
 	}
 }

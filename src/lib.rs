@@ -50,6 +50,8 @@ pub mod high_level;
 pub mod sound;
 pub mod world;
 
+pub mod microphone;
+
 #[test]
 fn basic() {
 	let stereokit = Settings::default().init().unwrap();

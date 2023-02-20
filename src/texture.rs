@@ -9,7 +9,7 @@ use num_enum::TryFromPrimitive;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
 use std::path::Path;
-use std::ptr::NonNull;
+use std::ptr::{NonNull, null_mut};
 use std::rc::{Rc, Weak};
 use stereokit_sys::{_gradient_t, _tex_t, bool32_t, gradient_t, spherical_harmonics_t, vec3};
 use ustr::ustr;
@@ -313,6 +313,18 @@ impl Texture {
 	}
 	pub unsafe fn set_anisotropy_level(&self, anisotropy_level: i32) {
 		stereokit_sys::tex_set_anisotropy(self.tex.as_ptr(), anisotropy_level);
+	}
+
+	pub fn add_zbuffer(&self, texture_format: TextureFormat) {
+		unsafe {
+			stereokit_sys::tex_add_zbuffer(self.tex.as_ptr(), texture_format as IntegerType);
+		}
+	}
+
+	pub fn set_size(&self, width: u32, height: u32) {
+		unsafe {
+			stereokit_sys::tex_set_colors(self.tex.as_ptr(), width as IntegerType, height as IntegerType, null_mut())
+		}
 	}
 }
 impl Drop for Texture {

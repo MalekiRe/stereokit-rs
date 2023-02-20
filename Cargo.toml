@@ -16,6 +16,7 @@ exclude = [
 
 [features]
 default = []
+physics = ["stereokit-sys/physics"]
 linux-egl = ["stereokit-sys/linux-egl"]
 high-level = ["glam"]
 prisma = ["stereokit-sys/prisma"]
@@ -27,7 +28,7 @@ mint = { version = "0.5.9", features = ["serde"] }
 num-derive = "0.3.3"
 derive_is_enum_variant = "0.1.1"
 derive_builder = "0.12.0"
-stereokit-sys = "2.2.0"
+stereokit-sys = { path = "../stereokit-sys"}
 once_cell = "1.16.0"
 bitflags = "1.3.2"
 ustr = "0.9.0"

@@ -251,6 +251,15 @@ impl Material {
 			shader: unsafe { NonNull::new(material_get_shader(self.material.as_ptr())).unwrap() },
 		}
 	}
+	pub fn set_texture(&self, _sk: &impl StereoKitContext, name: &str, value: &Texture) -> Result<()> {
+		let name = ustr(name);
+		if !unsafe {
+			stereokit_sys::material_set_texture(self.material.as_ptr(), name.as_char_ptr(), value.tex.as_ptr()) != 0
+		} {
+			return Err(Report::msg("unable to set texture"));
+		}
+		Ok(())
+	}
 }
 impl Clone for Material {
 	fn clone(&self) -> Self {
