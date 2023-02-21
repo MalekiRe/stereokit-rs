@@ -1,7 +1,8 @@
 use crate::values::{matrix_to, quat_from, vec3_from, MMatrix, MQuat, MVec3, pose_from};
 use std::fmt::Error;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Pose {
 	pub position: MVec3,
 	pub orientation: MQuat,

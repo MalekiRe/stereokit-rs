@@ -13,6 +13,7 @@ use std::fmt::Error;
 use std::path::Path;
 use std::ptr::{null, null_mut, NonNull};
 use std::rc::{Rc, Weak};
+use serde::{Deserialize, Serialize};
 use stereokit_sys::{_model_t, bool32_t, floor, model_node_child, model_node_find, model_node_get_name, model_node_get_root, model_node_get_transform_local, model_node_get_transform_model, model_node_set_transform_local, model_node_set_transform_model, model_node_set_visible, model_node_sibling};
 use ustr::ustr;
 
@@ -192,7 +193,7 @@ impl Drop for Model {
 	}
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct NodeId(i32);
 
 impl NodeId {

@@ -22,6 +22,7 @@ high-level = ["glam"]
 prisma = ["stereokit-sys/prisma"]
 color_named = []
 glam = ["dep:glam"]
+serde = []
 
 [dependencies]
 mint = { version = "0.5.9", features = ["serde"] }
