@@ -1,7 +1,7 @@
 use crate::font::Font;
 use crate::sprite::Sprite;
 use crate::text::TextStyle;
-use crate::values::{vec3_from, MVec3, pose_from, IntegerType};
+use crate::values::{vec3_from, MVec3, pose_from, pose_to, IntegerType};
 use crate::{
 	lifecycle::StereoKitDraw,
 	text::TextAlign,
@@ -43,16 +43,17 @@ pub fn window(
 	content_closure: impl FnOnce(&WindowContext),
 ) {
 	let window_title = ustr(window_title);
+	let mut p = pose_from(*pose);
 	unsafe {
 		stereokit_sys::ui_window_begin(
 			window_title.as_char_ptr(),
-			&mut pose_from(*pose),
+			&mut p,
 			vec2_from(size),
 			window_type as ui_win_,
 			move_type as ui_move_,
 		)
 	};
-
+	*pose = pose_to(p);
 	content_closure(&WindowContext(PhantomData));
 
 	unsafe {
@@ -70,10 +71,11 @@ pub fn try_window<Res, Er>(
 	content_closure: impl FnOnce(&WindowContext) -> Result<Res, Er>,
 ) -> Result<Res, Er> {
 	let window_title = ustr(window_title);
+	let mut p = pose_from(*pose);
 	unsafe {
 		stereokit_sys::ui_window_begin(
 			window_title.as_char_ptr(),
-			&mut pose_from(*pose),
+			&mut p,
 			vec2_from(size),
 			window_type as ui_win_,
 			move_type as ui_move_,
@@ -81,7 +83,7 @@ pub fn try_window<Res, Er>(
 	};
 
 	let result = content_closure(&WindowContext(PhantomData));
-
+	*pose = pose_to(p);
 	unsafe {
 		stereokit_sys::ui_window_end();
 	}

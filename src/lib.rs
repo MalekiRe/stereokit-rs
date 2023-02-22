@@ -1,4 +1,3 @@
-use glam::{Mat4, Quat};
 use mint::Quaternion;
 pub use lifecycle::{Settings, StereoKit};
 pub use stereokit_sys as sys;
