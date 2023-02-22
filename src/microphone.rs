@@ -60,6 +60,9 @@ impl Microphone {
     pub fn is_recording(&self) -> bool {
         Self::_is_recording()
     }
+    pub fn get_name(&self) -> &str {
+        self.name.as_str()
+    }
 
 
 }

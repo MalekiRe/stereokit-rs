@@ -1,5 +1,8 @@
+use glam::{Mat4, Quat};
+use mint::Quaternion;
 pub use lifecycle::{Settings, StereoKit};
 pub use stereokit_sys as sys;
+use crate::render::RenderLayer;
 use crate::ui::{layout, MoveType, window, WindowType};
 use crate::ui::layout::Side;
 
@@ -53,6 +56,8 @@ pub mod sound;
 pub mod world;
 
 pub mod microphone;
+#[cfg(feature = "physics")]
+mod physics;
 
 #[test]
 fn basic() {
@@ -89,6 +94,34 @@ fn rect_cut() -> color_eyre::eyre::Result<()> {
 				})
 			})
 		});
+	}, |_| {});
+	Ok(())
+}
+
+#[cfg(feature = "physics")]
+#[test]
+fn physics_test() -> color_eyre::eyre::Result<()> {
+	color_eyre::install()?;
+	let sk = Settings::default().init()?;
+	let cube_mesh = mesh::Mesh::gen_cube(
+		&sk,
+		mint::Vector3 {
+			x: 0.2_f32,
+			y: 0.2_f32,
+			z: 0.2_f32,
+		},
+		1,
+	)?;
+	let cube_material =
+		material::Material::copy_from_id(&sk, material::DEFAULT_ID_MATERIAL)?;
+	let cube_model = model::Model::from_mesh(&sk, &cube_mesh, &cube_material)?;
+	let solid = crate::physics::Solid::new(&sk, [0.0, 0.4, 0.0].into(), Quat::IDENTITY.into(), crate::physics::SolidType::Normal).unwrap();
+	solid.add_box(&sk, [0.2, 0.2, 0.2].into(), 0.1, [0.0, 0.0, 0.0].into());
+	let platform = crate::physics::Solid::new(&sk, [0.0, 0.0, 0.0].into(), Quat::IDENTITY.into(), crate::physics::SolidType::Immovable).unwrap();
+	platform.add_box(&sk, [20.0, 0.2, 20.0].into(), 0.0, [0.0, 0.0, 0.0].into());
+	sk.run(|sk| {
+		let pose = solid.get_pose(sk);
+		cube_model.draw(sk, Mat4::from_scale_rotation_translation(glam::Vec3::new(1.0, 1.0, 1.0), pose.orientation.into(), pose.position.into()).into(), color_named::BLUE, RenderLayer::Layer0);
 	}, |_| {});
 	Ok(())
 }
