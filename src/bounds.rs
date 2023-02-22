@@ -1,4 +1,4 @@
-use crate::values::{vec3_from, MVec3};
+use crate::values::{vec3_from, MVec3, vec3_to};
 use std::ptr::NonNull;
 use stereokit_sys::{bounds_t, vec3};
 pub struct Bounds {
@@ -30,6 +30,12 @@ impl Bounds {
 				vec3_from(pt2),
 				radius,
 			) != 0
+		}
+	}
+	pub fn from(bounds: bounds_t) -> Self {
+		Self {
+			center: vec3_to(bounds.center),
+			dimensions: vec3_to(bounds.dimensions),
 		}
 	}
 }

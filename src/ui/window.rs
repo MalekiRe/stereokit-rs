@@ -23,8 +23,8 @@ use ustr::ustr;
 pub enum WindowType {
 	WindowEmpty = 0,
 	WindowHead = 1,
-	WindowBody = 2,
-	WindowNormal = 3,
+	WindowBody = 4,
+	WindowNormal = 6,
 }
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
@@ -36,7 +36,7 @@ pub enum MoveType {
 	MoveNone = 3,
 }
 
-pub struct WindowContext(PhantomData<*const ()>);
+pub struct WindowContext(pub(crate) PhantomData<*const ()>);
 
 pub fn window(
 	_ctx: &StereoKitDraw,

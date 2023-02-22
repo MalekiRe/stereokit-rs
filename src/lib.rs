@@ -1,5 +1,7 @@
 pub use lifecycle::{Settings, StereoKit};
 pub use stereokit_sys as sys;
+use crate::ui::{layout, MoveType, window, WindowType};
+use crate::ui::layout::Side;
 
 #[macro_use]
 pub mod macros;
@@ -72,6 +74,24 @@ fn init_error() -> color_eyre::Result<()> {
 	Ok(())
 }
  */
+
+#[test]
+fn rect_cut() -> color_eyre::eyre::Result<()> {
+	color_eyre::install()?;
+	let sk = Settings::default().init()?;
+	let mut window_pose = pose::Pose::IDENTITY;
+
+	sk.run(|sk| {
+		window(sk, "yooo", &mut window_pose, [0.3, 0.3].into(), WindowType::WindowBody, MoveType::MoveExact, |ui| {
+			layout::layout_cut(ui, Side::Right, 0.0, |layout| {
+				layout.ui(|ui| {
+					ui.label("hi", false);
+				})
+			})
+		});
+	}, |_| {});
+	Ok(())
+}
 
 #[test]
 fn test() -> color_eyre::eyre::Result<()> {

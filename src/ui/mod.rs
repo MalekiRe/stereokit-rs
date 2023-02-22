@@ -1,4 +1,6 @@
 pub mod window;
+pub mod layout;
+
 pub use window::*;
 
 use stereokit_sys::{bool32_t, text_align_, ui_label, ui_sameline, ui_settings, ui_space, ui_text};
