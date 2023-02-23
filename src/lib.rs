@@ -1,9 +1,5 @@
-use mint::Quaternion;
 pub use lifecycle::{Settings, StereoKit};
 pub use stereokit_sys as sys;
-use crate::render::RenderLayer;
-use crate::ui::{layout, MoveType, window, WindowType};
-use crate::ui::layout::Side;
 
 #[macro_use]
 pub mod macros;
@@ -54,10 +50,10 @@ pub mod high_level;
 pub mod sound;
 pub mod world;
 
+pub mod hierarchy;
 pub mod microphone;
 #[cfg(feature = "physics")]
 pub mod physics;
-pub mod hierarchy;
 
 #[test]
 fn basic() {
@@ -86,15 +82,26 @@ fn rect_cut() -> color_eyre::eyre::Result<()> {
 	let sk = Settings::default().init()?;
 	let mut window_pose = pose::Pose::IDENTITY;
 
-	sk.run(|sk| {
-		window(sk, "yooo", &mut window_pose, [0.3, 0.3].into(), WindowType::WindowBody, MoveType::MoveExact, |ui| {
-			layout::layout_cut(ui, Side::Right, 0.0, |layout| {
-				layout.ui(|ui| {
-					ui.label("hi", false);
-				})
-			})
-		});
-	}, |_| {});
+	sk.run(
+		|sk| {
+			ui::window(
+				sk,
+				"yooo",
+				&mut window_pose,
+				[0.3, 0.3].into(),
+				ui::WindowType::WindowBody,
+				ui::MoveType::MoveExact,
+				|ui| {
+					ui::layout::layout_cut(ui, ui::layout::Side::Right, 0.0, |layout| {
+						layout.ui(|ui| {
+							ui.label("hi", false);
+						})
+					})
+				},
+			);
+		},
+		|_| {},
+	);
 	Ok(())
 }
 
@@ -112,17 +119,41 @@ fn physics_test() -> color_eyre::eyre::Result<()> {
 		},
 		1,
 	)?;
-	let cube_material =
-		material::Material::copy_from_id(&sk, material::DEFAULT_ID_MATERIAL)?;
+	let cube_material = material::Material::copy_from_id(&sk, material::DEFAULT_ID_MATERIAL)?;
 	let cube_model = model::Model::from_mesh(&sk, &cube_mesh, &cube_material)?;
-	let solid = crate::physics::Solid::new(&sk, [0.0, 0.4, 0.0].into(), Quat::IDENTITY.into(), crate::physics::SolidType::Normal).unwrap();
+	let solid = crate::physics::Solid::new(
+		&sk,
+		[0.0, 0.4, 0.0].into(),
+		Quat::IDENTITY.into(),
+		crate::physics::SolidType::Normal,
+	)
+	.unwrap();
 	solid.add_box(&sk, [0.2, 0.2, 0.2].into(), 0.1, [0.0, 0.0, 0.0].into());
-	let platform = crate::physics::Solid::new(&sk, [0.0, 0.0, 0.0].into(), Quat::IDENTITY.into(), crate::physics::SolidType::Immovable).unwrap();
+	let platform = crate::physics::Solid::new(
+		&sk,
+		[0.0, 0.0, 0.0].into(),
+		Quat::IDENTITY.into(),
+		crate::physics::SolidType::Immovable,
+	)
+	.unwrap();
 	platform.add_box(&sk, [20.0, 0.2, 20.0].into(), 0.0, [0.0, 0.0, 0.0].into());
-	sk.run(|sk| {
-		let pose = solid.get_pose(sk);
-		cube_model.draw(sk, Mat4::from_scale_rotation_translation(glam::Vec3::new(1.0, 1.0, 1.0), pose.orientation.into(), pose.position.into()).into(), color_named::BLUE, RenderLayer::Layer0);
-	}, |_| {});
+	sk.run(
+		|sk| {
+			let pose = solid.get_pose(sk);
+			cube_model.draw(
+				sk,
+				Mat4::from_scale_rotation_translation(
+					glam::Vec3::new(1.0, 1.0, 1.0),
+					pose.orientation.into(),
+					pose.position.into(),
+				)
+				.into(),
+				color_named::BLUE,
+				RenderLayer::Layer0,
+			);
+		},
+		|_| {},
+	);
 	Ok(())
 }
 

@@ -9,7 +9,6 @@ use std::cell::{Ref, RefCell};
 use std::ffi::{c_char, c_void, CStr, CString};
 use std::fmt::Error;
 use std::marker::PhantomData;
-//use std::os::unix::thread;
 use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut};
@@ -157,6 +156,7 @@ impl Settings {
 	}
 }
 
+#[allow(non_snake_case)]
 extern "C" fn tracing_log(level: log_, message: *const c_char) {
 	if let Ok(message) = unsafe { CStr::from_ptr(message) }.to_str() {
 		#[allow(non_upper_case_globals)]
