@@ -113,22 +113,22 @@ pub(crate) fn quat_to(q: quat) -> MQuat {
 	MQuat::from([q.x, q.y, q.z, q.w])
 }
 pub(crate) fn pose_to(pose: pose_t) -> Pose {
-	match pose {
-		pose_t { position, orientation } => {
-			Pose {
-				position: vec3_to(position),
-				orientation: quat_to(orientation),
-			}
-		}
+	let pose_t {
+		position,
+		orientation,
+	} = pose;
+	Pose {
+		position: vec3_to(position),
+		orientation: quat_to(orientation),
 	}
 }
 pub(crate) fn pose_from(pose: Pose) -> pose_t {
-	match pose {
-		Pose { position, orientation } => {
-			pose_t {
-				position: vec3_from(position),
-				orientation: quat_from(orientation),
-			}
-		}
+	let Pose {
+		position,
+		orientation,
+	} = pose;
+	pose_t {
+		position: vec3_from(position),
+		orientation: quat_from(orientation),
 	}
 }

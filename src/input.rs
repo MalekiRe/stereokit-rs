@@ -1,5 +1,6 @@
 #![allow(non_upper_case_globals)]
 
+use crate::values::{pose_to, quat_to, vec2_to, vec3_to};
 use crate::{
 	pose::Pose,
 	values::{MQuat, MVec2, MVec3},
@@ -12,8 +13,9 @@ use num_enum::TryFromPrimitive;
 use std::ops::Deref;
 use std::slice::Iter;
 use std::{fmt::Pointer, mem::transmute};
-use stereokit_sys::{bool32_t, button_state_, controller_t, hand_t, input_hand_visible, input_key, key_, quat, vec3};
-use crate::values::{pose_to, quat_to, vec2_to, vec3_to};
+use stereokit_sys::{
+	bool32_t, button_state_, controller_t, hand_t, input_hand_visible, input_key, key_, quat, vec3,
+};
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
@@ -162,8 +164,13 @@ impl Ray {
 			dir: MVec3::from([0.0, 0.0, 0.0]),
 		};
 
-		unsafe { stereokit_sys::ray_from_mouse(transmute(mouse.pos), transmute(&mut ray)) != 0 }
-			.then_some(ray)
+		unsafe {
+			stereokit_sys::ray_from_mouse(
+				transmute(mouse.pos),
+				&mut ray as *mut Ray as *mut stereokit_sys::ray_t,
+			) != 0
+		}
+		.then_some(ray)
 	}
 }
 
@@ -192,7 +199,7 @@ impl Handed {
 		Some(match val {
 			0 => Handed::Left,
 			1 => Handed::Right,
-			_ => return None
+			_ => return None,
 		})
 	}
 }
@@ -248,57 +255,75 @@ pub struct Controller {
 
 pub trait StereoKitInput {
 	fn input_hand(&self, handed: Handed) -> Hand {
-		let input_hand = unsafe { *stereokit_sys::input_hand((handed as u32).try_into().unwrap()) };
-		match input_hand {
-			hand_t { fingers, wrist, palm, pinch_pt, handedness, tracked_state, pinch_state, grip_state, size, pinch_activation, grip_activation } => {
-				Hand {
-					fingers: fingers.map(|t| {
-						t.map(|a| Joint::from_sk_vals(a.position, a.orientation, a.radius))
-					}),
-					wrist: pose_to(wrist),
-					palm: pose_to(palm),
-					pinch_point: vec3_to(pinch_pt),
-					handedness: Handed::from_sk(handedness.try_into().unwrap()).unwrap(),
-					tracked_state: ButtonState::from_bits(tracked_state.try_into().unwrap()).unwrap(),
-					pinch_state: ButtonState::from_bits(pinch_state.try_into().unwrap()).unwrap(),
-					grip_state: ButtonState::from_bits(grip_state.try_into().unwrap()).unwrap(),
-					size,
-					pinch_activation,
-					grip_activation,
-				}
-			}
+		let input_hand = unsafe { *stereokit_sys::input_hand(handed as u32) };
+		let hand_t {
+			fingers,
+			wrist,
+			palm,
+			pinch_pt,
+			handedness,
+			tracked_state,
+			pinch_state,
+			grip_state,
+			size,
+			pinch_activation,
+			grip_activation,
+		} = input_hand;
+		Hand {
+			fingers: fingers
+				.map(|t| t.map(|a| Joint::from_sk_vals(a.position, a.orientation, a.radius))),
+			wrist: pose_to(wrist),
+			palm: pose_to(palm),
+			pinch_point: vec3_to(pinch_pt),
+			handedness: Handed::from_sk(handedness).unwrap(),
+			tracked_state: ButtonState::from_bits(tracked_state).unwrap(),
+			pinch_state: ButtonState::from_bits(pinch_state).unwrap(),
+			grip_state: ButtonState::from_bits(grip_state).unwrap(),
+			size,
+			pinch_activation,
+			grip_activation,
 		}
 	}
 	fn input_controller(&self, handed: Handed) -> Controller {
-		let controller = unsafe { *stereokit_sys::input_controller((handed as u32).try_into().unwrap()) };
-		match controller {
-			controller_t { pose, palm, aim, tracked, tracked_pos, tracked_rot, stick_click, x1, x2, trigger, grip, stick } => {
-				Controller {
-					pose: pose_to(pose),
-					palm: pose_to(palm),
-					aim: pose_to(aim),
-					tracked: ButtonState::from_bits(tracked.try_into().unwrap()).unwrap(),
-					tracked_pos: TrackState::try_from(tracked_pos.try_into().unwrap()).unwrap(),
-					tracked_rot: TrackState::try_from(tracked_rot.try_into().unwrap()).unwrap(),
-					stick_click: ButtonState::from_bits(stick_click.try_into().unwrap()).unwrap(),
-					x1: ButtonState::from_bits(x1.try_into().unwrap()).unwrap(),
-					x2: ButtonState::from_bits(x2.try_into().unwrap()).unwrap(),
-					trigger,
-					grip,
-					stick: vec2_to(stick),
-				}
-			}
+		let controller = unsafe { *stereokit_sys::input_controller(handed as u32) };
+		let controller_t {
+			pose,
+			palm,
+			aim,
+			tracked,
+			tracked_pos,
+			tracked_rot,
+			stick_click,
+			x1,
+			x2,
+			trigger,
+			grip,
+			stick,
+		} = controller;
+		Controller {
+			pose: pose_to(pose),
+			palm: pose_to(palm),
+			aim: pose_to(aim),
+			tracked: ButtonState::from_bits(tracked).unwrap(),
+			tracked_pos: TrackState::try_from(tracked_pos).unwrap(),
+			tracked_rot: TrackState::try_from(tracked_rot).unwrap(),
+			stick_click: ButtonState::from_bits(stick_click).unwrap(),
+			x1: ButtonState::from_bits(x1).unwrap(),
+			x2: ButtonState::from_bits(x2).unwrap(),
+			trigger,
+			grip,
+			stick: vec2_to(stick),
 		}
 	}
 	fn input_controller_menu(&self) -> ButtonState {
 		let button_state = unsafe { stereokit_sys::input_controller_menu() };
-		ButtonState::from_bits(button_state.try_into().unwrap()).unwrap()
+		ButtonState::from_bits(button_state).unwrap()
 	}
 	fn input_hand_visible(&self, handed: Handed, visible: bool) {
-		unsafe { input_hand_visible((handed as u32).try_into().unwrap(), visible as bool32_t) }
+		unsafe { input_hand_visible(handed as u32, visible as bool32_t) }
 	}
 	fn input_head(&self) -> Pose {
-		let pose = unsafe {*stereokit_sys::input_head()};
+		let pose = unsafe { *stereokit_sys::input_head() };
 		Pose {
 			position: vec3_to(pose.position),
 			orientation: quat_to(pose.orientation),
@@ -310,7 +335,7 @@ pub trait StereoKitInput {
 	}
 
 	fn input_key(&self, key: Key) -> ButtonState {
-		ButtonState::from_bits_truncate(unsafe { input_key(key as key_).try_into().unwrap() })
+		ButtonState::from_bits_truncate(unsafe { input_key(key as key_) })
 	}
 }
 stereokit_trait_impl!(StereoKitInput);

@@ -1,11 +1,11 @@
 use crate::lifecycle::StereoKitContext;
+use crate::values::IntegerType;
 use crate::StereoKit;
 use color_eyre::Report;
 use color_eyre::Result;
 use std::ptr::{null_mut, NonNull};
 use stereokit_sys::{_model_t, _sprite_t};
 use ustr::ustr;
-use crate::values::IntegerType;
 
 pub struct Sprite {
 	pub(crate) sprite: NonNull<_sprite_t>,
@@ -35,10 +35,7 @@ impl Sprite {
 					ustr("").as_char_ptr(),
 				)
 			})
-			.ok_or(Report::msg(format!(
-				"Unable to create sprite from file '{}'",
-				file
-			)))?,
+			.ok_or_else(|| Report::msg(format!("Unable to create sprite from file '{}'", file)))?,
 		})
 	}
 }

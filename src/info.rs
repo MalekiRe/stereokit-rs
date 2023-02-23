@@ -39,7 +39,7 @@ impl StereoKit {
 	pub fn system_info(&self) -> SystemInfo {
 		let info = unsafe { sk_system_info() };
 		SystemInfo {
-			display_type: Display::try_from_primitive(info.display_type.try_into().unwrap()).unwrap(),
+			display_type: Display::try_from_primitive(info.display_type).unwrap(),
 			display_width: info.display_width as u32,
 			display_height: info.display_height as u32,
 			spatial_bridge_present: info.spatial_bridge_present > 0,

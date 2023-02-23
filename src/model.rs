@@ -5,16 +5,23 @@ use crate::mesh::Mesh;
 use crate::pose::Pose;
 use crate::render::RenderLayer;
 use crate::shader::Shader;
-use crate::values::{matrix_from, vec3_from, vec3_to, Color128, MMatrix, MVec3, matrix_to, IntegerType};
+use crate::values::{
+	matrix_from, matrix_to, vec3_from, vec3_to, Color128, IntegerType, MMatrix, MVec3,
+};
 use crate::StereoKit;
 use color_eyre::{Report, Result};
+use serde::{Deserialize, Serialize};
 use std::ffi::{c_void, CStr, CString};
 use std::fmt::Error;
 use std::path::Path;
 use std::ptr::{null, null_mut, NonNull};
 use std::rc::{Rc, Weak};
-use serde::{Deserialize, Serialize};
-use stereokit_sys::{_model_t, bool32_t, floor, model_node_child, model_node_find, model_node_get_name, model_node_get_root, model_node_get_transform_local, model_node_get_transform_model, model_node_set_transform_local, model_node_set_transform_model, model_node_set_visible, model_node_sibling};
+use stereokit_sys::{
+	_model_t, bool32_t, floor, model_node_child, model_node_find, model_node_get_name,
+	model_node_get_root, model_node_get_transform_local, model_node_get_transform_model,
+	model_node_set_transform_local, model_node_set_transform_model, model_node_set_visible,
+	model_node_sibling,
+};
 use ustr::ustr;
 
 pub struct Model {
@@ -32,7 +39,7 @@ impl Model {
 				.as_ref()
 				.as_os_str()
 				.to_str()
-				.ok_or(Report::msg("failed string conversion in Model::from_file"))?,
+				.ok_or_else(|| Report::msg("failed string conversion in Model::from_file"))?,
 		);
 		Ok(Model {
 			model: NonNull::new(unsafe {
@@ -43,10 +50,12 @@ impl Model {
 						.unwrap_or(null_mut()),
 				)
 			})
-			.ok_or(Report::msg(format!(
-				"Unable to create model from file path '{}'.",
-				f.canonicalize().unwrap().to_str().unwrap()
-			)))?,
+			.ok_or_else(|| {
+				Report::msg(format!(
+					"Unable to create model from file path '{}'.",
+					f.canonicalize().unwrap().to_str().unwrap()
+				))
+			})?,
 		})
 	}
 	pub fn from_mem(
@@ -67,10 +76,12 @@ impl Model {
 						.unwrap_or(null_mut()),
 				)
 			})
-			.ok_or(Report::msg(format!(
-				"Unable to create model '{}' from memory",
-				file_name
-			)))?,
+			.ok_or_else(|| {
+				Report::msg(format!(
+					"Unable to create model '{}' from memory",
+					file_name
+				))
+			})?,
 		})
 	}
 	pub fn from_mesh(
@@ -82,7 +93,7 @@ impl Model {
 			model: NonNull::new(unsafe {
 				stereokit_sys::model_create_mesh(mesh.mesh.as_ptr(), material.material.as_ptr())
 			})
-			.ok_or(Report::msg("Failed to create model from mesh and material"))?,
+			.ok_or_else(|| Report::msg("Failed to create model from mesh and material"))?,
 		})
 	}
 	pub fn draw(
@@ -126,24 +137,19 @@ impl Model {
 impl Model {
 	pub fn node_find(&self, node: &str) -> Option<NodeId> {
 		let str = ustr(node);
-		NodeId::try_from(unsafe {
-			model_node_find(self.model.as_ptr(), str.as_char_ptr())
-		})
+		NodeId::try_from(unsafe { model_node_find(self.model.as_ptr(), str.as_char_ptr()) })
 	}
 	pub fn node_get_name(&self, node: NodeId) -> String {
-		unsafe {CStr::from_ptr(
-			model_node_get_name(self.model.as_ptr(), node.0)
-		)}.to_str().unwrap().to_string()
+		unsafe { CStr::from_ptr(model_node_get_name(self.model.as_ptr(), node.0)) }
+			.to_str()
+			.unwrap()
+			.to_string()
 	}
 	pub fn node_get_transform_model(&self, node: NodeId) -> MMatrix {
-		matrix_to(unsafe {
-			model_node_get_transform_model(self.model.as_ptr(), node.0)
-		})
+		matrix_to(unsafe { model_node_get_transform_model(self.model.as_ptr(), node.0) })
 	}
 	pub fn node_get_transform_local(&self, node: NodeId) -> MMatrix {
-		matrix_to(unsafe {
-			model_node_get_transform_local(self.model.as_ptr(), node.0)
-		})
+		matrix_to(unsafe { model_node_get_transform_local(self.model.as_ptr(), node.0) })
 	}
 	pub fn node_set_transform_model(&self, node: NodeId, transform_model_space: MMatrix) {
 		let transform_model_space = matrix_from(transform_model_space);
@@ -158,24 +164,16 @@ impl Model {
 		}
 	}
 	pub fn node_get_root(&self) -> Option<NodeId> {
-		NodeId::try_from(unsafe {
-			model_node_get_root(self.model.as_ptr())
-		})
+		NodeId::try_from(unsafe { model_node_get_root(self.model.as_ptr()) })
 	}
 	pub fn node_set_visible(&self, node: NodeId, visible: bool) {
-		unsafe {
-			model_node_set_visible(self.model.as_ptr(), node.0, visible as i32)
-		}
+		unsafe { model_node_set_visible(self.model.as_ptr(), node.0, visible as i32) }
 	}
 	pub fn node_sibling(&self, node: NodeId) -> Option<NodeId> {
-		NodeId::try_from(unsafe {
-			model_node_sibling(self.model.as_ptr(), node.0)
-		})
+		NodeId::try_from(unsafe { model_node_sibling(self.model.as_ptr(), node.0) })
 	}
 	pub fn node_child(&self, node: NodeId) -> Option<NodeId> {
-		NodeId::try_from(unsafe {
-			model_node_child(self.model.as_ptr(), node.0)
-		})
+		NodeId::try_from(unsafe { model_node_child(self.model.as_ptr(), node.0) })
 	}
 }
 
@@ -200,9 +198,11 @@ impl NodeId {
 	pub fn try_from(id: i32) -> Option<NodeId> {
 		match id {
 			-1 => None,
-			otherwise => Some(NodeId(otherwise))
+			otherwise => Some(NodeId(otherwise)),
 		}
 	}
+	/// # Safety
+	/// ID must be valid
 	pub unsafe fn from_unchecked(id: i32) -> NodeId {
 		NodeId(id)
 	}

@@ -2,7 +2,9 @@
 
 use crate::font::Font;
 use crate::lifecycle::{StereoKitContext, StereoKitDraw};
-use crate::values::{matrix_from, vec2_from, vec2_to, Color128, Color32, MMatrix, MVec2, MVec3, IntegerType};
+use crate::values::{
+	matrix_from, vec2_from, vec2_to, Color128, Color32, IntegerType, MMatrix, MVec2, MVec3,
+};
 use crate::StereoKit;
 use bitflags::bitflags;
 use bitflags_serde_shim::impl_serde_for_bitflags;
@@ -71,6 +73,7 @@ impl TextStyle {
 	}
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn draw_at(
 	_draw_ctx: &StereoKitDraw,
 	text: impl AsRef<str>,
@@ -98,6 +101,7 @@ pub fn draw_at(
 	}
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn draw_in(
 	_draw_ctx: &StereoKitDraw,
 	text: impl AsRef<str>,

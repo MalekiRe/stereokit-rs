@@ -9,7 +9,7 @@ use num_enum::TryFromPrimitive;
 use std::ffi::{c_void, CString};
 use std::fmt::Error;
 use std::path::Path;
-use std::ptr::{NonNull, null_mut};
+use std::ptr::{null_mut, NonNull};
 use std::rc::{Rc, Weak};
 use stereokit_sys::{_gradient_t, _tex_t, bool32_t, gradient_t, spherical_harmonics_t, vec3};
 use ustr::ustr;
@@ -160,7 +160,7 @@ impl Gradient {
 		}
 	}
 	pub fn add(&mut self, color: Color128, position: f32) {
-		unsafe { stereokit_sys::gradient_add(self.gradient, std::mem::transmute(color), position) }
+		unsafe { stereokit_sys::gradient_add(self.gradient, color, position) }
 	}
 }
 
@@ -255,7 +255,7 @@ impl Texture {
 		Some(Texture {
 			tex: NonNull::new(unsafe {
 				stereokit_sys::tex_gen_cubemap(
-					std::mem::transmute(gradient),
+					gradient.gradient,
 					std::mem::transmute(direction),
 					resolution as i32,
 					spherical_harmonics_info
@@ -284,6 +284,9 @@ impl Texture {
 		})
 	}
 
+	/// # Safety
+	/// - All parameters must be valid
+	/// - If StereoKit should destroy the texture, set owned to true
 	pub unsafe fn set_native(
 		&self,
 		native_texture: usize,
@@ -305,14 +308,16 @@ impl Texture {
 		);
 	}
 
-	pub unsafe fn set_sample(&self, sample: TextureSample) {
-		stereokit_sys::tex_set_sample(self.tex.as_ptr(), sample as IntegerType);
+	/// # Safety
+	/// Sample must be valid
+	pub fn set_sample(&self, sample: TextureSample) {
+		unsafe { stereokit_sys::tex_set_sample(self.tex.as_ptr(), sample as IntegerType) };
 	}
-	pub unsafe fn set_address_mode(&self, address_mode: TextureAddress) {
-		stereokit_sys::tex_set_address(self.tex.as_ptr(), address_mode as IntegerType);
+	pub fn set_address_mode(&self, address_mode: TextureAddress) {
+		unsafe { stereokit_sys::tex_set_address(self.tex.as_ptr(), address_mode as IntegerType) };
 	}
-	pub unsafe fn set_anisotropy_level(&self, anisotropy_level: i32) {
-		stereokit_sys::tex_set_anisotropy(self.tex.as_ptr(), anisotropy_level);
+	pub fn set_anisotropy_level(&self, anisotropy_level: i32) {
+		unsafe { stereokit_sys::tex_set_anisotropy(self.tex.as_ptr(), anisotropy_level) };
 	}
 
 	pub fn add_zbuffer(&self, texture_format: TextureFormat) {
@@ -323,7 +328,12 @@ impl Texture {
 
 	pub fn set_size(&self, width: u32, height: u32) {
 		unsafe {
-			stereokit_sys::tex_set_colors(self.tex.as_ptr(), width as i32, height as i32, null_mut())
+			stereokit_sys::tex_set_colors(
+				self.tex.as_ptr(),
+				width as i32,
+				height as i32,
+				null_mut(),
+			)
 		}
 	}
 }

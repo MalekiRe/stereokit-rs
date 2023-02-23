@@ -10,7 +10,7 @@ use std::{fmt::Error, ptr::NonNull};
 // use std::error::Report;
 use crate::bounds::Bounds;
 use crate::lifecycle::StereoKitContext;
-use crate::values::{IntegerType, vec3_to};
+use crate::values::{vec3_to, IntegerType};
 use color_eyre::{Report, Result};
 use stereokit_sys::{_mesh_t, bool32_t, mesh_draw};
 
@@ -29,10 +29,12 @@ impl Mesh {
 			mesh: NonNull::new(unsafe {
 				stereokit_sys::mesh_gen_cube(vec3_from(size), subdivisions)
 			})
-			.ok_or(Report::msg(format!(
-				"Failed to create a cube from the size '{:?}' and subdivisions '{}'.",
-				size, subdivisions
-			)))?,
+			.ok_or_else(|| {
+				Report::msg(format!(
+					"Failed to create a cube from the size '{:?}' and subdivisions '{}'.",
+					size, subdivisions
+				))
+			})?,
 		})
 	}
 	pub fn gen_plane(
@@ -56,7 +58,7 @@ impl Mesh {
 					subdivisions,
 					0,
 				)
-			}).ok_or(Report::msg(format!("Failed to create a plane from dimensions '{:?}' normal '{:?}' top '{:?}' subdivisions '{}'", dimensions, plane_normal, plane_top_direction, subdivisions)))?,
+			}).ok_or_else(|| Report::msg(format!("Failed to create a plane from dimensions '{:?}' normal '{:?}' top '{:?}' subdivisions '{}'", dimensions, plane_normal, plane_top_direction, subdivisions)))?,
 		})
 	}
 	pub fn draw(

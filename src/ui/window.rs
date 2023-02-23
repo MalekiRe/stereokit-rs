@@ -1,7 +1,7 @@
 use crate::font::Font;
 use crate::sprite::Sprite;
 use crate::text::TextStyle;
-use crate::values::{vec3_from, MVec3, pose_from, pose_to, IntegerType};
+use crate::values::{pose_from, pose_to, vec3_from, IntegerType, MVec3};
 use crate::{
 	lifecycle::StereoKitDraw,
 	text::TextAlign,
@@ -9,7 +9,12 @@ use crate::{
 };
 use num_enum::TryFromPrimitive;
 use std::{ffi::CString, marker::PhantomData};
-use stereokit_sys::{bool32_t, pose_t, text_align_, text_make_style, text_style_get_material, text_style_t, ui_btn_layout_, ui_button, ui_button_at, ui_button_img, ui_button_img_16, ui_button_img_at, ui_button_img_sz, ui_hslider, ui_label, ui_move_, ui_pop_text_style, ui_push_text_style, ui_sameline, ui_settings, ui_space, ui_text, ui_toggle, ui_win_};
+use stereokit_sys::{
+	bool32_t, pose_t, text_align_, text_make_style, text_style_get_material, text_style_t,
+	ui_btn_layout_, ui_button, ui_button_at, ui_button_img, ui_button_img_16, ui_button_img_at,
+	ui_button_img_sz, ui_hslider, ui_label, ui_move_, ui_pop_text_style, ui_push_text_style,
+	ui_sameline, ui_settings, ui_space, ui_text, ui_toggle, ui_win_,
+};
 use ustr::ustr;
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
@@ -112,7 +117,7 @@ impl WindowContext {
 	pub fn toggle(&self, text: &str, pressed: &mut bool) -> bool {
 		let text = ustr(text);
 		let mut p = *pressed as i32;
-		let ret = unsafe { ui_toggle(text.as_char_ptr(), &mut p) != 0};
+		let ret = unsafe { ui_toggle(text.as_char_ptr(), &mut p) != 0 };
 		*pressed = p != 0;
 		ret
 	}
@@ -152,6 +157,7 @@ impl WindowContext {
 			) != 0
 		}
 	}
+	#[allow(clippy::too_many_arguments)]
 	pub fn slider(
 		&self,
 		text: &str,

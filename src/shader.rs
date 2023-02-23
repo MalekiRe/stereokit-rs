@@ -22,16 +22,18 @@ impl Shader {
 				.as_ref()
 				.as_os_str()
 				.to_str()
-				.ok_or(Report::msg("file to string conversion failed"))?,
+				.ok_or_else(|| Report::msg("file to string conversion failed"))?,
 		);
 		Ok(Shader {
 			shader: NonNull::new(unsafe {
 				stereokit_sys::shader_create_file(file_path.as_char_ptr())
 			})
-			.ok_or(Report::msg(format!(
-				"The Shader from file '{}' could not be loaded",
-				file_path
-			)))?,
+			.ok_or_else(|| {
+				Report::msg(format!(
+					"The Shader from file '{}' could not be loaded",
+					file_path
+				))
+			})?,
 		})
 	}
 	pub fn from_mem(sk: &impl StereoKitContext, memory: &[u8]) -> Result<Self> {
@@ -39,7 +41,7 @@ impl Shader {
 			shader: NonNull::new(unsafe {
 				stereokit_sys::shader_create_mem(memory.as_ptr() as *mut c_void, memory.len())
 			})
-			.ok_or(Report::msg("Unable to create shader from memory"))?,
+			.ok_or_else(|| Report::msg("Unable to create shader from memory"))?,
 		})
 	}
 	pub fn default(sk: &impl StereoKitContext) -> Self {
@@ -54,10 +56,12 @@ impl Shader {
 	pub fn from_name(sk: &impl StereoKitContext, name: &str) -> Result<Self> {
 		Ok(Shader {
 			shader: NonNull::new(unsafe { shader_find(ustr(name).as_char_ptr()) })
-				.ok_or(Report::msg(format!(
-					"The Shader '{}' could not be located from it's name",
-					name
-				)))
+				.ok_or_else(|| {
+					Report::msg(format!(
+						"The Shader '{}' could not be located from it's name",
+						name
+					))
+				})
 				.suggestion("Try something in the format of 'default/shader_pbr'")?,
 		})
 	}
