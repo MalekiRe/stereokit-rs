@@ -29,7 +29,7 @@ impl Microphone {
 	pub fn _get_stream() -> Result<SoundStream> {
 		Ok(SoundStream {
 			sound_t: NonNull::new(unsafe { stereokit_sys::mic_get_stream() })
-				.ok_or(Report::msg("microphone isn't on"))?,
+				.ok_or_else(|| Report::msg("microphone isn't on"))?,
 		})
 	}
 	pub fn _is_recording() -> bool {

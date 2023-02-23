@@ -38,9 +38,7 @@ impl ValidLayout for LayoutContext{}
 impl ValidLayout for WindowContext{}
 impl LayoutContext {
     fn new() -> Self {
-        Self {
-            0: Default::default(),
-        }
+        Self(Default::default())
     }
 }
 impl LayoutContext {

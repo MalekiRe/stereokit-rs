@@ -63,7 +63,7 @@ pub fn line_add_list(points: &[MVec3], color: impl Into<Color32>, thickness: f32
 }
 pub fn line_add_listv(_draw_ctx: &StereoKitDraw, points: &[LinePoint]) {
 	let points: Vec<line_point_t> = points
-		.into_iter()
+		.iter()
 		.map(|p| line_point_t {
 			pt: vec3_from(p.point),
 			thickness: p.thickness,

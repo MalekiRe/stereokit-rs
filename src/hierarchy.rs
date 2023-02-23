@@ -12,9 +12,7 @@ pub struct Hierarchy(PhantomData<*const ()>);
 
 impl Hierarchy {
     fn new() -> Self {
-        Self {
-            0: Default::default(),
-        }
+        Self(Default::default())
     }
     pub fn to_world(&self) -> MMatrix {
         _hierarchy_to_world()

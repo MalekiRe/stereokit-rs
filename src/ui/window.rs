@@ -177,7 +177,7 @@ impl WindowContext {
 	}
 	pub fn text_style(&self, text_style: TextStyle, content_closure: impl FnOnce(&WindowContext)) {
 		unsafe { ui_push_text_style(text_style.text_style) }
-		content_closure(&self);
+		content_closure(self);
 		unsafe {
 			ui_pop_text_style();
 		}
@@ -188,7 +188,7 @@ impl WindowContext {
 		content_closure: impl FnOnce(&WindowContext) -> Result<Res, Er>,
 	) -> Result<Res, Er> {
 		unsafe { ui_push_text_style(text_style.text_style) }
-		let result = content_closure(&self);
+		let result = content_closure(self);
 		unsafe {
 			ui_pop_text_style();
 		}

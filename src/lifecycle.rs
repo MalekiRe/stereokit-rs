@@ -240,7 +240,7 @@ impl StereoKit {
 	) {
 		self._run(
 			state,
-			|st, (sk, dc)| on_update(st, *sk, dc),
+			|st, (sk, dc)| on_update(st, sk, dc),
 			|st, (sk, _)| on_close(st, sk),
 		);
 	}

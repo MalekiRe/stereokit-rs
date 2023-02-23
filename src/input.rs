@@ -142,7 +142,7 @@ pub enum TrackState {
 
 impl TrackState {
 	pub fn try_from(val: u32) -> Option<Self> {
-		return Some(match val {
+		Some(match val {
 			0 => TrackState::Lost,
 			1 => TrackState::Inferred,
 			2 => TrackState::Known,
