@@ -56,7 +56,8 @@ pub mod world;
 
 pub mod microphone;
 #[cfg(feature = "physics")]
-mod physics;
+pub mod physics;
+pub mod hierarchy;
 
 #[test]
 fn basic() {
