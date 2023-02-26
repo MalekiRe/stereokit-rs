@@ -23,6 +23,7 @@ use stereokit_sys::{
 	log_, log__log_diagnostic, log__log_error, log__log_inform, log__log_warning, log_subscribe,
 	material_t, model_t, pose_t, sk_settings_t,
 };
+use crate::time::StereoKitTime;
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
 #[repr(u32)]
@@ -176,7 +177,7 @@ pub struct StereoKit {
 }
 pub struct StereoKitDraw(PhantomData<*const ()>);
 
-pub trait StereoKitContext: StereoKitInput + StereoKitRender {
+pub trait StereoKitContext: StereoKitInput + StereoKitRender + StereoKitTime{
 	fn quit(&self) {
 		unsafe { stereokit_sys::sk_quit() };
 	}
