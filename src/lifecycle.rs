@@ -97,7 +97,7 @@ pub struct SKSettingsBuilt {
 
 impl Settings {
 	pub fn init(self) -> Result<StereoKit> {
-		unsafe { log_subscribe(Some(tracing_log)) };
+		//unsafe { log_subscribe(Some(tracing_log)) };
 		if GLOBAL_STATE.with(|f| *f.borrow()) {
 			return Err(Report::msg("Stereokit is already running")
 				.suggestion("Only run 1 instance of StereoKit at a time in a single process"));
@@ -162,11 +162,11 @@ extern "C" fn tracing_log(level: log_, message: *const c_char) {
 	if let Ok(message) = unsafe { CStr::from_ptr(message) }.to_str() {
 		#[allow(non_upper_case_globals)]
 		match level {
-			_log__log_error => tracing::error!(target: "StereoKit", message),
-			_log__log_warning => tracing::warn!(target: "StereoKit", message),
-			_log__log_inform => tracing::info!(target: "StereoKit", message),
-			_log__log_diagnostic => tracing::debug!(target: "StereoKit", message),
-			_ => (),
+			log__log_error => tracing::error!(target: "StereoKit", message),
+			log__log_warning => tracing::warn!(target: "StereoKit", message),
+			log__log_inform => tracing::info!(target: "StereoKit", message),
+			log__log_diagnostic => tracing::debug!(target: "StereoKit", message),
+			_ => tracing::info!(target: "StereoKit", message),
 		}
 	}
 }
