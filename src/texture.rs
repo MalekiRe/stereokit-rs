@@ -336,6 +336,20 @@ impl Texture {
 			)
 		}
 	}
+
+	pub fn get_width(&self) -> i32 {
+		unsafe {
+			stereokit_sys::tex_get_width(self.tex.as_ptr())
+		}
+	}
+
+	pub fn get_height(&self) -> i32 {
+		unsafe {
+			stereokit_sys::tex_get_height(self.tex.as_ptr())
+		}
+	}
+
+
 }
 impl Drop for Texture {
 	fn drop(&mut self) {
