@@ -48,7 +48,7 @@ pub fn line_addv(_draw_ctx: &StereoKitDraw, start: &LinePoint, end: &LinePoint) 
 }
 pub fn line_add_axis(_draw_ctx: &StereoKitDraw, pose: Pose, size: f32) {
 	unsafe {
-		stereokit_sys::line_add_axis(std::mem::transmute(pose), size);
+		stereokit_sys::line_add_axis(crate::values::pose_from(pose), size);
 	}
 }
 pub fn line_add_list(points: &[MVec3], color: impl Into<Color32>, thickness: f32) {
