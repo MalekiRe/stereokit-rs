@@ -1,7 +1,9 @@
 use crate::pose::Pose;
 use mint::{ColumnMatrix4, RowMatrix4};
 use std::fmt::Pointer;
-use stereokit_sys::{color128, color32, matrix, pose_t, quat, text_style_t, vec2, vec3, vec4};
+use stereokit_sys::{
+	color128, color32, matrix, pose_t, quat, ray_t, text_style_t, vec2, vec3, vec4,
+};
 
 pub type MVec4 = mint::Vector4<f32>;
 pub type MVec3 = mint::Vector3<f32>;
@@ -16,6 +18,11 @@ pub type IntegerType = u32;
 
 #[cfg(target_os = "windows")]
 pub type IntegerType = i32;
+
+pub struct Ray {
+	pub pos: MVec3,
+	pub dir: MVec3,
+}
 
 pub struct SKMatrix {
 	matrix: MMatrix,
@@ -130,5 +137,12 @@ pub(crate) fn pose_from(pose: Pose) -> pose_t {
 	pose_t {
 		position: vec3_from(position),
 		orientation: quat_from(orientation),
+	}
+}
+
+pub fn ray_to(ray: ray_t) -> Ray {
+	Ray {
+		dir: vec3_to(ray.dir),
+		pos: vec3_to(ray.pos),
 	}
 }
