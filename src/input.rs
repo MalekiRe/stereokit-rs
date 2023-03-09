@@ -1,9 +1,9 @@
 #![allow(non_upper_case_globals)]
 
-use crate::values::{IntegerType, pose_to, quat_to, vec2_to, vec3_to};
+use crate::values::{pose_to, quat_to, vec2_to, vec3_to, IntegerType};
 use crate::{
 	pose::Pose,
-	values::{MQuat, MVec2, MVec3},
+	values::{MQuat, MVec2, MVec3, Ray},
 	StereoKit,
 };
 use bitflags::bitflags;
@@ -14,7 +14,8 @@ use std::ops::Deref;
 use std::slice::Iter;
 use std::{fmt::Pointer, mem::transmute};
 use stereokit_sys::{
-	bool32_t, button_state_, controller_t, hand_t, input_hand_visible, input_key, key_, quat, vec3,
+	bool32_t, button_state_, controller_t, hand_t, input_hand_visible, input_key, key_, mouse_t,
+	quat, vec3,
 };
 
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
@@ -153,24 +154,33 @@ impl TrackState {
 	}
 }
 
-pub struct Ray {
-	pub pos: MVec3,
-	pub dir: MVec3,
-}
 impl Ray {
-	pub fn from_mouse(mouse: &Mouse) -> Option<Self> {
+	pub fn from_mouse(mouse: &Mouse) -> Self {
 		let mut ray = Ray {
 			pos: MVec3::from([0.0, 0.0, 0.0]),
 			dir: MVec3::from([0.0, 0.0, 0.0]),
 		};
 
 		unsafe {
-			stereokit_sys::ray_from_mouse(
-				transmute(mouse.pos),
-				&mut ray as *mut Ray as *mut stereokit_sys::ray_t,
-			) != 0
+			let mut blah: stereokit_sys::ray_t = stereokit_sys::ray_t {
+				pos: vec3 {
+					x: 0.0f32,
+					y: 0.0f32,
+					z: 0.0f32,
+				},
+				dir: vec3 {
+					x: 0.0f32,
+					y: 0.0f32,
+					z: 0.0f32,
+				},
+			};
+
+			stereokit_sys::ray_from_mouse(crate::values::vec2_from(mouse.pos), &mut blah);
+
+			ray = crate::values::ray_to(blah);
 		}
-		.then_some(ray)
+
+		ray
 	}
 }
 
@@ -181,6 +191,17 @@ pub struct Mouse {
 	pub scroll: f32,
 	pub scroll_change: f32,
 }
+
+fn mouse_to(mouse: stereokit_sys::mouse_t) -> Mouse {
+	Mouse {
+		available: mouse.available,
+		pos: crate::values::vec2_to(mouse.pos),
+		pos_change: crate::values::vec2_to(mouse.pos),
+		scroll: mouse.scroll,
+		scroll_change: mouse.scroll_change,
+	}
+}
+
 impl Mouse {
 	pub fn available(&self) -> bool {
 		self.available != 0
@@ -330,8 +351,11 @@ pub trait StereoKitInput {
 		}
 	}
 
-	fn input_mouse(&self) -> &Mouse {
-		unsafe { transmute(&*stereokit_sys::input_mouse()) }
+	fn input_mouse(&self) -> Mouse {
+		unsafe {
+			let mut mouse = stereokit_sys::input_mouse();
+			mouse_to(*mouse)
+		}
 	}
 
 	fn input_key(&self, key: Key) -> ButtonState {
