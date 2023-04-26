@@ -1,5 +1,8 @@
 ## StereoKit
-StereoKit-rs high level bindings to StereoKit<https://StereoKit.net>
+StereoKit-rs high level bindings to StereoKit
+
+<https://StereoKit.net>
+
 StereoKit is an easy-to-use Mixed Realty engine, designed for creating VR, AR, and XR experiences
 
 ![Alt Link](https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExYmE3MWI5ZjI5Mzk3YjFlNTVlZTM0YWEzYzYxMGJkNjY3ZjQ2YjQ4MiZlcD12MV9pbnRlcm5hbF9naWZzX2dpZklkJmN0PWc/tDPnLNOjTRio520V5s/giphy-downsized-large.gif)
