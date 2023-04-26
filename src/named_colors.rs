@@ -1,7 +1,7 @@
-use crate::values::Color128;
-
+use crate::Color128;
 macro_rules! named_color {
 	($name:ident, $r:expr, $g:expr, $b:expr) => {
+		#[allow(dead_code)]
 		pub const $name: Color128 =
 			Color128::new_rgb($r as f32 / 255.0, $g as f32 / 255.0, $b as f32 / 255.0);
 	};
