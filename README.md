@@ -64,3 +64,8 @@ fn basic() {
     }, |_| {});
 }
 ```
+
+## Getting Started
+
+To get started with a android-setup template use `cargo generate MalekiRe/stereokit-template`
+If you don't have cargo generate first run `cargo install cargo-generate`
