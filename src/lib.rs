@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![feature(negative_impls)]
-mod named_colors;
+pub mod named_colors;
 #[cfg(test)]
 mod tests;
 
