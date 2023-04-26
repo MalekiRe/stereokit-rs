@@ -1,4 +1,4 @@
-use crate::{CStereoKitDraw, CStereoKitMultiThread};
+use crate::{StereoKitDraw, StereoKitMultiThread};
 
 #[test]
 fn basic() {

@@ -16,25 +16,23 @@ use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
 use stereokit_sys::{_model_t, _mesh_t, _material_t, _shader_t, sk_settings_t, system_info_t, log_, depth_mode_, display_blend_, display_, display_mode_, app_focus_, display_type_, fov_info_t, device_tracking_, ray_t, plane_t, bounds_t, sphere_t, _gradient_t, _tex_t, _font_t, _sprite_t, _sound_t, _solid_t, gradient_key_t, sh_light_t, spherical_harmonics_t, vert_t, bool32_t, cull_, mesh_t, tex_format_, tex_sample_, tex_address_, transparency_, depth_test_, _material_buffer_t, text_align_, text_fit_, anim_mode_, pose_t, quat, line_point_t, render_clear_, projection_, rect_t, sound_inst_t, sk_init, pointer_t, hand_joint_t, hand_t, handed_, controller_t, track_state_, mouse_t, openxr_handle_t, key_, world_refresh_, log_colors_, sprite_type_, ui_win_, ui_move_};
 use thiserror::Error;
 
-pub struct CSkDraw(PhantomData<*const ()>);
-pub struct CSk(PhantomData<*const ()>);
-pub struct CSkSingle(pub(crate) PhantomData<*const ()>);
+pub struct SkDraw(PhantomData<*const ()>);
+pub struct Sk(PhantomData<*const ()>);
+pub struct SkSingle(pub(crate) PhantomData<*const ()>);
 
-impl !Sync for CSkSingle {}
-impl !Send for CSkSingle {}
+impl !Sync for SkSingle {}
+impl !Send for SkSingle {}
 
-impl CStereoKitSingleThread for CSkDraw {}
-impl CStereoKitMultiThread for CSkDraw {}
-impl CStereoKitDraw for CSkDraw {}
+impl StereoKitSingleThread for SkDraw {}
+impl StereoKitMultiThread for SkDraw {}
+impl StereoKitDraw for SkDraw {}
+impl StereoKitMultiThread for Sk {}
+impl StereoKitMultiThread for SkSingle {}
+impl StereoKitSingleThread for SkSingle {}
 
-impl CStereoKitMultiThread for CSk {}
-
-impl CStereoKitMultiThread for CSkSingle {}
-impl CStereoKitSingleThread for CSkSingle {}
-
-impl CSkSingle {
-    pub fn multithreaded(&self) -> CSk {
-        CSk(PhantomData)
+impl SkSingle {
+    pub fn multithreaded(&self) -> Sk {
+        Sk(PhantomData)
     }
 }
 
@@ -84,7 +82,7 @@ unsafe extern "C" fn callback_trampoline<F, LST, GST>(payload_ptr: *mut c_void)
 //     }
 // }
 
-impl CSkSingle {
+impl SkSingle {
     // pub fn step(&mut self, mut on_step: impl FnMut(&CSkDraw) + 'static) {
     //     unsafe {
     //         while wait_for_me {}
@@ -95,8 +93,8 @@ impl CSkSingle {
     // }
     pub fn run(
         self,
-        mut on_update: impl FnMut(&CSkDraw),
-        mut on_close: impl FnMut(&mut CSkSingle),
+        mut on_update: impl FnMut(&SkDraw),
+        mut on_close: impl FnMut(&mut SkSingle),
     ) {
         self._run(
             &mut (),
@@ -107,8 +105,8 @@ impl CSkSingle {
     pub fn run_stateful<ST>(
         self,
         state: &mut ST,
-        mut on_update: impl FnMut(&mut ST, &mut CSkSingle, &CSkDraw),
-        mut on_close: impl FnMut(&mut ST, &mut CSkSingle),
+        mut on_update: impl FnMut(&mut ST, &mut SkSingle, &SkDraw),
+        mut on_close: impl FnMut(&mut ST, &mut SkSingle),
     ) {
         self._run(
             state,
@@ -119,10 +117,10 @@ impl CSkSingle {
 
     fn _run<ST, U, S>(mut self, state: &mut ST, mut update: U, mut shutdown: S)
         where
-            U: FnMut(&mut ST, &mut (&mut CSkSingle, &CSkDraw)),
-            S: FnMut(&mut ST, &mut (&mut CSkSingle, &CSkDraw)),
+            U: FnMut(&mut ST, &mut (&mut SkSingle, &SkDraw)),
+            S: FnMut(&mut ST, &mut (&mut SkSingle, &SkDraw)),
     {
-        let draw_context = CSkDraw(PhantomData);
+        let draw_context = SkDraw(PhantomData);
 
         // use one variable so shutdown doesn't run if update panics
         let mut caught_panic = Option::<PanicPayload>::None;
@@ -130,7 +128,7 @@ impl CSkSingle {
         let mut update_ref: (
             &mut U,
             &mut ST,
-            &mut (&mut CSkSingle, &CSkDraw),
+            &mut (&mut SkSingle, &SkDraw),
             &mut Option<PanicPayload>,
         ) = (
             &mut update,
@@ -142,14 +140,14 @@ impl CSkSingle {
             as *mut (
             &mut U,
             &mut ST,
-            &mut (&mut CSkSingle, &CSkDraw),
+            &mut (&mut SkSingle, &SkDraw),
             &mut Option<PanicPayload>,
         ) as *mut c_void;
 
         let mut shutdown_ref: (
             &mut S,
             &mut ST,
-            &mut (&mut CSkSingle, &CSkDraw),
+            &mut (&mut SkSingle, &SkDraw),
             &mut Option<PanicPayload>,
         ) = (
             &mut shutdown,
@@ -161,7 +159,7 @@ impl CSkSingle {
             as *mut (
             &mut S,
             &mut ST,
-            &mut (&mut CSkSingle, &CSkDraw),
+            &mut (&mut SkSingle, &SkDraw),
             &mut Option<PanicPayload>,
         ) as *mut c_void;
 
@@ -171,9 +169,9 @@ impl CSkSingle {
 
         unsafe {
             stereokit_sys::sk_run_data(
-                Some(callback_trampoline::<U, ST, (&mut CSkSingle, &CSkDraw)>),
+                Some(callback_trampoline::<U, ST, (&mut SkSingle, &SkDraw)>),
                 update_raw,
-                Some(callback_trampoline::<S, ST, (&mut CSkSingle, &CSkDraw)>),
+                Some(callback_trampoline::<S, ST, (&mut SkSingle, &SkDraw)>),
                 shutdown_raw,
             );
         }
@@ -509,7 +507,7 @@ impl Into<sk_settings_t> for Settings {
 }
 
 impl Settings {
-    pub fn init(self) -> SkResult<CSkSingle> {
+    pub fn init(self) -> SkResult<SkSingle> {
         let (vm_pointer, jobject_pointer) = (null_mut::<c_void>(), null_mut::<c_void>());
         #[cfg(target_os = "android")]
             let (vm_pointer, jobject_pointer) = {
@@ -525,7 +523,7 @@ impl Settings {
             sk_init(settings) != 0
         } {
             true => {
-                Ok(CSkSingle(std::marker::PhantomData))
+                Ok(SkSingle(std::marker::PhantomData))
             }
             false => {
                 Err(StereoKitError::SkInit(self))
@@ -690,7 +688,7 @@ impl SettingsBuilder {
             }
         }
     }
-    pub fn init(self) -> SkResult<CSkSingle> {
+    pub fn init(self) -> SkResult<SkSingle> {
         self.build().init()
     }
 }
@@ -2401,7 +2399,8 @@ pub enum MoveType {
     None = 3,
 }
 
-pub trait CStereoKitDraw: CStereoKitSingleThread {
+/// All stereokit functions that *must* only be done in the render loop
+pub trait StereoKitDraw: StereoKitSingleThread {
     /// Adds a mesh to the render queue for this frame! If the Hierarchy has a transform on it, that transform is combined with the Matrix provided here.
     fn mesh_draw(
         &self,
@@ -2633,7 +2632,8 @@ pub trait CStereoKitDraw: CStereoKitSingleThread {
     }
 
 }
-pub trait CStereoKitSingleThread: CStereoKitMultiThread {
+/// All stereokit based functions that *must* be done in a single thread
+pub trait StereoKitSingleThread: StereoKitMultiThread {
     /// Pushes a transform Matrix onto the stack, and combines it with the Matrix below it. Any draw operation’s Matrix will now be combined with this Matrix to make it relative to the current hierarchy. Use Hierarchy.Pop to remove it from the Hierarchy stack! All Push calls must have an accompanying Pop call.
     fn hierarchy_push(&self, transform: impl Into<Mat4>) {
         let transform = transform.into().into();
@@ -2751,7 +2751,7 @@ pub trait CStereoKitSingleThread: CStereoKitMultiThread {
         }.into()
     }
 }
-pub trait CStereoKitMultiThread {
+pub trait StereoKitMultiThread {
     /// Shuts down all StereoKit initialized systems. Release your own StereoKit created assets before calling this.
     fn shutdown(&self) {
         unsafe {
