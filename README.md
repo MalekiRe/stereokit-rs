@@ -36,6 +36,16 @@ For better documentation and tutorials check out <https://stereokit.net>
 Reach out on the official StereoKit discord server if you have any questions!
 <https://discord.com/invite/jtZpfS7nyK>
 
+## Getting Started
+
+To get started with an android-setup template use
+
+`cargo generate MalekiRe/stereokit-template`
+
+If you don't have cargo generate first run
+
+`cargo install cargo-generate`
+
 ### Example
 
 ```rust
@@ -64,13 +74,3 @@ fn basic() {
     }, |_| {});
 }
 ```
-
-## Getting Started
-
-To get started with an android-setup template use 
-
-`cargo generate MalekiRe/stereokit-template`
-
-If you don't have cargo generate first run
-
-`cargo install cargo-generate`
