@@ -1,10 +1,15 @@
 #![doc = include_str!("../README.md")]
-#![feature(negative_impls)]
 pub mod named_colors;
 #[cfg(test)]
 mod tests;
 
+#[cfg(target_os = "windows")]
+type IntegerType = i32;
+#[cfg(not(target_os = "windows"))]
+type IntegerType = u32;
+
 use std::any::Any;
+use std::cell::Cell;
 use std::ffi::{c_void, CStr, CString};
 use std::fmt;
 use std::fmt::Formatter;
@@ -12,16 +17,14 @@ use std::marker::PhantomData;
 use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::ptr::{NonNull, null, null_mut, slice_from_raw_parts_mut};
+use std::sync::MutexGuard;
 use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
 use stereokit_sys::{_model_t, _mesh_t, _material_t, _shader_t, sk_settings_t, system_info_t, log_, depth_mode_, display_blend_, display_, display_mode_, app_focus_, display_type_, fov_info_t, device_tracking_, ray_t, plane_t, bounds_t, sphere_t, _gradient_t, _tex_t, _font_t, _sprite_t, _sound_t, _solid_t, gradient_key_t, sh_light_t, spherical_harmonics_t, vert_t, bool32_t, cull_, mesh_t, tex_format_, tex_sample_, tex_address_, transparency_, depth_test_, _material_buffer_t, text_align_, text_fit_, anim_mode_, pose_t, quat, line_point_t, render_clear_, projection_, rect_t, sound_inst_t, sk_init, pointer_t, hand_joint_t, hand_t, handed_, controller_t, track_state_, mouse_t, openxr_handle_t, key_, world_refresh_, log_colors_, sprite_type_, ui_win_, ui_move_};
 use thiserror::Error;
 
 pub struct SkDraw(PhantomData<*const ()>);
-pub struct Sk(PhantomData<*const ()>);
-pub struct SkSingle(pub(crate) PhantomData<*const ()>);
-
-impl !Sync for SkSingle {}
-impl !Send for SkSingle {}
+pub struct Sk(PhantomData<()>);
+pub struct SkSingle(pub(crate) PhantomData<*const (/*Cell<()>, MutexGuard<'static, ()>*/)>);
 
 impl StereoKitSingleThread for SkDraw {}
 impl StereoKitMultiThread for SkDraw {}
@@ -35,6 +38,14 @@ impl SkSingle {
         Sk(PhantomData)
     }
 }
+
+impl SkDraw {
+    pub fn multithreaded(&self) -> Sk {
+        Sk(PhantomData)
+    }
+}
+
+
 
 type PanicPayload = Box<dyn Any + Send + 'static>;
 
@@ -477,8 +488,8 @@ impl Into<sk_settings_t> for Settings {
                 let app_name = CString::new(app_name).unwrap();
                 let assets_folder = CString::new(assets_folder.to_str().unwrap()).unwrap();
                 let s = sk_settings_t {
-                    app_name: app_name.as_ptr(),
-                    assets_folder: assets_folder.as_ptr(),
+                    app_name: app_name.into_raw(),
+                    assets_folder: assets_folder.into_raw(),
                     display_preference: display_preference as display_mode_,
                     blend_preference: blend_preference as display_blend_,
                     no_flatscreen_fallback: no_flatscreen_fallback as bool32_t,
@@ -494,12 +505,12 @@ impl Into<sk_settings_t> for Settings {
                     disable_desktop_input_window: disable_desktop_input_window as bool32_t,
                     disable_unfocused_sleep: disable_unfocused_sleep as bool32_t,
                     render_scaling,
-                    render_multisample: 0,
+                    render_multisample: 1,
                     android_java_vm: null_mut(),
                     android_activity: null_mut(),
                 };
-                Box::leak(Box::new(app_name));
-                Box::leak(Box::new(assets_folder));
+                //Box::leak(Box::new(app_name));
+                //Box::leak(Box::new(assets_folder));
                 s
             }
         }
@@ -520,7 +531,10 @@ impl Settings {
         settings.android_java_vm = vm_pointer;
         settings.android_activity = jobject_pointer;
         match unsafe {
-            sk_init(settings) != 0
+            println!("before init");
+            let val = sk_init(settings) != 0;
+            println!("after init");
+            val
         } {
             true => {
                 Ok(SkSingle(std::marker::PhantomData))
@@ -570,12 +584,12 @@ impl Default for SettingsBuilder {
     fn default() -> Self {
         Self {
             app_name: "StereoKit".to_string(),
-            assets_folder: Default::default(),
+            assets_folder: PathBuf::from(""),
             display_preference: DisplayMode::MixedReality,
             no_flatscreen_fallback: false,
             blend_preference: DisplayBlend::None,
             depth_mode: DepthMode::Balanced,
-            log_filter: LogLevel::Inform,
+            log_filter: LogLevel::Warning,
             overlay_app: false,
             overlay_priority: 0,
             flatscreen_pos_x: 0,
@@ -1762,9 +1776,9 @@ impl Into<pointer_t> for Pointer {
         match self {
             Pointer { source, tracked, state, ray, orientation } => {
                 pointer_t {
-                    source: source.bits,
-                    tracked: tracked.bits,
-                    state: state.bits,
+                    source: source.bits as IntegerType,
+                    tracked: tracked.bits as IntegerType,
+                    state: state.bits as IntegerType,
                     ray: ray.into(),
                     orientation: quat {
                         x: orientation.x,
@@ -1782,9 +1796,9 @@ impl From<pointer_t> for Pointer {
         match value {
             pointer_t { source, tracked, state, ray, orientation } => {
                 Self {
-                    source: unsafe { InputSource::from_bits_unchecked(source) },
-                    tracked: unsafe { ButtonState::from_bits_unchecked(tracked) },
-                    state: unsafe { ButtonState::from_bits_unchecked(state) },
+                    source: unsafe { InputSource::from_bits_unchecked(source as u32) },
+                    tracked: unsafe { ButtonState::from_bits_unchecked(tracked as u32) },
+                    state: unsafe { ButtonState::from_bits_unchecked(state as u32) },
                     ray: ray.into(),
                     orientation: Quat::from_xyzw(orientation.x, orientation.y, orientation.z, orientation.w),
                 }
@@ -1869,9 +1883,9 @@ impl Into<hand_t> for Hand {
                     palm: palm.into(),
                     pinch_pt: pinch_pt.into(),
                     handedness: handedness as handed_,
-                    tracked_state: tracked_state.bits,
-                    pinch_state: pinch_state.bits,
-                    grip_state: grip_state.bits,
+                    tracked_state: tracked_state.bits as IntegerType,
+                    pinch_state: pinch_state.bits as IntegerType,
+                    grip_state: grip_state.bits as IntegerType,
                     size,
                     pinch_activation,
                     grip_activation,
@@ -1890,9 +1904,9 @@ impl From<hand_t> for Hand {
                     palm: palm.into(),
                     pinch_pt: pinch_pt.into(),
                     handedness: unsafe { std::mem::transmute(handedness)},
-                    tracked_state: unsafe { ButtonState::from_bits_unchecked(tracked_state) },
-                    pinch_state: unsafe { ButtonState::from_bits_unchecked(pinch_state) },
-                    grip_state: unsafe { ButtonState::from_bits_unchecked(grip_state) },
+                    tracked_state: unsafe { ButtonState::from_bits_unchecked(tracked_state as u32) },
+                    pinch_state: unsafe { ButtonState::from_bits_unchecked(pinch_state as u32) },
+                    grip_state: unsafe { ButtonState::from_bits_unchecked(grip_state as u32) },
                     size,
                     pinch_activation,
                     grip_activation,
@@ -1936,12 +1950,12 @@ impl Into<controller_t> for Controller {
                     pose: pose.into(),
                     palm: palm.into(),
                     aim: aim.into(),
-                    tracked: tracked.bits,
+                    tracked: tracked.bits as IntegerType,
                     tracked_pos: tracked_pos as track_state_,
                     tracked_rot: tracked_rot as track_state_,
-                    stick_click: stick_click.bits,
-                    x1: x1.bits,
-                    x2: x2.bits,
+                    stick_click: stick_click.bits as IntegerType,
+                    x1: x1.bits as IntegerType,
+                    x2: x2.bits as IntegerType,
                     trigger,
                     grip,
                     stick: stick.into(),
@@ -1958,12 +1972,12 @@ impl From<controller_t> for Controller {
                     pose: pose.into(),
                     palm: palm.into(),
                     aim: aim.into(),
-                    tracked: unsafe { ButtonState::from_bits_unchecked(tracked)},
+                    tracked: unsafe { ButtonState::from_bits_unchecked(tracked as u32)},
                     tracked_pos: unsafe { std::mem::transmute(tracked_pos)},
                     tracked_rot: unsafe { std::mem::transmute(tracked_rot)},
-                    stick_click: unsafe { ButtonState::from_bits_unchecked(stick_click)},
-                    x1: unsafe { ButtonState::from_bits_unchecked(x1)},
-                    x2: unsafe { ButtonState::from_bits_unchecked(x2)},
+                    stick_click: unsafe { ButtonState::from_bits_unchecked(stick_click as u32)},
+                    x1: unsafe { ButtonState::from_bits_unchecked(x1 as u32)},
+                    x2: unsafe { ButtonState::from_bits_unchecked(x2 as u32)},
                     trigger,
                     grip,
                     stick: stick.into(),
@@ -2416,7 +2430,7 @@ pub trait StereoKitDraw: StereoKitSingleThread {
                 material.as_ref().0.as_ptr(),
                 transform.into().into(),
                 color_linear,
-                layer.bits,
+                layer.bits as IntegerType,
             )
         }
     }
@@ -2434,7 +2448,7 @@ pub trait StereoKitDraw: StereoKitSingleThread {
                 model.as_ref().0.as_ptr(),
                 transform.into().into(),
                 color_linear,
-                layer.bits
+                layer.bits as IntegerType
             )
         }
     }
@@ -2518,7 +2532,7 @@ pub trait StereoKitDraw: StereoKitSingleThread {
                 material.as_ref().0.as_ptr(),
                 &transform,
                 color_linear,
-                layer.bits
+                layer.bits as IntegerType
             )
         }
     }
@@ -2536,7 +2550,7 @@ pub trait StereoKitDraw: StereoKitSingleThread {
                 model.as_ref().0.as_ptr(),
                 &transform,
                 color_linear,
-                layer.bits
+                layer.bits as IntegerType
             )
         }
     }
@@ -2595,8 +2609,8 @@ pub trait StereoKitDraw: StereoKitSingleThread {
                 to_rendertarget.as_ref().0.as_ptr(),
                 &camera,
                 &projection,
-                layer_filter.bits,
-                clear as u32,
+                layer_filter.bits as IntegerType,
+                clear as IntegerType,
                 viewport,
             )
         }
@@ -2620,8 +2634,8 @@ pub trait StereoKitDraw: StereoKitSingleThread {
                 override_material.as_ref().0.as_ptr(),
                 &camera,
                 &projection,
-                layer_filter.bits,
-                clear as u32,
+                layer_filter.bits as IntegerType,
+                clear as IntegerType,
                 viewport
             )
         }
@@ -3416,7 +3430,7 @@ pub trait StereoKitMultiThread {
     /// Sets up an empty texture container! Fill it with data using SetColors next! Creates a default unique asset Id.
     fn tex_create(&self, r#type: TextureType, format: TextureFormat) -> Tex {
         Tex(NonNull::new( unsafe {
-            stereokit_sys::tex_create(r#type.bits, format as tex_format_)
+            stereokit_sys::tex_create(r#type.bits as IntegerType, format as tex_format_)
         }
         ).unwrap())
     }
@@ -3536,7 +3550,7 @@ pub trait StereoKitMultiThread {
         stereokit_sys::tex_set_surface(
             tex.as_ref().0.as_ptr(),
             native_surface,
-            r#type.bits,
+            r#type.bits as IntegerType,
             native_fmt,
             width,
             height,
@@ -3605,7 +3619,7 @@ pub trait StereoKitMultiThread {
                 color,
                 width,
                 height,
-                type_.bits,
+                type_.bits as IntegerType,
                 format as tex_format_
             )
         }).unwrap())
@@ -5670,14 +5684,14 @@ pub trait StereoKitMultiThread {
 
     fn render_set_filter(&self, layer_filter: RenderLayer) {
         unsafe {
-            stereokit_sys::render_set_filter(layer_filter.bits)
+            stereokit_sys::render_set_filter(layer_filter.bits as IntegerType)
         }
     }
 
     fn render_get_filter(&self) -> RenderLayer {
         unsafe {
             RenderLayer::from_bits_unchecked(
-                stereokit_sys::render_get_filter()
+                stereokit_sys::render_get_filter() as u32
             )
         }
     }
@@ -5710,7 +5724,7 @@ pub trait StereoKitMultiThread {
         unsafe {
             stereokit_sys::render_override_capture_filter(
                 use_override_filter as bool32_t,
-                layer_filter.bits
+                layer_filter.bits as IntegerType
             )
         }
     }
@@ -5718,7 +5732,7 @@ pub trait StereoKitMultiThread {
     fn render_get_capture_filter(&self) -> RenderLayer {
         unsafe {
             RenderLayer::from_bits_unchecked(
-                stereokit_sys::render_get_capture_filter()
+                stereokit_sys::render_get_capture_filter() as u32
             )
         }
     }
@@ -5932,13 +5946,13 @@ pub trait StereoKitMultiThread {
 
     fn input_pointer_count(&self, filter: InputSource) -> i32 {
         unsafe {
-            stereokit_sys::input_pointer_count(filter.bits)
+            stereokit_sys::input_pointer_count(filter.bits as IntegerType)
         }
     }
 
     fn input_pointer(&self, index: i32, filter: InputSource) -> Pointer {
         unsafe {
-            stereokit_sys::input_pointer(index, filter.bits)
+            stereokit_sys::input_pointer(index, filter.bits as IntegerType)
         }.into()
     }
 
@@ -5958,7 +5972,7 @@ pub trait StereoKitMultiThread {
 
     fn input_controller_menu(&self) -> ButtonState {
         unsafe {
-            ButtonState::from_bits_unchecked(stereokit_sys::input_controller_menu())
+            ButtonState::from_bits_unchecked(stereokit_sys::input_controller_menu() as u32)
         }
     }
 
@@ -5982,7 +5996,7 @@ pub trait StereoKitMultiThread {
 
     fn input_key(&self, key: Key) -> ButtonState {
         unsafe {
-            ButtonState::from_bits_unchecked(stereokit_sys::input_key(key as key_))
+            ButtonState::from_bits_unchecked(stereokit_sys::input_key(key as key_) as u32)
         }
     }
 
@@ -6022,8 +6036,8 @@ pub trait StereoKitMultiThread {
         let pointer = pointer.into();
         unsafe {
             stereokit_sys::input_fire_event(
-                source.bits,
-                input_event.bits,
+                source.bits as IntegerType,
+                input_event.bits as IntegerType,
                 &pointer
             )
         }
