@@ -29,6 +29,8 @@ use stereokit_sys::{
 };
 use thiserror::Error;
 
+pub use stereokit_sys as sys;
+
 pub struct SkDraw(PhantomData<*const ()>);
 pub struct Sk(PhantomData<()>);
 pub struct SkSingle(pub(crate) PhantomData<*const ()>);
@@ -6362,7 +6364,7 @@ impl WindowContext {
 	}
 	pub fn text_style(&self, style: TextStyle, content_closure: impl FnOnce(&WindowContext)) {
 		self.push_text_style(style);
-		content_closure(&self);
+		content_closure(self);
 		self.pop_text_style();
 	}
 	pub fn push_tint(&self, tint_gamma: Color128) {
@@ -6377,7 +6379,7 @@ impl WindowContext {
 	}
 	pub fn tint(&self, tint_gamma: Color128, content_closure: impl FnOnce(&WindowContext)) {
 		self.push_tint(tint_gamma);
-		content_closure(&self);
+		content_closure(self);
 		self.pop_tint();
 	}
 	pub fn push_enabled(&self, enabled: bool) {
@@ -6392,7 +6394,7 @@ impl WindowContext {
 	}
 	pub fn enabled(&self, enabled: bool, content_closure: impl FnOnce(&WindowContext)) {
 		self.push_enabled(enabled);
-		content_closure(&self);
+		content_closure(self);
 		self.pop_enabled();
 	}
 	pub fn push_preserve_keyboard(&self, preserve_keyboard: bool) {
@@ -6409,7 +6411,7 @@ impl WindowContext {
 		content_closure: impl FnOnce(&WindowContext),
 	) {
 		self.push_preserve_keyboard(preserve_keyboard);
-		content_closure(&self);
+		content_closure(self);
 		self.pop_preserve_keyboard();
 	}
 	pub fn push_surface(
@@ -6437,7 +6439,7 @@ impl WindowContext {
 		content_closure: impl FnOnce(&WindowContext),
 	) {
 		self.push_surface(surface_pose, layout_state, layout_dimensions);
-		content_closure(&self);
+		content_closure(self);
 		self.pop_surface();
 	}
 	pub fn push_id(&self, id: impl AsRef<str>) -> u64 {
@@ -6452,12 +6454,12 @@ impl WindowContext {
 	}
 	pub fn id(&self, id: impl AsRef<str>, content_closure: impl FnOnce(&WindowContext, u64)) {
 		let id = self.push_id(id);
-		content_closure(&self, id);
+		content_closure(self, id);
 		self.pop_id();
 	}
 	pub fn idi(&self, id: i32, content_closure: impl FnOnce(&WindowContext, u64)) {
 		let id = self.push_idi(id);
-		content_closure(&self, id);
+		content_closure(self, id);
 		self.pop_id();
 	}
 }
