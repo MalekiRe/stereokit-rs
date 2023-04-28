@@ -9,6 +9,9 @@ type IntegerType = i32;
 type IntegerType = u32;
 
 use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::any::Any;
 use std::ffi::{c_void, CStr, CString};
 use std::fmt;
@@ -252,8 +255,8 @@ pub type Color128 = stereokit_sys::color128;
 pub type ModelNodeId = i32;
 
 /// Specifies a type of display mode StereoKit uses, like Mixed Reality headset display vs. a PC display, or even just rendering to an offscreen surface, or not rendering at all!
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum DisplayMode {
 	/// Creates an OpenXR instance, and drives display/input through that.
 	MixedReality = 0,
@@ -269,8 +272,8 @@ impl From<display_mode_> for DisplayMode {
 }
 
 /// TODO: remove this in v0.4 This describes the type of display tech used on a Mixed Reality device. This will be replaced by DisplayBlend in v0.4.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum Display {
 	/// 	Default value, when using this as a search type, it will fall back to default behavior which defers to platform preference.
 	None = 0,
@@ -290,8 +293,8 @@ impl From<display_> for Display {
 }
 
 /// This describes the way the display’s content blends with whatever is behind it. VR headsets are normally Opaque, but some VR headsets provide passthrough video, and can support Opaque as well as Blend, like the Varjo. Transparent AR displays like the HoloLens would be Additive.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum DisplayBlend {
 	/// Default value, when using this as a search type, it will fall back to default behavior which defers to platform preference.
 	None = 0,
@@ -316,8 +319,8 @@ impl Into<display_blend_> for DisplayBlend {
 }
 
 /// This is used to determine what kind of depth buffer StereoKit uses!
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum DepthMode {
 	/// Default mode, uses 16 bit on mobile devices like HoloLens and Quest, and 32 bit on higher powered platforms like PC. If you need a far view distance even on mobile devices, prefer D32 or Stencil instead.
 	Balanced = 0,
@@ -335,8 +338,8 @@ impl From<depth_mode_> for DepthMode {
 }
 
 /// Severity of a log item.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum LogLevel {
 	None = 0,
 	/// This is for diagnostic information, where you need to know details about what -exactly- is going on in the system. This info doesn’t surface by default.
@@ -356,6 +359,7 @@ impl From<log_> for LogLevel {
 
 bitflags::bitflags! {
 /// When rendering content, you can filter what you’re rendering by the RenderLayer that they’re on. This allows you to draw items that are visible in one render, but not another. For example, you may wish to draw a player’s avatar in a ‘mirror’ rendertarget, but not in the primary display. See Renderer.LayerFilter for configuring what the primary display renders.
+	#[derive(Serialize, Deserialize)]
 	pub struct RenderLayer: u32 {
 		/// The default render layer. All Draw use this layer unless otherwise specified.
 		const LAYER0 = 1 << 0;
@@ -392,6 +396,8 @@ impl Default for RenderLayer {
 	}
 }
 /// For performance sensitive areas, or places dealing with large chunks of memory, it can be faster to get a reference to that memory rather than copying it! However, if this isn’t explicitly stated, it isn’t necessarily clear what’s happening. So this enum allows us to visibly specify what type of memory reference is occurring.
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum Memory {
 	/// The chunk of memory involved here is a reference that is still managed or used by StereoKit! You should not free it, and be extremely cautious about modifying it.
 	Reference = 0,
@@ -400,8 +406,7 @@ pub enum Memory {
 }
 
 /// StereoKit initialization settings!
-///
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
 	/// Name of the application, this shows up an the top of the Win32 window, and is submitted to OpenXR. OpenXR caps this at 128 characters.
 	pub app_name: String,
@@ -752,7 +757,7 @@ impl SettingsBuilder {
 
 /// Information about a system’s capabilities and properties!
 ///
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemInfo {
 	/// The type of display this device has.
 	pub display_type: Display,
@@ -802,7 +807,7 @@ impl From<system_info_t> for SystemInfo {
 }
 
 /// This tells about the app’s current focus state, whether it’s active and receiving input, or if it’s backgrounded or hidden. This can be important since apps may still run and render when unfocused, as the app may still be visible behind the app that does have focus.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C)]
 pub enum AppFocus {
 	/// This StereoKit app is active, focused, and receiving input from the user. Application should behave as normal.
@@ -819,7 +824,7 @@ impl From<app_focus_> for AppFocus {
 }
 
 /// StereoKit uses an asynchronous loading system to prevent assets from blocking execution! This means that asset loading systems will return an asset to you right away, even though it is still being processed in the background.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C)]
 pub enum AssetState {
 	/// This asset encountered an issue when parsing the source data. Either the format is unrecognized by StereoKit, or the data may be corrupt. Check the logs for additional details.
@@ -838,7 +843,7 @@ pub enum AssetState {
 	Loaded = 3,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C)]
 pub enum DeviceTracking {
 	None = 0,
@@ -856,7 +861,7 @@ impl Into<device_tracking_> for DeviceTracking {
 	}
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C)]
 pub enum DisplayType {
 	None = 0,
@@ -875,7 +880,7 @@ pub type FovInfo = fov_info_t;
 /// This is a great tool for intersection testing with geometrical
 /// shapes.
 ///
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 #[repr(C)]
 pub struct Ray {
 	/// The position or origin point of the Ray.
@@ -907,7 +912,7 @@ impl Into<ray_t> for Ray {
 /// for storing the sizes of objects, calculating containment,
 /// intersections, and more!
 ///
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 #[repr(C)]
 pub struct Bounds {
 	/// The exact center of the Bounds!
@@ -933,7 +938,7 @@ impl Into<bounds_t> for Bounds {
 /// This plane is stored using the ax + by + cz + d = 0 formula, where
 /// the normal is a,b,c, and the d is, well, d.
 ///
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, Deserialize, Serialize)]
 #[repr(C)]
 pub struct Plane {
 	/// The direction the plane is facing.
@@ -957,7 +962,7 @@ impl Into<plane_t> for Plane {
 /// and a radius, can be used for raycasting, collision, visibility, and
 /// other things!
 ///
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, Deserialize, Serialize)]
 #[repr(C)]
 pub struct Sphere {
 	/// Center of the sphere.
@@ -1217,8 +1222,8 @@ impl AsRef<Asset> for Asset {
 #[derive(Debug, Copy, Clone)]
 pub struct TextStyle(pub u32);
 /// A enum for describing alignment or positioning
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Serialize_repr, Deserialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum TextAlign {
 	XLeft = 1,
 	YTop = 2,
@@ -1237,8 +1242,8 @@ pub enum TextAlign {
 }
 
 /// This enum describes how text layout behaves within the space it is given.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Serialize_repr, Deserialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum TextFit {
 	/// The text will wrap around to the next line down when it reaches the end of the space on the X axis.
 	Wrap = 1,
@@ -1345,7 +1350,7 @@ impl Into<vert_t> for Vert {
 }
 
 ///Culling is discarding an object from the render pipeline! This enum describes how mesh faces get discarded on the graphics card. With culling set to none, you can double the number of pixels the GPU ends up drawing, which can have a big impact on performance. None can be appropriate in cases where the mesh is designed to be ‘double sided’. Front can also be helpful when you want to flip a mesh ‘inside-out’!
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C)]
 pub enum CullMode {
 	/// Discard if the back of the triangle face is pointing towards the camera. This is the default behavior.
@@ -1360,6 +1365,7 @@ bitflags::bitflags! {
 	/// Textures come in various types and flavors! These are bit-flags
 	/// that tell StereoKit what type of texture we want; and how the application
 	/// might use it!
+	#[derive(Serialize, Deserialize)]
 	pub struct TextureType: u32 {
 		/// A standard color image; without any generated mip-maps.
 		const IMAGE_NO_MIPS = 1 << 0;
@@ -1390,7 +1396,7 @@ bitflags::bitflags! {
 
 /// What type of color information will the texture contain? A
 /// good default here is Rgba32.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
 #[repr(u32)]
 pub enum TextureFormat {
 	/// A default zero value for TexFormat! Uninitialized formats
@@ -1455,7 +1461,7 @@ pub enum TextureFormat {
 /// pixels? If you'd like an in-depth explanation of these topics, check
 /// out [this exploration of texture filtering](https://medium.com/@bgolus/sharper-mipmapping-using-shader-based-supersampling-ed7aadb47bec)
 /// by graphics wizard Ben Golus.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
 #[repr(u32)]
 pub enum TextureSample {
 	/// Use a linear blend between adjacent pixels, this creates
@@ -1472,7 +1478,7 @@ pub enum TextureSample {
 /// What happens when the shader asks for a texture coordinate
 /// that's outside the texture?? Believe it or not, this happens plenty
 /// often!
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
 #[repr(u32)]
 pub enum TextureAddress {
 	/// Wrap the UV coordinate around to the other side of the
@@ -1493,8 +1499,8 @@ pub enum TextureAddress {
 }
 
 /// Also known as ‘alpha’ for those in the know. But there’s actually more than one type of transparency in rendering! The horrors. We’re keepin’ it fairly simple for now, so you get three options!
-#[derive(Debug, Clone, Copy)]
-#[repr(C)]
+#[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum Transparency {
 	/// Not actually transparent! This is opaque! Solid! It’s the default option, and it’s the fastest option! Opaque objects write to the z-buffer, the occlude pixels behind them, and they can be used as input to important Mixed Reality features like Late Stage Reprojection that’ll make your view more stable!
 	None = 1,
@@ -1505,8 +1511,8 @@ pub enum Transparency {
 }
 
 /// Depth test describes how this material looks at and responds to depth information in the zbuffer! The default is Less, which means if the material pixel’s depth is Less than the existing depth data, (basically, is this in front of some other object) it will draw that pixel. Similarly, Greater would only draw the material if it’s ‘behind’ the depth buffer. Always would just draw all the time, and not read from the depth buffer at all.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum DepthTest {
 	/// Default behavior, pixels behind the depth buffer will be discarded, and pixels in front of it will be drawn.
 	Less = 0,
@@ -1527,8 +1533,8 @@ pub enum DepthTest {
 }
 
 /// TODO: v0.4 This may need significant revision? What type of data does this material parameter need? This is used to tell the shader how large the data is, and where to attach it to on the shader.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum MaterialParameter {
 	/// This data type is not currently recognized. Please report your case on GitHub Issues!
 	Unknown = 0,
@@ -1552,8 +1558,8 @@ pub enum MaterialParameter {
 }
 
 /// Describes how an animation is played back, and what to do when the animation hits the end.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum AnimMode {
 	/// If the animation reaches the end, it will always loop back around to the start again.
 	Loop = 0,
@@ -1564,8 +1570,8 @@ pub enum AnimMode {
 }
 
 /// The way the Sprite is stored on the backend! Does it get batched and atlased for draw efficiency, or is it a single image?
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum SpriteType {
 	/// The sprite will be batched onto an atlas texture so all sprites can be drawn in a single pass. This is excellent for performance! The only thing to watch out for here, adding a sprite to an atlas will rebuild the atlas texture! This can be a bit expensive, so it’s recommended to add all sprites to an atlas at start, rather than during runtime. Also, if an image is too large, it may take up too much space on the atlas, and may be better as a Single sprite type.
 	Atlased = 0,
@@ -1596,7 +1602,7 @@ impl Into<line_point_t> for LinePoint {
 }
 
 /// Pose represents a location and orientation in space, excluding scale!
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 #[repr(C)]
 pub struct Pose {
 	pub position: Vec3,
@@ -1659,8 +1665,8 @@ impl Into<pose_t> for Pose {
 }
 
 /// When rendering to a rendertarget, this tells if and what of the rendertarget gets cleared before rendering. For example, if you are assembling a sheet of images, you may want to clear everything on the first image draw, but not clear on subsequent draws.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum RenderClear {
 	/// Don’t clear anything, leave it as it is.
 	None = 0,
@@ -1678,8 +1684,8 @@ impl Into<render_clear_> for RenderClear {
 }
 
 /// The projection mode used by StereoKit for the main camera! You can use this with Renderer.Projection. These options are only available in flatscreen mode, as MR headsets provide very specific projection matrices.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum Projection {
 	/// This is the default projection mode, and the one you’re most likely to be familiar with! This is where parallel lines will converge as they go into the distance.
 	Perspective = 0,
@@ -1698,6 +1704,7 @@ pub type SoundInstance = sound_inst_t;
 
 bitflags::bitflags! {
 /// What type of device is the source of the pointer? This is a bit-flag that can contain some input source family information.
+	#[derive(Deserialize, Serialize)]
 	pub struct InputSource: u32 {
 		/// Matches with all input sources!
 		const ANY = 2147483647;
@@ -1720,8 +1727,8 @@ bitflags::bitflags! {
 	}
 }
 /// An enum for indicating which hand to use!
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum Handed {
 	/// Left hand.
 	Left = 0,
@@ -1733,6 +1740,7 @@ pub enum Handed {
 bitflags::bitflags! {
 	/// A bit-flag for the current state of a button input.
 	/// This is *BROKEN* you cannot rely on Inactive to be false, I am waiting for nick to fix it lmao
+	#[derive(Deserialize, Serialize)]
 	pub struct ButtonState: u32 {
 		/// Is the button currently up, unpressed?
 		const INACTIVE = 0;
@@ -1749,8 +1757,8 @@ bitflags::bitflags! {
 	}
 }
 /// This is the tracking state of a sensory input in the world, like a controller’s position sensor, or a QR code identified by a tracking system.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum TrackState {
 	/// The system has no current knowledge about the state of this input. It may be out of visibility, or possibly just disconnected.
 	Lost = 0,
@@ -1761,7 +1769,7 @@ pub enum TrackState {
 }
 
 /// Pointer is an abstraction of a number of different input sources, and a way to surface input events!
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 pub struct Pointer {
 	/// What input source did this pointer come from? This is a bit-flag that contains input family and capability information.
 	pub source: InputSource,
@@ -1824,7 +1832,7 @@ impl From<pointer_t> for Pointer {
 }
 
 /// Contains information to represents a joint on the hand.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct HandJoint {
 	/// The center of the joint’s world space location.
 	pub position: Vec3,
@@ -1873,7 +1881,7 @@ impl From<hand_joint_t> for HandJoint {
 		}
 	}
 }
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Hand {
 	/// This is a 2D array with 25 HandJoints. You can get the right joint by finger*5 + joint
 	pub fingers: [[HandJoint; 5]; 5],
@@ -1961,7 +1969,7 @@ impl From<hand_t> for Hand {
 	}
 }
 /// This represents a physical controller input device! Tracking information, buttons, analog sticks and triggers! There’s also a Menu button that’s tracked separately at Input.ContollerMenu.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Controller {
 	/// The grip pose of the controller. This approximately represents the center of the hand’s position. Check trackedPos and trackedRot for the current state of the pose data.
 	pub pose: Pose,
@@ -2054,7 +2062,7 @@ impl From<controller_t> for Controller {
 	}
 }
 /// This stores information about the mouse! What’s its state, where’s it pointed, do we even have one?
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[repr(C)]
 pub struct Mouse {
 	/// Is the mouse available to use? Most MR systems likely won’t have a mouse!
@@ -2079,8 +2087,18 @@ impl From<mouse_t> for Mouse {
 	}
 }
 /// A collection of system key codes, representing keyboard characters and mouse buttons. Based on VK codes.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(
+	Debug,
+	Copy,
+	Clone,
+	Deserialize_repr,
+	Serialize_repr,
+	PartialEq,
+	Eq,
+	IntoPrimitive,
+	TryFromPrimitive,
+)]
+#[repr(u32)]
 pub enum Key {
 	None = 0,
 	MouseLeft = 1,
@@ -2184,12 +2202,11 @@ pub enum Key {
 	Subtract = 109,
 	Decimal = 110,
 	Divide = 111,
-	MAX = 255,
 }
 
 /// A settings flag that lets you describe the behavior of how StereoKit will refresh data about the world mesh, if applicable. This is used with World.RefreshType.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum WorldRefresh {
 	/// Refreshing occurs when the user leaves the area that was most recently scanned. This area is a sphere that is 0.5 of the World.RefreshRadius.
 	Area = 0,
@@ -2198,8 +2215,8 @@ pub enum WorldRefresh {
 }
 
 /// This describes what technology is being used to power StereoKit’s XR backend.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum BackendXrType {
 	/// StereoKit is not using an XR backend of any sort. That means the application is flatscreen and has the simulator disabled.
 	None = 0,
@@ -2212,8 +2229,8 @@ pub enum BackendXrType {
 }
 
 /// This describes the platform that StereoKit is running on.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum BackendPlatform {
 	/// This is running as a Windows app using the Win32 APIs.
 	Win32 = 0,
@@ -2228,8 +2245,8 @@ pub enum BackendPlatform {
 }
 
 /// This describes the graphics API thatStereoKit is using for rendering.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum BackendGraphics {
 	None = 0,
 	D3D11 = 1,
@@ -2242,8 +2259,8 @@ pub enum BackendGraphics {
 pub type OpenXrHandle = openxr_handle_t;
 
 /// The log tool will write to the console with annotations for console colors, which helps with readability, but isn’t always supported. These are the options available for configuring those colors.
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum LogColors {
 	/// Use console coloring annotations
 	Ansi = 0,
@@ -2251,8 +2268,8 @@ pub enum LogColors {
 	None = 1,
 }
 
-#[derive(Debug, Copy, Clone)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum AssetType {
 	None = 0,
 	Mesh = 1,
@@ -2462,6 +2479,8 @@ static_sound!("default/sound_unclick", UNCLICK);
 static_sound!("default/sound_grab", GRAB);
 static_sound!("default/sound_ungrab", UNGRAB);
 
+#[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum WindowType {
 	Empty = 1,
 	Head = 2,
@@ -2469,6 +2488,8 @@ pub enum WindowType {
 	Normal = 6,
 }
 
+#[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
 pub enum MoveType {
 	Exact = 0,
 	FaceUser = 1,
@@ -2555,6 +2576,11 @@ pub trait StereoKitDraw: StereoKitSingleThread {
 				color,
 				thickness,
 			)
+		}
+	}
+	fn line_add_listv(&self, points: &[LinePoint]) {
+		unsafe {
+			stereokit_sys::line_add_listv(std::mem::transmute(points.as_ptr()), points.len() as i32)
 		}
 	}
 
