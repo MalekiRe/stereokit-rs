@@ -435,11 +435,34 @@ pub struct Settings {
 	/// If using Runtime.Flatscreen, the pixel size of the window on the screen.
 	pub flatscreen_height: i32,
 	/// By default, StereoKit will simulate Mixed Reality input so developers can test MR spaces without being in a headset. If You don’t want this, you can disable it with this setting!
-	pub display_flatscreen_mr_sim: bool,
+	pub disable_flatscreen_mr_sim: bool,
 	pub disable_desktop_input_window: bool,
 	/// By default, StereoKit will slow down when the application is out of focus. This is useful for saving processing power while the app is out-of-focus, but may not always be desired. In particular, running multiple copies of a SK app for testing networking code may benefit from this setting.
 	pub disable_unfocused_sleep: bool,
 	pub render_scaling: f32,
+}
+impl Default for Settings {
+	fn default() -> Self {
+		Self {
+			app_name: "StereoKit".to_string(),
+			assets_folder: PathBuf::from(""),
+			display_preference: DisplayMode::MixedReality,
+			no_flatscreen_fallback: false,
+			blend_preference: DisplayBlend::None,
+			depth_mode: DepthMode::Balanced,
+			log_filter: LogLevel::Warning,
+			overlay_app: false,
+			overlay_priority: 0,
+			flatscreen_pos_x: 0,
+			flatscreen_pos_y: 0,
+			flatscreen_width: 0,
+			flatscreen_height: 0,
+			disable_flatscreen_mr_sim: false,
+			disable_desktop_input_window: false,
+			disable_unfocused_sleep: false,
+			render_scaling: 1.0,
+		}
+	}
 }
 impl fmt::Display for Settings {
 	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -490,7 +513,7 @@ impl From<sk_settings_t> for Settings {
 					flatscreen_pos_y,
 					flatscreen_width,
 					flatscreen_height,
-					display_flatscreen_mr_sim: disable_flatscreen_mr_sim != 0,
+					disable_flatscreen_mr_sim: disable_flatscreen_mr_sim != 0,
 					disable_desktop_input_window: disable_desktop_input_window != 0,
 					disable_unfocused_sleep: disable_unfocused_sleep != 0,
 					render_scaling,
@@ -516,7 +539,7 @@ impl Into<sk_settings_t> for Settings {
 				flatscreen_pos_y,
 				flatscreen_width,
 				flatscreen_height,
-				display_flatscreen_mr_sim,
+				disable_flatscreen_mr_sim,
 				disable_desktop_input_window,
 				disable_unfocused_sleep,
 				render_scaling,
@@ -537,7 +560,7 @@ impl Into<sk_settings_t> for Settings {
 					flatscreen_pos_y,
 					flatscreen_width,
 					flatscreen_height,
-					disable_flatscreen_mr_sim: display_flatscreen_mr_sim as bool32_t,
+					disable_flatscreen_mr_sim: disable_flatscreen_mr_sim as bool32_t,
 					disable_desktop_input_window: disable_desktop_input_window as bool32_t,
 					disable_unfocused_sleep: disable_unfocused_sleep as bool32_t,
 					render_scaling,
@@ -578,177 +601,93 @@ impl Settings {
 	}
 }
 /// Use this to help construct your settings!
+#[derive(Default, Debug)]
 pub struct SettingsBuilder {
-	/// Name of the application, this shows up an the top of the Win32 window, and is submitted to OpenXR. OpenXR caps this at 128 characters.
-	app_name: String,
-	/// Where to look for assets when loading files! Final path will look like ‘\[assetsFolder\]/\[file\]’, so a trailing ‘/’ is unnecessary.
-	assets_folder: PathBuf,
-	/// Which display type should we try to load? Default is DisplayMode.MixedReality.
-	display_preference: DisplayMode,
-	///If the preferred display fails, should we avoid falling back to flatscreen and just crash out? Default is false.
-	no_flatscreen_fallback: bool,
-	/// What type of background blend mode do we prefer for this application? Are you trying to build an Opaque/Immersive/VR app, or would you like the display to be AnyTransparent, so the world will show up behind your content, if that’s an option? Note that this is a preference only, and if it’s not available on this device, the app will fall back to the runtime’s preference instead! By default, (DisplayBlend.None) this uses the runtime’s preference.
-	blend_preference: DisplayBlend,
-	/// What kind of depth buffer should StereoKit use? A fast one, a detailed one, one that uses stencils? By default, StereoKit uses a balanced mix depending on platform, prioritizing speed but opening up when there’s headroom.
-	depth_mode: DepthMode,
-	/// The default log filtering level. This can be changed at runtime, but this allows you to set the log filter before Initialization occurs, so you can choose to get information from that. Default is LogLevel.Info.
-	log_filter: LogLevel,
-	/// If the runtime supports it, should this application run as an overlay above existing applications? Check SK.System.overlayApp after initialization to see if the runtime could comply with this flag. This will always force StereoKit to work in a blend compositing mode.
-	overlay_app: bool,
-	/// For overlay applications, this is the order in which apps should be composited together. 0 means first, bottom of the stack, and uint.MaxValue is last, on top of the stack.
-	overlay_priority: u32,
-	/// If using Runtime.Flatscreen, the pixel position of the window on the screen.
-	flatscreen_pos_x: i32,
-	/// If using Runtime.Flatscreen, the pixel position of the window on the screen.
-	flatscreen_pos_y: i32,
-	/// If using Runtime.Flatscreen, the pixel size of the window on the screen.
-	flatscreen_width: i32,
-	/// If using Runtime.Flatscreen, the pixel size of the window on the screen.
-	flatscreen_height: i32,
-	/// By default, StereoKit will simulate Mixed Reality input so developers can test MR spaces without being in a headset. If You don’t want this, you can disable it with this setting!
-	display_flatscreen_mr_sim: bool,
-	disable_desktop_input_window: bool,
-	/// By default, StereoKit will slow down when the application is out of focus. This is useful for saving processing power while the app is out-of-focus, but may not always be desired. In particular, running multiple copies of a SK app for testing networking code may benefit from this setting.
-	disable_unfocused_sleep: bool,
-	render_scaling: f32,
-}
-impl Default for SettingsBuilder {
-	fn default() -> Self {
-		Self {
-			app_name: "StereoKit".to_string(),
-			assets_folder: PathBuf::from(""),
-			display_preference: DisplayMode::MixedReality,
-			no_flatscreen_fallback: false,
-			blend_preference: DisplayBlend::None,
-			depth_mode: DepthMode::Balanced,
-			log_filter: LogLevel::Warning,
-			overlay_app: false,
-			overlay_priority: 0,
-			flatscreen_pos_x: 0,
-			flatscreen_pos_y: 0,
-			flatscreen_width: 0,
-			flatscreen_height: 0,
-			display_flatscreen_mr_sim: false,
-			disable_desktop_input_window: false,
-			disable_unfocused_sleep: false,
-			render_scaling: 1.0,
-		}
-	}
+	settings: Settings,
 }
 impl SettingsBuilder {
 	pub fn new() -> Self {
 		Self::default()
 	}
-	pub fn app_name(mut self, app_name: impl AsRef<str>) -> Self {
-		self.app_name = app_name.as_ref().to_string();
+	pub fn app_name(&mut self, app_name: impl AsRef<str>) -> &mut Self {
+		self.settings.app_name = app_name.as_ref().to_string();
 		self
 	}
-	pub fn assets_folder(mut self, assets_folder: impl AsRef<Path>) -> Self {
-		self.assets_folder = assets_folder.as_ref().to_path_buf();
+	pub fn assets_folder(&mut self, assets_folder: impl AsRef<Path>) -> &mut Self {
+		self.settings.assets_folder = assets_folder.as_ref().to_path_buf();
 		self
 	}
-	pub fn display_preference(mut self, display_preference: DisplayMode) -> Self {
-		self.display_preference = display_preference;
+	pub fn display_preference(&mut self, display_preference: DisplayMode) -> &mut Self {
+		self.settings.display_preference = display_preference;
 		self
 	}
-	pub fn blend_preference(mut self, blend_preference: DisplayBlend) -> Self {
-		self.blend_preference = blend_preference;
+	pub fn blend_preference(&mut self, blend_preference: DisplayBlend) -> &mut Self {
+		self.settings.blend_preference = blend_preference;
 		self
 	}
-	pub fn no_flatscreen_fallback(mut self, no_flatscreen_fallback: bool) -> Self {
-		self.no_flatscreen_fallback = no_flatscreen_fallback;
+	pub fn no_flatscreen_fallback(&mut self, no_flatscreen_fallback: bool) -> &mut Self {
+		self.settings.no_flatscreen_fallback = no_flatscreen_fallback;
 		self
 	}
-	pub fn log_filter(mut self, log_filter: LogLevel) -> Self {
-		self.log_filter = log_filter;
+	pub fn log_filter(&mut self, log_filter: LogLevel) -> &mut Self {
+		self.settings.log_filter = log_filter;
 		self
 	}
-	pub fn overlay_app(mut self, overlay_app: bool) -> Self {
-		self.overlay_app = overlay_app;
+	pub fn overlay_app(&mut self, overlay_app: bool) -> &mut Self {
+		self.settings.overlay_app = overlay_app;
 		self
 	}
-	pub fn flatscreen_pos_x(mut self, flatscreen_pos_x: i32) -> Self {
-		self.flatscreen_pos_x = flatscreen_pos_x;
+	pub fn overlay_priority(&mut self, overlay_priority: u32) -> &mut Self {
+		self.settings.overlay_priority = overlay_priority;
 		self
 	}
-	pub fn flatscreen_pos_y(mut self, flatscreen_pos_y: i32) -> Self {
-		self.flatscreen_pos_y = flatscreen_pos_y;
+	pub fn flatscreen_pos_x(&mut self, flatscreen_pos_x: i32) -> &mut Self {
+		self.settings.flatscreen_pos_x = flatscreen_pos_x;
 		self
 	}
-	pub fn flatscreen_pos(mut self, flatscreen_pos: (i32, i32)) -> Self {
-		self.flatscreen_pos_x = flatscreen_pos.0;
-		self.flatscreen_pos_y = flatscreen_pos.1;
+	pub fn flatscreen_pos_y(&mut self, flatscreen_pos_y: i32) -> &mut Self {
+		self.settings.flatscreen_pos_y = flatscreen_pos_y;
 		self
 	}
-	pub fn flatscreen_width(mut self, flatscreen_width: i32) -> Self {
-		self.flatscreen_width = flatscreen_width;
+	pub fn flatscreen_pos(&mut self, flatscreen_pos: (i32, i32)) -> &mut Self {
+		self.settings.flatscreen_pos_x = flatscreen_pos.0;
+		self.settings.flatscreen_pos_y = flatscreen_pos.1;
 		self
 	}
-	pub fn flatscreen_height(mut self, flatscreen_height: i32) -> Self {
-		self.flatscreen_height = flatscreen_height;
+	pub fn flatscreen_width(&mut self, flatscreen_width: i32) -> &mut Self {
+		self.settings.flatscreen_width = flatscreen_width;
 		self
 	}
-	pub fn flatscreen_size(mut self, flatscreen_size: (i32, i32)) -> Self {
-		self.flatscreen_width = flatscreen_size.0;
-		self.flatscreen_height = flatscreen_size.1;
+	pub fn flatscreen_height(&mut self, flatscreen_height: i32) -> &mut Self {
+		self.settings.flatscreen_height = flatscreen_height;
 		self
 	}
-	pub fn disable_flatscreen_mr_sim(mut self, disable_flatscreen_mr_sim: bool) -> Self {
-		self.display_flatscreen_mr_sim = disable_flatscreen_mr_sim;
+	pub fn flatscreen_size(&mut self, flatscreen_size: (i32, i32)) -> &mut Self {
+		self.settings.flatscreen_width = flatscreen_size.0;
+		self.settings.flatscreen_height = flatscreen_size.1;
 		self
 	}
-	pub fn disabled_desktop_input_window(mut self, disabled_desktop_input_window: bool) -> Self {
-		self.disable_desktop_input_window = disabled_desktop_input_window;
+	pub fn disable_flatscreen_mr_sim(&mut self, disable_flatscreen_mr_sim: bool) -> &mut Self {
+		self.settings.disable_flatscreen_mr_sim = disable_flatscreen_mr_sim;
 		self
 	}
-	pub fn disable_unfocused_sleep(mut self, disable_unfocused_sleep: bool) -> Self {
-		self.disable_unfocused_sleep = disable_unfocused_sleep;
+	pub fn disable_desktop_input_window(
+		&mut self,
+		disabled_desktop_input_window: bool,
+	) -> &mut Self {
+		self.settings.disable_desktop_input_window = disabled_desktop_input_window;
 		self
 	}
-	pub fn render_scaling(mut self, render_scaling: f32) -> Self {
-		self.render_scaling = render_scaling;
+	pub fn disable_unfocused_sleep(&mut self, disable_unfocused_sleep: bool) -> &mut Self {
+		self.settings.disable_unfocused_sleep = disable_unfocused_sleep;
+		self
+	}
+	pub fn render_scaling(&mut self, render_scaling: f32) -> &mut Self {
+		self.settings.render_scaling = render_scaling;
 		self
 	}
 	fn build(self) -> Settings {
-		match self {
-			SettingsBuilder {
-				app_name,
-				assets_folder,
-				display_preference,
-				no_flatscreen_fallback,
-				blend_preference,
-				depth_mode,
-				log_filter,
-				overlay_app,
-				overlay_priority,
-				flatscreen_pos_x,
-				flatscreen_pos_y,
-				flatscreen_width,
-				flatscreen_height,
-				display_flatscreen_mr_sim,
-				disable_desktop_input_window,
-				disable_unfocused_sleep,
-				render_scaling,
-			} => Settings {
-				app_name,
-				assets_folder,
-				display_preference,
-				no_flatscreen_fallback,
-				blend_preference,
-				depth_mode,
-				log_filter,
-				overlay_app,
-				overlay_priority,
-				flatscreen_pos_x,
-				flatscreen_pos_y,
-				flatscreen_width,
-				flatscreen_height,
-				display_flatscreen_mr_sim,
-				disable_desktop_input_window,
-				disable_unfocused_sleep,
-				render_scaling,
-			},
-		}
+		self.settings
 	}
 	pub fn init(self) -> SkResult<SkSingle> {
 		self.build().init()
@@ -3430,7 +3369,7 @@ pub trait StereoKitMultiThread {
 	) -> SkResult<(SphericalHarmonics, Tex)> {
 		let path = equirectangular_file_utf8.as_ref();
 		let path_buf = path.to_path_buf();
-		let spherical_harmonic_ptr = null_mut();
+		let mut sh: spherical_harmonics_t = sh_create(&[]).into();
 		let c_str = CString::new(path.to_str().ok_or(StereoKitError::TexFile(
 			path_buf.clone(),
 			"CString conversion".to_string(),
@@ -3440,7 +3379,7 @@ pub trait StereoKitMultiThread {
 			stereokit_sys::tex_create_cubemap_file(
 				c_str.as_ptr(),
 				srgb_data as bool32_t,
-				spherical_harmonic_ptr,
+				&mut sh,
 				priority,
 			)
 		})
@@ -3449,7 +3388,7 @@ pub trait StereoKitMultiThread {
 			"tex_create_file failed".to_string(),
 		))?);
 
-		Ok((unsafe { std::mem::transmute(*spherical_harmonic_ptr) }, tex))
+		Ok((sh.into(), tex))
 	}
 
 	//TODO: tex_create_cubemap_files
@@ -3771,10 +3710,10 @@ pub trait StereoKitMultiThread {
 	}
 
 	/// 	Creates a shader asset from a precompiled StereoKit Shader file stored as bytes!
-	fn shader_create_mem(&self, data: &mut [u8]) -> SkResult<Shader> {
+	fn shader_create_mem(&self, data: &[u8]) -> SkResult<Shader> {
 		Ok(Shader(
 			NonNull::new(unsafe {
-				stereokit_sys::shader_create_mem(data.as_mut_ptr() as *mut c_void, data.len())
+				stereokit_sys::shader_create_mem(data.as_ptr() as *mut c_void, data.len())
 			})
 			.ok_or(StereoKitError::ShaderMem)?,
 		))
