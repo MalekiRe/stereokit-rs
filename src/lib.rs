@@ -49,11 +49,26 @@ impl SkSingle {
 	pub fn multithreaded(&self) -> Sk {
 		Sk(PhantomData)
 	}
+	/// only use if you know what you are doing
+	pub unsafe fn create_unsafe() -> SkSingle {
+		SkSingle(PhantomData)
+	}
+}
+
+impl Sk {
+	/// only use if you know what you are doing
+	pub unsafe fn create_unsafe() -> Sk {
+		Sk(PhantomData)
+	}
 }
 
 impl SkDraw {
 	pub fn multithreaded(&self) -> Sk {
 		Sk(PhantomData)
+	}
+	/// only use if you know what you are doing
+	pub unsafe fn create_unsafe() -> Self {
+		SkDraw(PhantomData)
 	}
 }
 
@@ -686,10 +701,10 @@ impl SettingsBuilder {
 		self.settings.render_scaling = render_scaling;
 		self
 	}
-	fn build(self) -> Settings {
-		self.settings
+	fn build(&mut self) -> Settings {
+		self.settings.clone()
 	}
-	pub fn init(self) -> SkResult<SkSingle> {
+	pub fn init(&mut self) -> SkResult<SkSingle> {
 		self.build().init()
 	}
 }
