@@ -8,11 +8,21 @@ type IntegerType = i32;
 #[cfg(not(target_os = "windows"))]
 type IntegerType = u32;
 
+#[cfg(feature = "bevy_ecs")]
+use bevy_ecs::prelude::ReflectComponent;
+#[cfg(feature = "bevy_reflect")]
+use bevy_reflect::FromReflect;
+#[cfg(feature = "bevy_reflect")]
+use bevy_reflect::{DynamicInfo, Reflect, ReflectMut, ReflectOwned, ReflectRef, TypeInfo, ValueInfo};
+
 use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::any::Any;
+use std::borrow::BorrowMut;
+use std::cell::OnceCell;
+use std::collections::HashSet;
 use std::ffi::{c_void, CStr, CString};
 use std::fmt;
 use std::fmt::Formatter;
@@ -20,21 +30,14 @@ use std::marker::PhantomData;
 use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut, slice_from_raw_parts_mut, NonNull};
-use stereokit_sys::{
-	_font_t, _gradient_t, _material_buffer_t, _material_t, _mesh_t, _model_t, _shader_t, _solid_t,
-	_sound_t, _sprite_t, _tex_t, anim_mode_, app_focus_, bool32_t, bounds_t, controller_t, cull_,
-	depth_mode_, depth_test_, device_tracking_, display_, display_blend_, display_mode_,
-	display_type_, fov_info_t, gradient_key_t, hand_joint_t, hand_t, handed_, key_, line_point_t,
-	log_, log_colors_, mesh_t, mouse_t, openxr_handle_t, plane_t, pointer_t, pose_t, projection_,
-	quat, ray_t, rect_t, render_clear_, sh_light_t, sk_init, sk_settings_t, sound_inst_t, sphere_t,
-	spherical_harmonics_t, sprite_type_, system_info_t, tex_address_, tex_format_, tex_sample_,
-	text_align_, text_fit_, track_state_, transparency_, ui_move_, ui_win_, vert_t, world_refresh_,
-};
+use std::sync::OnceLock;
+use stereokit_sys::{_font_t, _gradient_t, _material_buffer_t, _material_t, _mesh_t, _model_t, _shader_t, _solid_t, _sound_t, _sprite_t, _tex_t, anim_mode_, app_focus_, bool32_t, bounds_t, controller_t, cull_, depth_mode_, depth_test_, device_tracking_, display_, display_blend_, display_mode_, display_type_, fov_info_t, gradient_key_t, hand_joint_t, hand_t, handed_, key_, line_point_t, log_, log_colors_, mesh_t, mouse_t, openxr_handle_t, plane_t, pointer_t, pose_t, projection_, quat, ray_t, rect_t, render_clear_, sh_light_t, sk_init, sk_settings_t, sound_inst_t, sphere_t, spherical_harmonics_t, sprite_type_, system_info_t, tex_address_, tex_format_, tex_sample_, text_align_, text_fit_, track_state_, transparency_, ui_color_, ui_cut_, ui_move_, ui_win_, vert_t, world_refresh_};
 use thiserror::Error;
 
 pub use stereokit_sys as sys;
 
 pub struct SkDraw(PhantomData<*const ()>);
+#[cfg_attr(feature = "bevy_ecs", derive(bevy_ecs::prelude::Resource))]
 pub struct Sk(PhantomData<()>);
 pub struct SkSingle(pub(crate) PhantomData<*const ()>);
 
@@ -375,6 +378,9 @@ impl From<log_> for LogLevel {
 bitflags::bitflags! {
 /// When rendering content, you can filter what you’re rendering by the RenderLayer that they’re on. This allows you to draw items that are visible in one render, but not another. For example, you may wish to draw a player’s avatar in a ‘mirror’ rendertarget, but not in the primary display. See Renderer.LayerFilter for configuring what the primary display renders.
 	#[derive(Serialize, Deserialize)]
+	#[cfg_attr(feature = "bevy_ecs", derive(bevy_ecs::prelude::Component))]
+	#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::prelude::Reflect, bevy_reflect::prelude::FromReflect))]
+	#[cfg_attr(feature = "bevy_reflect", reflect(Component))]
 	pub struct RenderLayer: u32 {
 		/// The default render layer. All Draw use this layer unless otherwise specified.
 		const LAYER0 = 1 << 0;
@@ -836,6 +842,9 @@ pub type FovInfo = fov_info_t;
 ///
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 #[repr(C)]
+#[cfg_attr(feature = "bevy_ecs", derive(bevy_ecs::prelude::Component))]
+#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::prelude::Reflect, bevy_reflect::prelude::FromReflect))]
+#[cfg_attr(feature = "bevy_reflect", reflect(Component))]
 pub struct Ray {
 	/// The position or origin point of the Ray.
 	pub pos: Vec3,
@@ -868,6 +877,9 @@ impl Into<ray_t> for Ray {
 ///
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 #[repr(C)]
+#[cfg_attr(feature = "bevy_ecs", derive(bevy_ecs::prelude::Component))]
+#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::prelude::Reflect, bevy_reflect::prelude::FromReflect))]
+#[cfg_attr(feature = "bevy_reflect", reflect(Component))]
 pub struct Bounds {
 	/// The exact center of the Bounds!
 	pub center: Vec3,
@@ -894,6 +906,9 @@ impl Into<bounds_t> for Bounds {
 ///
 #[derive(Debug, Copy, Clone, Default, Deserialize, Serialize)]
 #[repr(C)]
+#[cfg_attr(feature = "bevy_ecs", derive(bevy_ecs::prelude::Component))]
+#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::prelude::Reflect, bevy_reflect::prelude::FromReflect))]
+#[cfg_attr(feature = "bevy_reflect", reflect(Component))]
 pub struct Plane {
 	/// The direction the plane is facing.
 	pub normal: Vec3,
@@ -918,6 +933,9 @@ impl Into<plane_t> for Plane {
 ///
 #[derive(Debug, Copy, Clone, Default, Deserialize, Serialize)]
 #[repr(C)]
+#[cfg_attr(feature = "bevy_ecs", derive(bevy_ecs::prelude::Component))]
+#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::prelude::Reflect, bevy_reflect::prelude::FromReflect))]
+#[cfg_attr(feature = "bevy_reflect", reflect(Component))]
 pub struct Sphere {
 	/// Center of the sphere.
 	pub center: Vec3,
@@ -947,12 +965,17 @@ impl Into<sphere_t> for Sphere {
 /// appropriately later. Data is stored as float colors, so this'll be a
 /// high accuracy blend!
 ///
+
+
 pub struct Gradient(pub NonNull<_gradient_t>);
 impl Drop for Gradient {
 	fn drop(&mut self) {
 		gradient_release(self);
 	}
 }
+unsafe impl Send for Gradient {}
+unsafe impl Sync for Gradient {}
+
 
 /// A Mesh is a single collection of triangular faces with extra surface
 /// information to enhance rendering! StereoKit meshes are composed of a
@@ -983,6 +1006,8 @@ impl AsRef<Mesh> for Mesh {
 		&self
 	}
 }
+unsafe impl Send for Mesh {}
+unsafe impl Sync for Mesh {}
 
 /// This is the texture asset class! This encapsulates 2D images,
 /// texture arrays, cubemaps, and rendertargets! It can load any image
@@ -995,6 +1020,9 @@ impl AsRef<Tex> for Tex {
 		&self
 	}
 }
+
+unsafe impl Send for Tex {}
+unsafe impl Sync for Tex {}
 
 /// This class represents a text font asset! On the back-end, this asset
 /// is composed of a texture with font characters rendered to it, and a list of
@@ -1082,7 +1110,13 @@ impl AsRef<MaterialBuffer> for MaterialBuffer {
 /// order to execute a render command. So if you need speed, and only
 /// have a single mesh with a precalculated transform matrix, it can be
 /// faster to render a Mesh instead of a Model!
-pub struct Model(pub NonNull<_model_t>);
+#[cfg_attr(feature = "bevy_ecs", derive(bevy_ecs::prelude::Component))]
+#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::prelude::Reflect))]
+#[cfg_attr(feature = "bevy_reflect", reflect(Component))]
+pub struct Model(
+	#[cfg_attr(feature = "bevy_reflect", reflect(ignore))]
+	pub _Model
+);
 impl AsRef<Model> for Model {
 	fn as_ref(&self) -> &Model {
 		&self
@@ -1091,6 +1125,37 @@ impl AsRef<Model> for Model {
 impl Drop for Model {
 	fn drop(&mut self) {
 		model_release(self);
+	}
+}
+impl Model {
+	pub fn from(arg: NonNull<_model_t>) -> Self {
+		Self(_Model(arg))
+	}
+}
+unsafe impl Send for _Model {}
+unsafe impl Sync for _Model {}
+
+pub struct _Model(pub NonNull<_model_t>);
+
+impl _Model {
+	pub fn as_ptr(&self) -> *mut _model_t {
+		self.0.as_ptr()
+	}
+}
+
+#[cfg(feature = "bevy_reflect")]
+impl Default for Model {
+	fn default() -> Self {
+		let sk = unsafe { Sk::create_unsafe() };
+		sk.model_create_mesh(Mesh::CUBE, Material::DEFAULT)
+	}
+}
+
+#[cfg(feature = "bevy_reflect")]
+impl FromReflect for Model {
+	fn from_reflect(reflect: &dyn Reflect) -> Option<Self> {
+		let sk = unsafe { Sk::create_unsafe()};
+		Some(sk.model_copy(reflect.downcast_ref::<Model>()?))
 	}
 }
 
@@ -1170,6 +1235,18 @@ pub struct Asset(pub NonNull<std::os::raw::c_void>);
 impl AsRef<Asset> for Asset {
 	fn as_ref(&self) -> &Asset {
 		&self
+	}
+}
+
+impl From<Model> for Asset {
+	fn from(value: Model) -> Self {
+		unsafe { std::mem::transmute(value)}
+	}
+}
+
+impl AsRef<Asset> for Model {
+	fn as_ref(&self) -> &Asset {
+		unsafe {std::mem::transmute(self)}
 	}
 }
 
@@ -1562,8 +1639,13 @@ pub struct Pose {
 	pub position: Vec3,
 	pub orientation: Quat,
 }
+impl AsMut<Pose> for Pose {
+	fn as_mut(&mut self) -> &mut Pose {
+		self
+	}
+}
 impl Pose {
-	const IDENTITY: Pose = Pose {
+	pub const IDENTITY: Pose = Pose {
 		position: Vec3::new(0.0, 0.0, 0.0),
 		orientation: Quat::IDENTITY,
 	};
@@ -2451,6 +2533,24 @@ pub enum MoveType {
 	None = 3,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiCut {
+	Left = 0,
+	Right = 1,
+	Top = 2,
+	Bottom = 3,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiColor {
+	Primary = 0,
+	Background = 1,
+	Common = 2,
+	Complement = 3,
+	Text = 4,
+	Max = 5,
+}
+
 /// All stereokit functions that *must* only be done in the render loop
 pub trait StereoKitDraw: StereoKitSingleThread {
 	/// Adds a mesh to the render queue for this frame! If the Hierarchy has a transform on it, that transform is combined with the Matrix provided here.
@@ -3178,18 +3278,27 @@ pub trait StereoKitMultiThread {
 		model_space_ray: Ray,
 		cull_mode: CullMode,
 	) -> Option<(Ray, u32)> {
-		let out_ptr = null_mut();
+		let mut out_ray = Box::new(ray_t { pos: stereokit_sys::vec3 {
+			x: 0.0,
+			y: 0.0,
+			z: 0.0,
+		}, dir: stereokit_sys::vec3 {
+			x: 0.0,
+			y: 0.0,
+			z: 0.0,
+		} });
+
 		let mut out_inds = 0;
 		match unsafe {
 			stereokit_sys::mesh_ray_intersect(
 				mesh.as_ref().0.as_ptr(),
 				model_space_ray.into(),
-				out_ptr,
+				out_ray.as_mut() as *mut ray_t,
 				&mut out_inds,
 				cull_mode as cull_,
 			) != 0
 		} {
-			true => Some((unsafe { (*out_ptr).into() }, out_inds)),
+			true => Some((unsafe { (*out_ray).into() }, out_inds)),
 			false => None,
 		}
 	}
@@ -3474,6 +3583,19 @@ pub trait StereoKitMultiThread {
 	//TODO: tex_set_colors, need to use width*height checking
 
 	//TODO: tex_set_color_arr
+
+	fn tex_set_mem<T: AsRef<Tex>>(&self, tex: T, data: &[u8], srgb_data: bool, blocking: i32, priority: i32) {
+		unsafe {
+			stereokit_sys::tex_set_mem(
+				tex.as_ref().0.as_ptr(),
+				data.as_ptr() as *mut std::os::raw::c_void,
+				data.len(),
+				srgb_data as bool32_t,
+				blocking,
+				priority,
+			)
+		}
+	}
 
 	/// Only applicable if this texture is a rendertarget! This creates and attaches a zbuffer surface to the texture for use when rendering to it.
 	fn tex_add_zbuffer<T: AsRef<Tex>>(&self, tex: T, format: TextureFormat) -> Tex {
@@ -4560,7 +4682,7 @@ pub trait StereoKitMultiThread {
 	fn model_find<S: Into<String> + Clone>(&self, id: S) -> SkResult<Model> {
 		let str = std::ffi::CString::new(id.clone().into())
 			.map_err(|_| StereoKitError::ModelFile(id.clone().into()))?;
-		Ok(Model(
+		Ok(Model::from(
 			NonNull::new(unsafe { stereokit_sys::model_find(str.as_ptr()) })
 				.ok_or(StereoKitError::ModelFile(id.clone().into()))?,
 		))
@@ -4568,13 +4690,13 @@ pub trait StereoKitMultiThread {
 	/// Creates a shallow copy of a Model asset! Meshes and Materials
 	/// referenced by this Model will be referenced, not copied.
 	fn model_copy<M: AsRef<Model>>(&self, model: M) -> Model {
-		Model(
+		Model::from(
 			NonNull::new(unsafe { stereokit_sys::model_copy(model.as_ref().0.as_ptr()) }).unwrap(),
 		)
 	}
 
 	fn model_create(&self) -> Model {
-		Model(NonNull::new(unsafe { stereokit_sys::model_create() }).unwrap())
+		Model::from(NonNull::new(unsafe { stereokit_sys::model_create() }).unwrap())
 	}
 
 	/// Creates a single mesh subset Model using the indicated Mesh and Material!
@@ -4584,7 +4706,7 @@ pub trait StereoKitMultiThread {
 		mesh: Me,
 		material: Ma,
 	) -> Model {
-		Model(
+		Model::from(
 			NonNull::new(unsafe {
 				stereokit_sys::model_create_mesh(
 					mesh.as_ref().0.as_ptr(),
@@ -4610,7 +4732,7 @@ pub trait StereoKitMultiThread {
 				String::from("file name is not a valid CString"),
 			)
 		})?;
-		Ok(Model(
+		Ok(Model::from(
 			NonNull::new(unsafe {
 				stereokit_sys::model_create_mem(
 					c_file_name.as_ptr(),
@@ -4638,7 +4760,7 @@ pub trait StereoKitMultiThread {
 				"CString conversion".to_string(),
 			)
 		})?;
-		Ok(Model(
+		Ok(Model::from(
 			NonNull::new(unsafe {
 				stereokit_sys::model_create_file(
 					c_str.as_ptr(),
@@ -5890,18 +6012,32 @@ pub trait StereoKitMultiThread {
 	) {
 		let window_title = CString::new(window_title.as_ref()).unwrap();
 		let pose = pose.as_mut();
-		let mut pose = pose.clone().into();
+		let mut pose_2: pose_t = pose.clone().into();
 		let size = size.into();
 		unsafe {
 			stereokit_sys::ui_window_begin(
 				window_title.as_ptr(),
-				&mut pose as *mut pose_t,
+				&mut pose_2 as *mut pose_t,
 				size.into(),
 				window_type as ui_win_,
 				move_type as ui_move_,
 			)
 		}
+
+		let context = WindowContext(PhantomData);
+		#[cfg(feature = "auto-hash-id-location")]
+		unsafe {
+			context.new_locations();
+		}
+
 		content_closure(&WindowContext(PhantomData));
+
+		#[cfg(feature = "auto-hash-id-location")]
+		unsafe {
+			context.new_locations();
+		}
+
+		*pose = pose_2.into();
 		unsafe {
 			stereokit_sys::ui_window_end();
 		}
@@ -6337,7 +6473,24 @@ fn sound_release(sound: &mut Sound) {
 
 pub struct WindowContext(PhantomData<*const ()>);
 
+
+#[cfg(feature = "auto-hash-id-location")]
+static mut LOCATIONS: Option<HashSet<u64>> = None;
+
 impl WindowContext {
+	pub unsafe fn create_unsafe() -> Self {
+		Self { 0: Default::default() }
+	}
+
+	#[cfg(feature = "auto-hash-id-location")]
+	pub unsafe fn get_locations(&self) -> &'static mut HashSet<u64> {
+		LOCATIONS.as_mut().unwrap()
+	}
+	#[cfg(feature = "auto-hash-id-location")]
+	unsafe fn new_locations(&self) {
+		LOCATIONS.replace(HashSet::with_capacity(10000));
+	}
+
 	pub fn push_text_style(&self, style: TextStyle) {
 		unsafe { stereokit_sys::ui_push_text_style(style.0) }
 	}
@@ -6426,6 +6579,30 @@ impl WindowContext {
 		content_closure(self);
 		self.pop_surface();
 	}
+	pub fn push_cut_layout(
+		&self,
+		ui_cut: UiCut,
+		size: f32,
+		add_margin: bool,
+	) {
+		unsafe {
+			stereokit_sys::ui_layout_push_cut(
+				ui_cut as ui_cut_,
+				size,
+				add_margin as bool32_t
+			)
+		}
+	}
+	pub fn pop_layout(&self) {
+		unsafe {
+			stereokit_sys::ui_layout_pop()
+		}
+	}
+	pub fn cut_layout(&self, ui_cut: UiCut, size: f32, add_margin: bool, content_closure: impl FnOnce(&WindowContext)) {
+		self.push_cut_layout(ui_cut, size, add_margin);
+		content_closure(self);
+		self.pop_layout();
+	}
 	pub fn push_id(&self, id: impl AsRef<str>) -> u64 {
 		let id = CString::new(id.as_ref()).unwrap();
 		unsafe { stereokit_sys::ui_push_id(id.as_ptr()) }
@@ -6445,5 +6622,66 @@ impl WindowContext {
 		let id = self.push_idi(id);
 		content_closure(self, id);
 		self.pop_id();
+	}
+	pub fn stack_hash(&self, id: impl AsRef<str>) -> u64 {
+		let id = CString::new(id.as_ref()).unwrap();
+		unsafe {
+			stereokit_sys::ui_stack_hash(id.as_ptr())
+		}
+	}
+	pub fn label(&self, text: impl AsRef<str>, use_padding: bool) {
+		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+		unsafe {
+			stereokit_sys::ui_label(c_str.as_ptr(), use_padding as bool32_t);
+		}
+	}
+	pub fn toggle(&self, text: impl AsRef<str>, pressed: &mut bool) {
+		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+		unsafe {
+			stereokit_sys::ui_toggle(c_str.as_ptr(), pressed as &mut _ as *mut _ as *mut i32);
+		}
+	}
+	pub fn button(&self, text: impl AsRef<str>) -> bool {
+		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+		unsafe {
+			stereokit_sys::ui_button(c_str.as_ptr()) != 0
+		}
+	}
+	pub fn button_at(&self, text: impl AsRef<str>, window_relative_pos: impl Into<Vec3>, size: impl Into<Vec2>) -> bool {
+		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+		unsafe {
+			stereokit_sys::ui_button_at(c_str.as_ptr(), window_relative_pos.into().into(), size.into().into()) != 0
+		}
+	}
+	pub fn same_line(&self) {
+		unsafe {
+			stereokit_sys::ui_sameline()
+		}
+	}
+	pub fn hz_slider(&self, id: impl AsRef<str>, value: &mut f32, min: f32, max: f32, step: f32, width: f32) {
+		let c_str = std::ffi::CString::new(id.as_ref()).unwrap();
+		unsafe {
+			stereokit_sys::ui_hslider(c_str.as_ptr(), value as *mut f32, min, max, step, width, 0, 0);
+		}
+	}
+	pub fn set_color(&self, color: Color128) {
+		unsafe {
+			stereokit_sys::ui_set_color(color)
+		}
+	}
+	pub fn set_theme_color(&self, color_type: UiColor, color_gamma: Color128) {
+		unsafe {
+			stereokit_sys::ui_set_theme_color(color_type as ui_color_, color_gamma);
+		}
+	}
+	pub fn area_remaining(&self) -> Vec2 {
+		unsafe {
+			stereokit_sys::ui_area_remaining()
+		}.into()
+	}
+	pub fn layout_at(&self) -> Vec3 {
+		unsafe {
+			stereokit_sys::ui_layout_at()
+		}.into()
 	}
 }
