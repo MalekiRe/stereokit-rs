@@ -27,6 +27,7 @@ use std::ffi::{c_void, CStr, CString};
 use std::fmt;
 use std::fmt::Formatter;
 use std::marker::PhantomData;
+use std::ops::Deref;
 use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut, slice_from_raw_parts_mut, NonNull};
