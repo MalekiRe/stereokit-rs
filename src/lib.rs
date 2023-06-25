@@ -1203,6 +1203,7 @@ impl AsRef<Sprite> for Sprite {
 /// system tray, navigate to "Spatial sound", and choose "Windows Sonic
 /// for Headphones." For more information, visit
 /// <https://docs.microsoft.com/en-us/windows/win32/coreaudio/spatial-sound>
+#[cfg_attr(feature = "bevy_ecs", derive(bevy_ecs::prelude::Component))]
 pub struct Sound(pub NonNull<_sound_t>);
 impl Drop for Sound {
 	fn drop(&mut self) {
@@ -1214,6 +1215,8 @@ impl AsRef<Sound> for Sound {
 		&self
 	}
 }
+unsafe impl Send for Sound {}
+unsafe impl Sync for Sound {}
 
 /// A Solid is an object that gets simulated with physics! Once
 /// you create a solid, it will continuously be acted upon by forces like
@@ -4807,6 +4810,12 @@ pub trait StereoKitMultiThread {
 		}
 	}
 
+	fn model_get_bounds<M: AsRef<Model>>(&self, model: M) -> Bounds {
+		unsafe {
+			std::mem::transmute(stereokit_sys::model_get_bounds(model.as_ref().0.as_ptr()))
+		}
+	}
+
 	/// Calling Draw will automatically step the Model’s animation, but if you don’t draw the Model, or need access to the animated nodes before drawing, then you can step the animation early manually via this method. Animation will only ever be stepped once per frame, so it’s okay to call this multiple times, or in addition to Draw.
 	fn model_step_anim<M: AsRef<Model>>(&self, model: M) {
 		unsafe { stereokit_sys::model_step_anim(model.as_ref().0.as_ptr()) }
@@ -5579,6 +5588,16 @@ pub trait StereoKitMultiThread {
 	}
 
 	//TODO: sound_generate
+
+	fn sound_write_samples(&self, sound: impl AsRef<Sound>, samples: &mut [f32]) {
+		unsafe {
+			stereokit_sys::sound_write_samples(
+				sound.as_ref().0.as_ptr(),
+				samples.as_ptr(),
+				samples.len() as u64
+			)
+		}
+	}
 
 	fn sound_read_samples(&self, sound: impl AsRef<Sound>, samples: &mut [f32]) -> u64 {
 		unsafe {
