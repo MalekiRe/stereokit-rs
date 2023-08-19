@@ -974,6 +974,11 @@ impl Drop for Gradient {
 		gradient_release(self);
 	}
 }
+impl AsRef<Gradient> for Gradient {
+	fn as_ref(&self) -> &Gradient {
+		&self
+	}
+}
 unsafe impl Send for Gradient {}
 unsafe impl Sync for Gradient {}
 
