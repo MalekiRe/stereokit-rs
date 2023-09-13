@@ -3673,7 +3673,7 @@ pub trait StereoKitMultiThread {
 		gradient_dir: impl Into<Vec3>,
 		resolution: i32,
 	) -> (SphericalHarmonics, Tex) {
-		let sphere_ptr = null_mut();
+		let sphere_ptr = &mut sh_create(&[]).into();
 		let tex = unsafe {
 			stereokit_sys::tex_gen_cubemap(
 				gradient.as_ref().0.as_ptr(),
