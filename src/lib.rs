@@ -230,7 +230,7 @@ pub enum StereoKitError {
 	#[error("failed to create model {0} from memory for reason {1}")]
 	ModelFromMem(String, String),
 	#[error("failed to create model {0} from file for reason {1}")]
-	ModelFromFile(String, String),
+	ModelFromFile(PathBuf, String),
 	#[error("failed to find mesh {0}")]
 	MeshFind(String),
 	#[error("failed to convert to CString {0} in mesh_find")]
@@ -4733,7 +4733,7 @@ pub trait StereoKitMultiThread {
 		&self,
 		file_name: S,
 		memory: &[u8],
-		shader: Option<&Shader>,
+		shader: Option<impl AsRef<Shader>>,
 	) -> SkResult<Model> {
 		let c_file_name = std::ffi::CString::new(file_name.clone().into()).map_err(|_| {
 			StereoKitError::ModelFromMem(
@@ -4747,7 +4747,7 @@ pub trait StereoKitMultiThread {
 					c_file_name.as_ptr(),
 					memory.as_ptr() as *mut c_void,
 					memory.len(),
-					shader.map(|shader| shader.0.as_ptr()).unwrap_or(null_mut()),
+					shader.map(|shader| shader.as_ref().0.as_ptr()).unwrap_or(null_mut()),
 				)
 			})
 			.ok_or(StereoKitError::ModelFromMem(
@@ -4760,15 +4760,16 @@ pub trait StereoKitMultiThread {
 	/// Loads a list of mesh and material subsets from a .obj, .stl, .ply (ASCII), .gltf, or .glb file.
 	fn model_create_file(
 		&self,
-		filename: impl AsRef<str>,
+		filename: impl AsRef<Path>,
 		shader: Option<impl AsRef<Shader>>,
 	) -> SkResult<Model> {
-		let c_str = CString::new(filename.as_ref()).map_err(|_| {
-			StereoKitError::ModelFromFile(
-				filename.as_ref().to_string(),
-				"CString conversion".to_string(),
-			)
-		})?;
+		let path = filename.as_ref();
+		let path_buf = path.to_path_buf();
+		let c_str = CString::new(path.to_str().ok_or(StereoKitError::TexFile(
+			path_buf.clone(),
+			"CString conversion".to_string(),
+		))?)
+		.map_err(|_| StereoKitError::TexFile(path_buf.clone(), "CString Conversion".to_string()))?;
 		Ok(Model::from(
 			NonNull::new(unsafe {
 				stereokit_sys::model_create_file(
@@ -4777,7 +4778,7 @@ pub trait StereoKitMultiThread {
 				)
 			})
 			.ok_or(StereoKitError::ModelFromFile(
-				filename.as_ref().to_string(),
+				path_buf.clone(),
 				"model_create_file failed".to_string(),
 			))?,
 		))
