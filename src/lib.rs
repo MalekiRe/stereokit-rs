@@ -20,18 +20,14 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::any::Any;
-use std::borrow::BorrowMut;
-use std::cell::OnceCell;
 use std::collections::HashSet;
 use std::ffi::{c_void, CStr, CString};
 use std::fmt;
 use std::fmt::Formatter;
 use std::marker::PhantomData;
-use std::ops::Deref;
 use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut, slice_from_raw_parts_mut, NonNull};
-use std::sync::OnceLock;
 use stereokit_sys::{_font_t, _gradient_t, _material_buffer_t, _material_t, _mesh_t, _model_t, _shader_t, _solid_t, _sound_t, _sprite_t, _tex_t, anim_mode_, app_focus_, bool32_t, bounds_t, controller_t, cull_, depth_mode_, depth_test_, device_tracking_, display_, display_blend_, display_mode_, display_type_, fov_info_t, gradient_key_t, hand_joint_t, hand_t, handed_, key_, line_point_t, log_, log_colors_, mesh_t, mouse_t, openxr_handle_t, plane_t, pointer_t, pose_t, projection_, quat, ray_t, rect_t, render_clear_, sh_light_t, sk_init, sk_settings_t, sound_inst_t, sphere_t, spherical_harmonics_t, sprite_type_, system_info_t, tex_address_, tex_format_, tex_sample_, text_align_, text_fit_, track_state_, transparency_, ui_color_, ui_cut_, ui_move_, ui_win_, vert_t, world_refresh_};
 use thiserror::Error;
 
@@ -3307,7 +3303,7 @@ pub trait StereoKitMultiThread {
 				cull_mode as cull_,
 			) != 0
 		} {
-			true => Some((unsafe { (*out_ray).into() }, out_inds)),
+			true => Some(( (*out_ray).into() , out_inds)),
 			false => None,
 		}
 	}
