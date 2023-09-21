@@ -19,6 +19,7 @@ use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use sys::origin_mode_;
 use std::any::Any;
 use std::collections::HashSet;
 use std::ffi::{c_void, CStr, CString};
@@ -333,6 +334,18 @@ impl Into<display_blend_> for DisplayBlend {
 	}
 }
 
+/// The App initial reference point
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
+pub enum OriginMode {
+	/// Default value 
+	Local = 0,
+	/// Floor
+	Floor = 1,
+	/// Stage
+	Stage = 2,
+}
+
 /// This is used to determine what kind of depth buffer StereoKit uses!
 #[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
 #[repr(u32)]
@@ -458,6 +471,7 @@ pub struct Settings {
 	/// By default, StereoKit will slow down when the application is out of focus. This is useful for saving processing power while the app is out-of-focus, but may not always be desired. In particular, running multiple copies of a SK app for testing networking code may benefit from this setting.
 	pub disable_unfocused_sleep: bool,
 	pub render_scaling: f32,
+	pub origin: OriginMode,
 }
 impl Default for Settings {
 	fn default() -> Self {
@@ -479,6 +493,7 @@ impl Default for Settings {
 			disable_desktop_input_window: false,
 			disable_unfocused_sleep: false,
 			render_scaling: 1.0,
+			origin : OriginMode::Local,
 		}
 	}
 }
@@ -509,6 +524,7 @@ impl From<sk_settings_t> for Settings {
 				disable_unfocused_sleep,
 				render_scaling,
 				render_multisample: _,
+				origin,
 				android_java_vm: _,
 				android_activity: _,
 			} => unsafe {
@@ -535,6 +551,7 @@ impl From<sk_settings_t> for Settings {
 					disable_desktop_input_window: disable_desktop_input_window != 0,
 					disable_unfocused_sleep: disable_unfocused_sleep != 0,
 					render_scaling,
+					origin:std::mem::transmute(origin),
 				}
 			},
 		}
@@ -561,6 +578,7 @@ impl Into<sk_settings_t> for Settings {
 				disable_desktop_input_window,
 				disable_unfocused_sleep,
 				render_scaling,
+				origin,
 			} => {
 				let app_name = CString::new(app_name).unwrap();
 				let assets_folder = CString::new(assets_folder.to_str().unwrap()).unwrap();
@@ -583,6 +601,7 @@ impl Into<sk_settings_t> for Settings {
 					disable_unfocused_sleep: disable_unfocused_sleep as bool32_t,
 					render_scaling,
 					render_multisample: 1,
+        			origin: origin as origin_mode_,
 					android_java_vm: null_mut(),
 					android_activity: null_mut(),
 				};
@@ -702,6 +721,10 @@ impl SettingsBuilder {
 	}
 	pub fn render_scaling(&mut self, render_scaling: f32) -> &mut Self {
 		self.settings.render_scaling = render_scaling;
+		self
+	}
+	pub fn origin (&mut self, origin_mode : OriginMode) -> &mut Self {
+		self.settings.origin = origin_mode;
 		self
 	}
 	fn build(&mut self) -> Settings {
