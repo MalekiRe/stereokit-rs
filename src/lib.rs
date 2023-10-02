@@ -4825,6 +4825,11 @@ pub trait StereoKitMultiThread {
 		unsafe { stereokit_sys::model_recalculate_bounds(model.as_ref().0.as_ptr()) }
 	}
 
+	/// Examines the visuals as they currently are, and rebuilds the bounds based on all the vertices in the model! This leads (in general) to a tighter bound than the default bound based on bounding boxes. However, computing the exact bound can take much longer!
+	fn model_recalculate_bounds_exact<M: AsRef<Model>>(&self, model: M) {
+		unsafe { stereokit_sys::model_recalculate_bounds_exact(model.as_ref().0.as_ptr()) }
+	}
+
 	fn model_set_bounds<M: AsRef<Model>>(&self, model: M, bounds: impl AsRef<Bounds>) {
 		let bounds = bounds.as_ref();
 		unsafe {
