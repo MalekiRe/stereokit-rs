@@ -5185,6 +5185,10 @@ pub trait StereoKitMultiThread {
 		}
 	}
 
+	fn model_node_get_solid<M: AsRef<Model>>(&self, model: M, node: ModelNodeId) -> bool {
+		unsafe { stereokit_sys::model_node_get_solid(model.as_ref().0.as_ptr(), node) != 0 }
+	}
+
 	fn model_node_get_visible<M: AsRef<Model>>(&self, model: M, node: ModelNodeId) -> bool {
 		unsafe { stereokit_sys::model_node_get_visible(model.as_ref().0.as_ptr(), node) != 0 }
 	}
@@ -5224,6 +5228,16 @@ pub trait StereoKitMultiThread {
 		let name = CString::new(name.as_ref()).unwrap();
 		unsafe {
 			stereokit_sys::model_node_set_name(model.as_ref().0.as_ptr(), node, name.as_ptr())
+		}
+	}
+
+	fn model_node_set_solid<M: AsRef<Model>>(&self, model: M, node: ModelNodeId, solid: bool) {
+		unsafe {
+			stereokit_sys::model_node_set_solid(
+				model.as_ref().0.as_ptr(),
+				node,
+				solid as bool32_t,
+			)
 		}
 	}
 
@@ -5359,7 +5373,22 @@ pub trait StereoKitMultiThread {
 		unsafe { stereokit_sys::model_node_info_count(model.as_ref().0.as_ptr(), node) }
 	}
 
-	//TODO: model_node_info_iterate
+	fn model_node_info_iterate<M: AsRef<Model>>(&self, model: M, mut iterator : i32,node: ModelNodeId) -> Option<(&str, &str, i32)> {
+
+		let out_key_utf8: *mut *const i8 = CString::new("H").unwrap().into_raw() as *mut *const std::os::raw::c_char;
+		let out_value_utf8: *mut *const i8 = CString::new("H").unwrap().into_raw() as *mut *const std::os::raw::c_char;
+
+		let ref_iterator  = &mut iterator as *mut i32;
+
+		unsafe {
+			let res = stereokit_sys::model_node_info_iterate(model.as_ref().0.as_ptr(), node, ref_iterator,  out_key_utf8,  out_value_utf8);
+			if res != 0 {
+				let key = CStr::from_ptr(*out_key_utf8);
+				let value = CStr::from_ptr(*out_value_utf8);
+				Some((key.to_str().unwrap(),value.to_str().unwrap(), *ref_iterator as i32))
+			} else {None}
+		}
+	}
 
 	fn sprite_find<S: AsRef<str>>(&self, id: S) -> SkResult<Sprite> {
 		let cstr_id = CString::new(id.as_ref()).map_err(|_| {
