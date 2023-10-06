@@ -5383,8 +5383,8 @@ pub trait StereoKitMultiThread {
 
 	fn model_node_info_iterate<M: AsRef<Model>>(&self, model: M, mut iterator : i32,node: ModelNodeId) -> Option<(&str, &str, i32)> {
 
-		let out_key_utf8: *mut *const i8 = CString::new("H").unwrap().into_raw() as *mut *const std::os::raw::c_char;
-		let out_value_utf8: *mut *const i8 = CString::new("H").unwrap().into_raw() as *mut *const std::os::raw::c_char;
+		let out_key_utf8 = CString::new("H").unwrap().into_raw() as *mut *const std::os::raw::c_char;
+		let out_value_utf8 = CString::new("H").unwrap().into_raw() as *mut *const std::os::raw::c_char;
 
 		let ref_iterator  = &mut iterator as *mut i32;
 
