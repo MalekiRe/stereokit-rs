@@ -5158,6 +5158,13 @@ pub trait StereoKitMultiThread {
 		unsafe { stereokit_sys::model_node_visual_count(model.as_ref().0.as_ptr()) }
 	}
 
+	fn model_node_visual_index<M: AsRef<Model>>(&self, model: M, index: i32) -> Option<ModelNodeId> {
+		match unsafe { stereokit_sys::model_node_visual_index(model.as_ref().0.as_ptr(), index) } {
+			-1 => None,
+			otherwise => Some(otherwise),
+		}
+	}
+
 	fn model_node_iterate<M: AsRef<Model>>(
 		&self,
 		model: M,
@@ -5317,17 +5324,18 @@ pub trait StereoKitMultiThread {
 		node: ModelNodeId,
 		info_key_utf8: S,
 	) -> Option<&str> {
-		let info_key_utf8 = CString::new(info_key_utf8.as_ref()).unwrap();
-		unsafe {
-			CStr::from_ptr(stereokit_sys::model_node_info_get(
-				model.as_ref().0.as_ptr(),
+		let info_key_utf8_c = CString::new(info_key_utf8.as_ref()).unwrap();
+		match NonNull::new (unsafe {
+			stereokit_sys::model_node_info_get(
+				model.as_ref().0.as_ptr(), 
 				node,
-				info_key_utf8.as_ptr(),
-			))
+				info_key_utf8_c.as_ptr(),
+			) 
+		})  {
+		    Some(non_null) => return unsafe{CStr::from_ptr(non_null.as_ref()).to_str().ok()},
+    		None => None,
 		}
-		.to_str()
-		.map(|s| Some(s))
-		.unwrap_or(None)
+
 	}
 
 	fn model_node_info_set<M: AsRef<Model>, S: AsRef<str>>(
