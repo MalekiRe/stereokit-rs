@@ -19,19 +19,16 @@ use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use sys::origin_mode_;
 use std::any::Any;
-use std::borrow::BorrowMut;
-use std::cell::OnceCell;
 use std::collections::HashSet;
 use std::ffi::{c_void, CStr, CString};
 use std::fmt;
 use std::fmt::Formatter;
 use std::marker::PhantomData;
-use std::ops::Deref;
 use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut, slice_from_raw_parts_mut, NonNull};
-use std::sync::OnceLock;
 use stereokit_sys::{_font_t, _gradient_t, _material_buffer_t, _material_t, _mesh_t, _model_t, _shader_t, _solid_t, _sound_t, _sprite_t, _tex_t, anim_mode_, app_focus_, bool32_t, bounds_t, controller_t, cull_, depth_mode_, depth_test_, device_tracking_, display_, display_blend_, display_mode_, display_type_, fov_info_t, gradient_key_t, hand_joint_t, hand_t, handed_, key_, line_point_t, log_, log_colors_, mesh_t, mouse_t, openxr_handle_t, plane_t, pointer_t, pose_t, projection_, quat, ray_t, rect_t, render_clear_, sh_light_t, sk_init, sk_settings_t, sound_inst_t, sphere_t, spherical_harmonics_t, sprite_type_, system_info_t, tex_address_, tex_format_, tex_sample_, text_align_, text_fit_, track_state_, transparency_, ui_color_, ui_cut_, ui_move_, ui_win_, vert_t, world_refresh_};
 use thiserror::Error;
 
@@ -230,7 +227,7 @@ pub enum StereoKitError {
 	#[error("failed to create model {0} from memory for reason {1}")]
 	ModelFromMem(String, String),
 	#[error("failed to create model {0} from file for reason {1}")]
-	ModelFromFile(String, String),
+	ModelFromFile(PathBuf, String),
 	#[error("failed to find mesh {0}")]
 	MeshFind(String),
 	#[error("failed to convert to CString {0} in mesh_find")]
@@ -335,6 +332,18 @@ impl Into<display_blend_> for DisplayBlend {
 	fn into(self) -> display_blend_ {
 		unsafe { std::mem::transmute(self) }
 	}
+}
+
+/// The App initial reference point
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
+pub enum OriginMode {
+	/// Default value 
+	Local = 0,
+	/// Floor
+	Floor = 1,
+	/// Stage
+	Stage = 2,
 }
 
 /// This is used to determine what kind of depth buffer StereoKit uses!
@@ -462,6 +471,7 @@ pub struct Settings {
 	/// By default, StereoKit will slow down when the application is out of focus. This is useful for saving processing power while the app is out-of-focus, but may not always be desired. In particular, running multiple copies of a SK app for testing networking code may benefit from this setting.
 	pub disable_unfocused_sleep: bool,
 	pub render_scaling: f32,
+	pub origin: OriginMode,
 }
 impl Default for Settings {
 	fn default() -> Self {
@@ -483,6 +493,7 @@ impl Default for Settings {
 			disable_desktop_input_window: false,
 			disable_unfocused_sleep: false,
 			render_scaling: 1.0,
+			origin : OriginMode::Local,
 		}
 	}
 }
@@ -513,6 +524,7 @@ impl From<sk_settings_t> for Settings {
 				disable_unfocused_sleep,
 				render_scaling,
 				render_multisample: _,
+				origin,
 				android_java_vm: _,
 				android_activity: _,
 			} => unsafe {
@@ -539,6 +551,7 @@ impl From<sk_settings_t> for Settings {
 					disable_desktop_input_window: disable_desktop_input_window != 0,
 					disable_unfocused_sleep: disable_unfocused_sleep != 0,
 					render_scaling,
+					origin:std::mem::transmute(origin),
 				}
 			},
 		}
@@ -565,6 +578,7 @@ impl Into<sk_settings_t> for Settings {
 				disable_desktop_input_window,
 				disable_unfocused_sleep,
 				render_scaling,
+				origin,
 			} => {
 				let app_name = CString::new(app_name).unwrap();
 				let assets_folder = CString::new(assets_folder.to_str().unwrap()).unwrap();
@@ -587,6 +601,7 @@ impl Into<sk_settings_t> for Settings {
 					disable_unfocused_sleep: disable_unfocused_sleep as bool32_t,
 					render_scaling,
 					render_multisample: 1,
+        			origin: origin as origin_mode_,
 					android_java_vm: null_mut(),
 					android_activity: null_mut(),
 				};
@@ -706,6 +721,10 @@ impl SettingsBuilder {
 	}
 	pub fn render_scaling(&mut self, render_scaling: f32) -> &mut Self {
 		self.settings.render_scaling = render_scaling;
+		self
+	}
+	pub fn origin (&mut self, origin_mode : OriginMode) -> &mut Self {
+		self.settings.origin = origin_mode;
 		self
 	}
 	fn build(&mut self) -> Settings {
@@ -3307,7 +3326,7 @@ pub trait StereoKitMultiThread {
 				cull_mode as cull_,
 			) != 0
 		} {
-			true => Some((unsafe { (*out_ray).into() }, out_inds)),
+			true => Some(( (*out_ray).into() , out_inds)),
 			false => None,
 		}
 	}
@@ -3673,7 +3692,7 @@ pub trait StereoKitMultiThread {
 		gradient_dir: impl Into<Vec3>,
 		resolution: i32,
 	) -> (SphericalHarmonics, Tex) {
-		let sphere_ptr = null_mut();
+		let sphere_ptr = &mut sh_create(&[]).into();
 		let tex = unsafe {
 			stereokit_sys::tex_gen_cubemap(
 				gradient.as_ref().0.as_ptr(),
@@ -4733,7 +4752,7 @@ pub trait StereoKitMultiThread {
 		&self,
 		file_name: S,
 		memory: &[u8],
-		shader: Option<&Shader>,
+		shader: Option<impl AsRef<Shader>>,
 	) -> SkResult<Model> {
 		let c_file_name = std::ffi::CString::new(file_name.clone().into()).map_err(|_| {
 			StereoKitError::ModelFromMem(
@@ -4747,7 +4766,7 @@ pub trait StereoKitMultiThread {
 					c_file_name.as_ptr(),
 					memory.as_ptr() as *mut c_void,
 					memory.len(),
-					shader.map(|shader| shader.0.as_ptr()).unwrap_or(null_mut()),
+					shader.map(|shader| shader.as_ref().0.as_ptr()).unwrap_or(null_mut()),
 				)
 			})
 			.ok_or(StereoKitError::ModelFromMem(
@@ -4760,15 +4779,16 @@ pub trait StereoKitMultiThread {
 	/// Loads a list of mesh and material subsets from a .obj, .stl, .ply (ASCII), .gltf, or .glb file.
 	fn model_create_file(
 		&self,
-		filename: impl AsRef<str>,
+		filename: impl AsRef<Path>,
 		shader: Option<impl AsRef<Shader>>,
 	) -> SkResult<Model> {
-		let c_str = CString::new(filename.as_ref()).map_err(|_| {
-			StereoKitError::ModelFromFile(
-				filename.as_ref().to_string(),
-				"CString conversion".to_string(),
-			)
-		})?;
+		let path = filename.as_ref();
+		let path_buf = path.to_path_buf();
+		let c_str = CString::new(path.to_str().ok_or(StereoKitError::TexFile(
+			path_buf.clone(),
+			"CString conversion".to_string(),
+		))?)
+		.map_err(|_| StereoKitError::TexFile(path_buf.clone(), "CString Conversion".to_string()))?;
 		Ok(Model::from(
 			NonNull::new(unsafe {
 				stereokit_sys::model_create_file(
@@ -4777,7 +4797,7 @@ pub trait StereoKitMultiThread {
 				)
 			})
 			.ok_or(StereoKitError::ModelFromFile(
-				filename.as_ref().to_string(),
+				path_buf.clone(),
 				"model_create_file failed".to_string(),
 			))?,
 		))
@@ -4803,6 +4823,11 @@ pub trait StereoKitMultiThread {
 	/// Examines the visuals as they currently are, and rebuilds the bounds based on that! This is normally done automatically, but if you modify a Mesh that this Model is using, the Model can’t see it, and you should call this manually.
 	fn model_recalculate_bounds<M: AsRef<Model>>(&self, model: M) {
 		unsafe { stereokit_sys::model_recalculate_bounds(model.as_ref().0.as_ptr()) }
+	}
+
+	/// Examines the visuals as they currently are, and rebuilds the bounds based on all the vertices in the model! This leads (in general) to a tighter bound than the default bound based on bounding boxes. However, computing the exact bound can take much longer!
+	fn model_recalculate_bounds_exact<M: AsRef<Model>>(&self, model: M) {
+		unsafe { stereokit_sys::model_recalculate_bounds_exact(model.as_ref().0.as_ptr()) }
 	}
 
 	fn model_set_bounds<M: AsRef<Model>>(&self, model: M, bounds: impl AsRef<Bounds>) {
@@ -5133,6 +5158,13 @@ pub trait StereoKitMultiThread {
 		unsafe { stereokit_sys::model_node_visual_count(model.as_ref().0.as_ptr()) }
 	}
 
+	fn model_node_visual_index<M: AsRef<Model>>(&self, model: M, index: i32) -> Option<ModelNodeId> {
+		match unsafe { stereokit_sys::model_node_visual_index(model.as_ref().0.as_ptr(), index) } {
+			-1 => None,
+			otherwise => Some(otherwise),
+		}
+	}
+
 	fn model_node_iterate<M: AsRef<Model>>(
 		&self,
 		model: M,
@@ -5158,6 +5190,10 @@ pub trait StereoKitMultiThread {
 			.map(|s| Some(s))
 			.unwrap_or(None)
 		}
+	}
+
+	fn model_node_get_solid<M: AsRef<Model>>(&self, model: M, node: ModelNodeId) -> bool {
+		unsafe { stereokit_sys::model_node_get_solid(model.as_ref().0.as_ptr(), node) != 0 }
 	}
 
 	fn model_node_get_visible<M: AsRef<Model>>(&self, model: M, node: ModelNodeId) -> bool {
@@ -5199,6 +5235,16 @@ pub trait StereoKitMultiThread {
 		let name = CString::new(name.as_ref()).unwrap();
 		unsafe {
 			stereokit_sys::model_node_set_name(model.as_ref().0.as_ptr(), node, name.as_ptr())
+		}
+	}
+
+	fn model_node_set_solid<M: AsRef<Model>>(&self, model: M, node: ModelNodeId, solid: bool) {
+		unsafe {
+			stereokit_sys::model_node_set_solid(
+				model.as_ref().0.as_ptr(),
+				node,
+				solid as bool32_t,
+			)
 		}
 	}
 
@@ -5278,17 +5324,18 @@ pub trait StereoKitMultiThread {
 		node: ModelNodeId,
 		info_key_utf8: S,
 	) -> Option<&str> {
-		let info_key_utf8 = CString::new(info_key_utf8.as_ref()).unwrap();
-		unsafe {
-			CStr::from_ptr(stereokit_sys::model_node_info_get(
-				model.as_ref().0.as_ptr(),
+		let info_key_utf8_c = CString::new(info_key_utf8.as_ref()).unwrap();
+		match NonNull::new (unsafe {
+			stereokit_sys::model_node_info_get(
+				model.as_ref().0.as_ptr(), 
 				node,
-				info_key_utf8.as_ptr(),
-			))
+				info_key_utf8_c.as_ptr(),
+			) 
+		})  {
+		    Some(non_null) => return unsafe{CStr::from_ptr(non_null.as_ref()).to_str().ok()},
+    		None => None,
 		}
-		.to_str()
-		.map(|s| Some(s))
-		.unwrap_or(None)
+
 	}
 
 	fn model_node_info_set<M: AsRef<Model>, S: AsRef<str>>(
@@ -5334,7 +5381,22 @@ pub trait StereoKitMultiThread {
 		unsafe { stereokit_sys::model_node_info_count(model.as_ref().0.as_ptr(), node) }
 	}
 
-	//TODO: model_node_info_iterate
+	fn model_node_info_iterate<M: AsRef<Model>>(&self, model: M, mut iterator : i32,node: ModelNodeId) -> Option<(&str, &str, i32)> {
+
+		let out_key_utf8 = CString::new("H").unwrap().into_raw() as *mut *const std::os::raw::c_char;
+		let out_value_utf8 = CString::new("H").unwrap().into_raw() as *mut *const std::os::raw::c_char;
+
+		let ref_iterator  = &mut iterator as *mut i32;
+
+		unsafe {
+			let res = stereokit_sys::model_node_info_iterate(model.as_ref().0.as_ptr(), node, ref_iterator,  out_key_utf8,  out_value_utf8);
+			if res != 0 {
+				let key = CStr::from_ptr(*out_key_utf8);
+				let value = CStr::from_ptr(*out_value_utf8);
+				Some((key.to_str().unwrap(),value.to_str().unwrap(), *ref_iterator as i32))
+			} else {None}
+		}
+	}
 
 	fn sprite_find<S: AsRef<str>>(&self, id: S) -> SkResult<Sprite> {
 		let cstr_id = CString::new(id.as_ref()).map_err(|_| {
