@@ -1,5 +1,5 @@
-
-target/
-.vscode/launch.json
-.idea/*
+target
+.idea
+.vscode
+stereokit-sys/stereokit-sys.iml
 Cargo.lock
