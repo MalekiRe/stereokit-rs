@@ -1,0 +1,60 @@
+[package]
+description = "Low-Level Rust bindings around the StereoKitC library for XR"
+edition = "2021"
+homepage = "https://stereokit.net/"
+keywords = ["stereokit", "XR", "VR", "AR", "sys"]
+license = "MIT"
+links = "StereoKitC"
+name = "stereokit-sys"
+repository = "https://github.com/MalekiRe/stereokit-sys"
+version = "2.5.6"
+
+include = [
+  "Cargo.toml",
+  "build.rs",
+  "src/*",
+  "StereoKit/cmake",
+  "StereoKit/StereoKitC",
+  "StereoKit/CMakeLists.txt",
+  "StereoKit/tools/include",
+  "StereoKit/tools/skshaderc",
+  "StereoKit/tools/skshaderc.exe",
+  "README.md",
+]
+readme = "README.md"
+
+[features]
+default = []
+linux-egl = []
+physics = []
+
+[dependencies]
+glam = "0.23.0"
+
+[dependencies.serde]
+version = "1.0.164"
+optional = true
+features = ["derive"]
+
+[dependencies.bevy_reflect]
+version = "0.10.1"
+optional = true
+
+[dependencies.bevy_ecs]
+version = "0.10.1"
+optional = true
+
+[dependencies.prisma]
+version = "0.1.1"
+optional = true
+
+[dependencies.palette]
+version = "0.6.1"
+default-features = false
+optional = true
+features = ["std"]
+
+[build-dependencies]
+bindgen = "0.64.0"
+cmake = "0.1.49"
+
