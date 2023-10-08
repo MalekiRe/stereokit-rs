@@ -1,3 +1,0 @@
-[submodule "StereoKit"]
-	path = stereokit-sys/StereoKit
-	url = https://github.com/StereoKit/StereoKit.git
