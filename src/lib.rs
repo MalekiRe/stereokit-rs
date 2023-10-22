@@ -19,7 +19,6 @@ use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use sys::origin_mode_;
 use std::any::Any;
 use std::collections::HashSet;
 use std::ffi::{c_void, CStr, CString};
@@ -240,6 +239,8 @@ pub enum StereoKitError {
 	TexMemory,
 	#[error("failed to create a tex from file {0} for reason {1}")]
 	TexFile(PathBuf, String),
+	#[error("failed to create a tex from color {0} for reason {1}")]
+	TexColor(String, String),	
 	#[error("failed to find font {0} for reason {1}")]
 	FontFind(String, String),
 	#[error("failed to create font from file {0} for reason {1}")]
@@ -472,6 +473,8 @@ pub struct Settings {
 	pub disable_unfocused_sleep: bool,
 	pub render_scaling: f32,
 	pub origin: OriginMode,
+	///If there's nothing to draw, add an option to skip submitting projection layers to OpenXR. This can be a nice optimization for overlay applications that may want to idle without showing anything until they're needed.
+	pub omit_empty_frames: bool,
 }
 impl Default for Settings {
 	fn default() -> Self {
@@ -494,6 +497,7 @@ impl Default for Settings {
 			disable_unfocused_sleep: false,
 			render_scaling: 1.0,
 			origin : OriginMode::Local,
+			omit_empty_frames : true,
 		}
 	}
 }
@@ -525,6 +529,7 @@ impl From<sk_settings_t> for Settings {
 				render_scaling,
 				render_multisample: _,
 				origin,
+				omit_empty_frames,
 				android_java_vm: _,
 				android_activity: _,
 			} => unsafe {
@@ -552,6 +557,7 @@ impl From<sk_settings_t> for Settings {
 					disable_unfocused_sleep: disable_unfocused_sleep != 0,
 					render_scaling,
 					origin:std::mem::transmute(origin),
+					omit_empty_frames: omit_empty_frames !=0,
 				}
 			},
 		}
@@ -579,6 +585,7 @@ impl Into<sk_settings_t> for Settings {
 				disable_unfocused_sleep,
 				render_scaling,
 				origin,
+				omit_empty_frames,
 			} => {
 				let app_name = CString::new(app_name).unwrap();
 				let assets_folder = CString::new(assets_folder.to_str().unwrap()).unwrap();
@@ -601,7 +608,8 @@ impl Into<sk_settings_t> for Settings {
 					disable_unfocused_sleep: disable_unfocused_sleep as bool32_t,
 					render_scaling,
 					render_multisample: 1,
-        			origin: origin as origin_mode_,
+        			origin: origin as stereokit_sys::origin_mode_,
+					omit_empty_frames: omit_empty_frames as bool32_t,
 					android_java_vm: null_mut(),
 					android_activity: null_mut(),
 				};
@@ -2505,7 +2513,7 @@ macro_rules! static_shader {
 static_shader!("default/shader", DEFAULT);
 static_shader!("default/shader_blit", BLIT);
 static_shader!("default/shader_pbr", PBR);
-static_shader!("default/shader_pbr_clip", PRB_CLIP);
+static_shader!("default/shader_pbr_clip", PBR_CLIP);
 static_shader!("default/shader_font", FONT);
 static_shader!("default/shader_ui", UI);
 static_shader!("default/shader_ui_box", UI_BOX);
@@ -3471,9 +3479,53 @@ pub trait StereoKitMultiThread {
 		.unwrap())
 	}
 
-	//TODO: fn tex_create_color32()
-	//TODO: fn tex_create_color128()
+	/// Creates a texture and sets the texture’s pixels using a color array! This will be an image of type TexType.Image, and a format of TexFormat.Rgba32 or TexFormat.Rgba32Linear depending on the value of the sRGBData parameter.
+	/// 
+	/// [StereoKiError::TexColor] is thrown if the data do not contains width*height color32
+	fn tex_create_color32(
+		&self,
+		in_arr_data: &[Color32],
+		width: usize,
+		height: usize,
+		srgb_data: bool,
+	) -> SkResult<Tex> {
+		if width * height != {in_arr_data}.len() {
+			return Err(StereoKitError::TexColor(
+				format!("{}x{} differ from {}",height,width,{in_arr_data}.len()),
+				"tex_create_color32 failed".to_string(),));
+		}
+		let tex = Tex(NonNull::new(unsafe { sys::tex_create_color32(in_arr_data.as_ptr() as *mut sys::color32, width as i32, height as i32, srgb_data as i32)})
+		.ok_or(StereoKitError::TexColor(
+			format!("{}x{}",height,width),
+			"tex_create_color32 failed".to_string(),
+		))?);
 
+		Ok(tex)
+	}
+
+	/// Creates a texture and sets the texture’s pixels using a color array! Color values are converted to 32 bit colors, so this means a memory allocation and conversion. Prefer the Color32 overload for performance, or create an empty Texture and use SetColors for more flexibility. This will be an image of type TexType.Image, and a format of TexFormat.Rgba32 or TexFormat.Rgba32Linear depending on the value of the sRGBData parameter.
+	/// 
+	/// [StereoKiError::TexColor] is thrown if the data do not contains width*height color128.
+	fn tex_create_color128 (
+		&self,
+		in_arr_data: &[Color128],
+		width: usize,
+		height: usize,
+		srgb_data: bool,
+	) -> SkResult<Tex> {
+		if width * height != in_arr_data.len()  {
+			return Err(StereoKitError::TexColor(
+				format!("{}x{} differ from {}",height,width,in_arr_data.len()),
+				"tex_create_color128 failed".to_string(),));
+		}
+		let tex = Tex(NonNull::new(unsafe { sys::tex_create_color128(in_arr_data.as_ptr() as *mut sys::color128, width as i32, height as i32, srgb_data as i32)})
+		.ok_or(StereoKitError::TexColor(
+			format!("{}x{}",height,width),
+			"tex_create_color128 failed".to_string(),
+		))?);
+
+		Ok(tex)
+	}
 	/// Loads an image file stored in memory directly into a texture! Supported formats are: jpg, png, tga, bmp, psd, gif, hdr, pic. Asset Id will be the same as the filename.
 	fn tex_create_mem(&self, data: &[u8], srgb_data: bool, priority: i32) -> SkResult<Tex> {
 		Ok(Tex(NonNull::new(unsafe {
@@ -3608,7 +3660,15 @@ pub trait StereoKitMultiThread {
 
 	//TODO: tex_on_load_remove
 
-	//TODO: tex_set_colors, need to use width*height checking
+	/// Set the texture’s pixels using a pointer to a chunk of memory! This is great if you’re pulling in some color data from native code, and don’t want to pay the cost of trying to marshal that data around.
+	/// Warning The check width*height*(TextureFormat size) upon the size of the data values must be done before calling tex_set_colors.
+	fn tex_set_colors<T: AsRef<Tex>>(&self, tex: T, width: usize, height: usize, data: *mut std::os::raw::c_void) {
+		unsafe {
+			stereokit_sys::tex_set_colors(
+				tex.as_ref().0.as_ptr(),
+				width as i32, height as i32, data)
+		}
+	}
 
 	//TODO: tex_set_color_arr
 
@@ -3633,18 +3693,24 @@ pub trait StereoKitMultiThread {
 		.unwrap())
 	}
 
-	//TODO: this is wrong, we need to allocate a buffer and insert it
-	// it is width * height * sizeof<color_format>
-	// fn tex_get_data<T: AsRef<Tex>>(&self, tex: T) -> &mut [u8] {
-	//     let ptr = null_mut();
-	//     let mut size = 0;
-	//     unsafe {
-	//         stereokit_sys::tex_get_data(tex.as_ref().0.as_ptr(), ptr, size);
-	//         &mut *slice_from_raw_parts_mut(std::mem::transmute(ptr), size)
-	//     }
-	// }
+	/// Retrieve the color data of the texture from the GPU. This can be a very slow operation, 
+	/// so use it cautiously. The out_data pointer must correspond to an array with the correct size.
+	/// 
+	/// Lenght of the array must be texture width * height of the unique mip
+	unsafe fn tex_get_data<'a, T: AsRef<Tex>>(&self, tex: T, out_data: *const c_void, size: usize) {
 
-	//TODO: tex_get_data_mip
+        stereokit_sys::tex_get_data(tex.as_ref().0.as_ptr(), out_data as *mut c_void, size);
+
+	}
+
+	/// Retrieve the color data of the texture from the GPU. This can be a very slow operation, 
+	/// so use it cautiously. The out_data pointer must correspond to an array with the correct size.
+	/// 
+	/// Lenght of the array must be texture width * height of the chosen mip
+	unsafe fn tex_get_data_mip<'a, T: AsRef<Tex>>(&self, tex: T, out_data: *const c_void, size: usize, mip: i32) {
+        stereokit_sys::tex_get_data_mip(tex.as_ref().0.as_ptr(), out_data as *mut c_void, size, mip);
+	}
+
 
 	/// This generates a solid color texture of the given dimensions. Can be quite nice for creating placeholder textures! Make sure to match linear/gamma colors with the correct format.
 	fn tex_gen_color(
@@ -4495,14 +4561,14 @@ pub trait StereoKitMultiThread {
 		}
 	}
 
-	unsafe fn material_get_param<M: AsRef<Material>, S: AsRef<str>>(
+	fn material_get_param<M: AsRef<Material>, S: AsRef<str>>(
 		&self,
 		material: M,
 		name: S,
 		type_: MaterialParameter,
 	) -> Option<*mut std::os::raw::c_void> {
 		let c_str = CString::new(name.as_ref()).unwrap();
-		let value = null_mut();
+		let value = CString::new("H").unwrap().into_raw() as *mut c_void;
 		match unsafe {
 			stereokit_sys::material_get_param(
 				material.as_ref().0.as_ptr(),
@@ -4516,13 +4582,13 @@ pub trait StereoKitMultiThread {
 		}
 	}
 
-	unsafe fn material_get_param_id<M: AsRef<Material>>(
+	fn material_get_param_id<M: AsRef<Material>>(
 		&self,
 		material: M,
 		id: u64,
 		type_: MaterialParameter,
 	) -> Option<*mut std::os::raw::c_void> {
-		let value = null_mut();
+		let value =  CString::new("H").unwrap().into_raw() as *mut c_void;
 		match unsafe {
 			stereokit_sys::material_get_param_id(
 				material.as_ref().0.as_ptr(),
@@ -4536,7 +4602,29 @@ pub trait StereoKitMultiThread {
 		}
 	}
 
-	//TODO: material_get_param_info need to figure out how to do this one
+	//Get the name and type of the info at index id
+	fn material_get_param_info <M: AsRef<Material>>(
+		&self,
+		material: M,
+		id: i32,
+	) -> Option<(&str,MaterialParameter)> {
+		
+		let name_info = CString::new("H").unwrap().into_raw() as *mut *mut std::os::raw::c_char;
+		let mut type_info: u32 = 0;
+		unsafe {
+			stereokit_sys::material_get_param_info(
+				material.as_ref().0.as_ptr(), 
+				id,
+				name_info,
+				&mut type_info as *mut u32,
+			) 
+		}
+		let name_info = unsafe {CStr::from_ptr(*name_info).to_str().unwrap()};
+		let type_info = unsafe { ::std::mem::transmute(type_info)};
+
+		
+		Some((name_info, type_info))
+	}
 
 	fn material_get_param_count<M: AsRef<Material>>(&self, material: M) -> i32 {
 		unsafe { stereokit_sys::material_get_param_count(material.as_ref().0.as_ptr()) }
