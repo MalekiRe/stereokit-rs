@@ -3562,7 +3562,47 @@ pub trait StereoKitMultiThread {
 		))?))
 	}
 
-	//TODO: tex_create_file_arr
+	/// Loads an array of image files directly into a single array texture! Array textures are often useful for shader effects,
+    /// layering, material merging, weird stuff, and will generally need a specific shader to support it. Supported formats 
+    /// are: jpg, png, tga, bmp, psd, gif, hdr, pic. Asset Id will be the hash of all the filenames merged consecutively.
+	/// 
+	/// file_count must be equal to in_arr_file length
+	fn tex_create_file_arr<P: AsRef<Path>>(
+		&self,
+		in_arr_files: &[P],
+		file_count: usize,
+		srgb_data: bool,
+		priority: i32,
+	) -> SkResult<Tex> {
+		let mut c_files = Vec::new();
+		for i in 0..file_count {
+			let path = in_arr_files[i].as_ref();
+			let path_buf = path.to_path_buf();
+			let c_str = CString::new(path.to_str().ok_or(StereoKitError::TexFile(
+				path_buf.clone(),
+				"CString conversion".to_string(),
+			))?)
+			.map_err(|_| StereoKitError::TexFile(path_buf.clone(), "CString Conversion during tex_create_file_arr".to_string()))?;
+			c_files.push(c_str);
+		}
+		let mut c_files_ptr = Vec::new();
+		for str in c_files.iter() {
+			c_files_ptr.push(str.as_ptr());
+		}
+		let in_arr_files_cstr = c_files_ptr.as_mut_slice().as_mut_ptr();
+		let tex = Tex(NonNull::new(
+			unsafe {stereokit_sys::tex_create_file_arr(
+				in_arr_files_cstr, 
+				file_count as i32,
+				srgb_data as bool32_t, 
+				priority)
+			})
+			.ok_or(StereoKitError::TexFile(
+				PathBuf::from(r"one_of_many_files"),
+				"tex_create_file_arr failed".to_string(),
+			))?);
+		Ok(tex)
+	}
 
 	/// Creates a cubemap texture from a single equirectangular image! You know, the ones that look like an unwrapped globe with the poles all stretched out. It uses some fancy shaders and texture blitting to create 6 faces from the equirectangular image.
 	fn tex_create_cubemap_file(
@@ -3578,7 +3618,7 @@ pub trait StereoKitMultiThread {
 			path_buf.clone(),
 			"CString conversion".to_string(),
 		))?)
-		.map_err(|_| StereoKitError::TexFile(path_buf.clone(), "CString Conversion".to_string()))?;
+		.map_err(|_| StereoKitError::TexFile(path_buf.clone(), "CString Conversion during tex_create_cubemap_file".to_string()))?;
 		let tex = Tex(NonNull::new(unsafe {
 			stereokit_sys::tex_create_cubemap_file(
 				c_str.as_ptr(),
@@ -3589,13 +3629,51 @@ pub trait StereoKitMultiThread {
 		})
 		.ok_or(StereoKitError::TexFile(
 			path_buf.clone(),
-			"tex_create_file failed".to_string(),
+			"tex_create_cubemap_file failed".to_string(),
 		))?);
 
 		Ok((sh.into(), tex))
 	}
 
-	//TODO: tex_create_cubemap_files
+	/// Creates a cubemap texture from 6 different image files! If you have a single equirectangular image, use tex_create_cubemap_file instead. Asset Id will be the first filename.
+    ///
+	///order of the file names is +X -X +Y -Y +Z -Z
+	fn tex_create_cubemap_files<P: AsRef<Path>>(
+		&self,
+		equirectangular_files_utf8: &[P;6] ,
+		srgb_data: bool,
+		priority: i32,
+	) -> SkResult<(SphericalHarmonics, Tex)>  {
+		let mut sh: spherical_harmonics_t = sh_create(&[]).into();
+		let mut c_files = Vec::new();
+		for i in 0..6 {
+			let path = equirectangular_files_utf8[i].as_ref();
+			let path_buf = path.to_path_buf();
+			let c_str = CString::new(path.to_str().ok_or(StereoKitError::TexFile(
+				path_buf.clone(),
+				"CString conversion".to_string(),
+			))?)
+			.map_err(|_| StereoKitError::TexFile(path_buf.clone(), "CString Conversion during tex_create_cubemap_files".to_string()))?;
+			c_files.push(c_str);
+		}
+		let mut c_files_ptr = Vec::new();
+		for str in c_files.iter() {
+			c_files_ptr.push(str.as_ptr());
+		}
+		let in_arr_cube_face_file_xxyyzz = c_files_ptr.as_mut_slice().as_mut_ptr();
+		let tex = Tex(NonNull::new(
+			unsafe {stereokit_sys::tex_create_cubemap_files(
+				in_arr_cube_face_file_xxyyzz, 
+				srgb_data as bool32_t, 
+				&mut sh, 
+				priority)
+			})
+			.ok_or(StereoKitError::TexFile(
+				PathBuf::from(r"one_of_6_files"),
+				"tex_create_cubemap_files failed".to_string(),
+			))?);
+		Ok((sh.into(), tex))
+	}
 
 	/// Allows you to set the Id of the texture to a specific Id.
 	fn tex_set_id<T: AsRef<Tex>, S: Into<String> + Clone>(&self, tex: T, id: S) {
