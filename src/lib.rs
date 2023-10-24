@@ -735,6 +735,10 @@ impl SettingsBuilder {
 		self.settings.origin = origin_mode;
 		self
 	}
+	pub fn omit_empty_frames (&mut self, origin_mode : bool) -> &mut Self {
+		self.settings.omit_empty_frames = origin_mode;
+		self
+	}
 	fn build(&mut self) -> Settings {
 		self.settings.clone()
 	}
@@ -3637,7 +3641,7 @@ pub trait StereoKitMultiThread {
 
 	/// Creates a cubemap texture from 6 different image files! If you have a single equirectangular image, use tex_create_cubemap_file instead. Asset Id will be the first filename.
     ///
-	///order of the file names is +X -X +Y -Y +Z -Z
+	/// order of the file names is +X -X +Y -Y +Z -Z
 	fn tex_create_cubemap_files<P: AsRef<Path>>(
 		&self,
 		equirectangular_files_utf8: &[P;6] ,
