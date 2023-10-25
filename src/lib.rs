@@ -3215,6 +3215,11 @@ pub trait StereoKitMultiThread {
 		}
 	}
 
+	/// The number of vertices stored in this Mesh! This is available to you regardless of whether or not KeepData is set.
+	fn mesh_get_vert_count<Me: AsRef<Mesh>>(&self, mesh: Me) -> i32 {
+		unsafe { stereokit_sys::mesh_get_vert_count(mesh.as_ref().0.as_ptr()) }
+	}
+		
 	/// Assigns the face indices for this Mesh! Faces are always triangles, there are only ever three indices per face. This function will create a index buffer object on the graphics card right away. If you’re calling this a second time, the buffer will be marked as dynamic and re-allocated. If you’re calling this a third time, the buffer will only re-allocate if the buffer is too small, otherwise it just copies in the data!
 	fn mesh_set_inds(&self, mesh: &Mesh, inds: &[i32]) {
 		unsafe {
@@ -3250,7 +3255,7 @@ pub trait StereoKitMultiThread {
 		}
 	}
 
-	/// The number of vertices stored in this Mesh! This is available to you regardless of whether or not KeepData is set.
+	/// The number of indices stored in this Mesh! This is available to you regardless of whether or not KeepData is set.
 	fn mesh_get_ind_count<Me: AsRef<Mesh>>(&self, mesh: Me) -> i32 {
 		unsafe { stereokit_sys::mesh_get_ind_count(mesh.as_ref().0.as_ptr()) }
 	}
