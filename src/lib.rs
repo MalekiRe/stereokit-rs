@@ -3196,23 +3196,27 @@ pub trait StereoKitMultiThread {
 		}
 	}
 
-	/// GetVerts	This marshalls the Mesh’s vertex data into an array. If KeepData is false, then the Mesh is not storing verts on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
+	/// GetVerts	This marshalls the Mesh’s vertex data and copy it into an Vec. If KeepData is false, then the Mesh is not storing verts on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
 	fn mesh_get_verts_copy<Me: AsRef<Mesh>>(&self, mesh: Me) -> Vec<Vert> {
-		unsafe {
-			let verts_pointer = CString::new("H").unwrap().into_raw() as *mut *mut vert_t;
-			let mut verts_len = 0;
-			stereokit_sys::mesh_get_verts(
-				mesh.as_ref().0.as_ptr(),
-				verts_pointer,
-				&mut verts_len,
-				0,
-			);
-			Vec::from_raw_parts(
-				std::mem::transmute(*verts_pointer),
-				verts_len as usize,
-				verts_len as usize,
-			)
-		}
+		self.mesh_get_verts_ref(mesh.as_ref()).to_vec()
+		// Don't use the binding function has you'll have do deallocate the returned structure
+		// unsafe {
+		// 	let verts_pointer = CString::new("H").unwrap().into_raw() as *mut *mut vert_t;
+		// 	let mut verts_len = 0;
+		// 	stereokit_sys::mesh_get_verts(
+		// 		mesh.as_ref().0.as_ptr(),
+		// 		verts_pointer,
+		// 		&mut verts_len,
+		// 		0,
+		// 	);
+		// 	let slice = std::slice::from_raw_parts(
+		// 		std::mem::transmute(*verts_pointer),
+		// 		verts_len as usize ,
+		// 	);
+		// 	let vec = slice.to_vec();
+		// 	std::ptr::drop_in_place(verts_pointer);
+		// 	vec
+		// }
 	}
 
 	/// The number of vertices stored in this Mesh! This is available to you regardless of whether or not KeepData is set.
@@ -3241,18 +3245,20 @@ pub trait StereoKitMultiThread {
 		}
 	}
 
-	/// This marshalls the Mesh’s index data into an array. If KeepData is false, then the Mesh is not storing indices on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
+	/// This marshalls the Mesh’s index data and copy it into an Vec. If KeepData is false, then the Mesh is not storing indices on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
 	fn mesh_get_inds_copy<Me: AsRef<Mesh>>(&self, mesh: Me) -> Vec<u32> {
-		unsafe {
-			let inds_ptr = CString::new("H").unwrap().into_raw() as *mut *mut u32;
-			let mut inds_len = 0;
-			stereokit_sys::mesh_get_inds(mesh.as_ref().0.as_ptr(), inds_ptr, &mut inds_len, 1);
-			Vec::from_raw_parts(
-				std::mem::transmute(*inds_ptr),
-				inds_len as usize,
-				inds_len as usize,
-			)
-		}
+		self.mesh_get_inds_ref(mesh.as_ref()).to_vec()
+		// Don't use the binding function has you'll have do deallocate the returned structure
+		// unsafe {
+		// 	let inds_ptr = CString::new("H").unwrap().into_raw() as *mut *mut u32;
+		// 	let mut inds_len = 0;
+		// 	stereokit_sys::mesh_get_inds(mesh.as_ref().0.as_ptr(), inds_ptr, &mut inds_len, 1);
+		// 	Vec::from_raw_parts(
+		// 		std::mem::transmute(*inds_ptr),
+		// 		inds_len as usize,
+		// 		inds_len as usize,
+		// 	)
+		// }
 	}
 
 	/// The number of indices stored in this Mesh! This is available to you regardless of whether or not KeepData is set.
