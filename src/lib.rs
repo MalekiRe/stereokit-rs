@@ -1397,7 +1397,7 @@ impl Into<spherical_harmonics_t> for SphericalHarmonics {
 }
 
 /// This represents a single vertex in a Mesh, all StereoKit Meshes currently use this exact layout!
-#[derive(Debug, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Vert {
 	/// Position of the vertex, in model space coordinates.
@@ -3189,26 +3189,26 @@ pub trait StereoKitMultiThread {
 	/// GetVerts	This marshalls the Mesh’s vertex data into an array. If KeepData is false, then the Mesh is not storing verts on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
 	fn mesh_get_verts_ref(&self, mesh: &Mesh) -> &mut [Vert] {
 		unsafe {
-			let mut verts_pointer = null_mut();
+			let verts_pointer = CString::new("H").unwrap().into_raw() as *mut *mut vert_t;
 			let mut verts_len = 0;
-			stereokit_sys::mesh_get_verts(mesh.0.as_ptr(), &mut verts_pointer, &mut verts_len, 0);
-			&mut *slice_from_raw_parts_mut(std::mem::transmute(verts_pointer), verts_len as usize)
+			stereokit_sys::mesh_get_verts(mesh.0.as_ptr(), verts_pointer, &mut verts_len, 0);
+			&mut *slice_from_raw_parts_mut(std::mem::transmute(*verts_pointer), verts_len as usize)
 		}
 	}
 
 	/// GetVerts	This marshalls the Mesh’s vertex data into an array. If KeepData is false, then the Mesh is not storing verts on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
 	fn mesh_get_verts_copy<Me: AsRef<Mesh>>(&self, mesh: Me) -> Vec<Vert> {
 		unsafe {
-			let mut verts_pointer = null_mut();
+			let verts_pointer = CString::new("H").unwrap().into_raw() as *mut *mut vert_t;
 			let mut verts_len = 0;
 			stereokit_sys::mesh_get_verts(
 				mesh.as_ref().0.as_ptr(),
-				&mut verts_pointer,
+				verts_pointer,
 				&mut verts_len,
 				0,
 			);
 			Vec::from_raw_parts(
-				std::mem::transmute(verts_pointer),
+				std::mem::transmute(*verts_pointer),
 				verts_len as usize,
 				verts_len as usize,
 			)
@@ -3221,7 +3221,7 @@ pub trait StereoKitMultiThread {
 	}
 		
 	/// Assigns the face indices for this Mesh! Faces are always triangles, there are only ever three indices per face. This function will create a index buffer object on the graphics card right away. If you’re calling this a second time, the buffer will be marked as dynamic and re-allocated. If you’re calling this a third time, the buffer will only re-allocate if the buffer is too small, otherwise it just copies in the data!
-	fn mesh_set_inds(&self, mesh: &Mesh, inds: &[i32]) {
+	fn mesh_set_inds(&self, mesh: &Mesh, inds: &[u32]) {
 		unsafe {
 			stereokit_sys::mesh_set_inds(
 				mesh.0.as_ptr(),
@@ -3232,23 +3232,23 @@ pub trait StereoKitMultiThread {
 	}
 
 	/// This marshalls the Mesh’s index data into an array. If KeepData is false, then the Mesh is not storing indices on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
-	fn mesh_get_inds_ref(&self, mesh: &Mesh) -> &mut [i32] {
+	fn mesh_get_inds_ref(&self, mesh: &Mesh) -> &mut [u32] {
 		unsafe {
-			let mut inds_ptr = null_mut();
-			let mut inds_len = 0;
-			stereokit_sys::mesh_get_inds(mesh.0.as_ptr(), &mut inds_ptr, &mut inds_len, 0);
-			&mut *slice_from_raw_parts_mut(std::mem::transmute(inds_ptr), inds_len as usize)
+			let inds_ptr = CString::new("H").unwrap().into_raw() as *mut *mut u32;
+			let mut inds_len = 0 as i32;
+			stereokit_sys::mesh_get_inds(mesh.0.as_ptr(), inds_ptr, &mut inds_len, 0);
+			&mut *slice_from_raw_parts_mut(std::mem::transmute(*inds_ptr), inds_len as usize)
 		}
 	}
 
 	/// This marshalls the Mesh’s index data into an array. If KeepData is false, then the Mesh is not storing indices on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
-	fn mesh_get_inds_copy<Me: AsRef<Mesh>>(&self, mesh: Me) -> Vec<i32> {
+	fn mesh_get_inds_copy<Me: AsRef<Mesh>>(&self, mesh: Me) -> Vec<u32> {
 		unsafe {
-			let mut inds_ptr = null_mut();
+			let inds_ptr = CString::new("H").unwrap().into_raw() as *mut *mut u32;
 			let mut inds_len = 0;
-			stereokit_sys::mesh_get_inds(mesh.as_ref().0.as_ptr(), &mut inds_ptr, &mut inds_len, 1);
+			stereokit_sys::mesh_get_inds(mesh.as_ref().0.as_ptr(), inds_ptr, &mut inds_len, 1);
 			Vec::from_raw_parts(
-				std::mem::transmute(inds_ptr),
+				std::mem::transmute(*inds_ptr),
 				inds_len as usize,
 				inds_len as usize,
 			)
@@ -3376,19 +3376,26 @@ pub trait StereoKitMultiThread {
 		mesh: Me,
 		triangle_index: u32,
 	) -> Option<[Vert; 3]> {
-		let out_a = null_mut();
-		let out_b = null_mut();
-		let out_c = null_mut();
+		let v_a = Vert::default();
+		let v_b = Vert::default();
+		let v_c = Vert::default();
+		let out_a: *const Vert = &v_a ;
+		let out_b: *const Vert = &v_b ;
+		let out_c: *const Vert = &v_c ;
+		let ptr_a = out_a as *const c_void;
+		let ptr_b = out_b as *const c_void;
+		let ptr_c = out_c as *const c_void;
+
 		unsafe {
 			match stereokit_sys::mesh_get_triangle(
 				mesh.as_ref().0.as_ptr(),
 				triangle_index,
-				out_a,
-				out_b,
-				out_c,
+				ptr_a as *mut vert_t,
+				ptr_b as *mut vert_t,
+				ptr_c as *mut vert_t,
 			) != 0
 			{
-				true => Some([(*out_a).into(), (*out_b).into(), (*out_c).into()]),
+				true => Some([v_a, v_b, v_c]),
 				false => None,
 			}
 		}
