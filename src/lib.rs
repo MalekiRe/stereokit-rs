@@ -2631,6 +2631,26 @@ pub trait StereoKitDraw: StereoKitSingleThread {
 		}
 	}
 
+	/// Adds this Model to the render queue for this frame! If the Hierarchy has a transform on it, that transform is combined with the Matrix provided here.
+	fn model_draw_mat(
+		&self,
+		model: impl AsRef<Model>,
+		material_override: impl AsRef<Material>,
+		transform: impl Into<Mat4>,
+		color_linear: Color128,
+		layer: RenderLayer,
+	) {
+		unsafe {
+			stereokit_sys::model_draw_mat(
+				model.as_ref().0.as_ptr(),
+				material_override.as_ref().0.as_ptr(),
+				transform.into().into(),
+				color_linear,
+				layer.bits as IntegerType,
+			)
+		}
+	}
+
 	/// Adds a line to the environment for the current frame.
 	fn line_add(
 		&self,
