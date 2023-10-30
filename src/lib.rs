@@ -256,7 +256,7 @@ pub enum StereoKitError {
 	#[error("failed to create sprite from texture")]
 	SpriteCreate,
 	#[error("failed to create sprite from file {0}")]
-	SpriteFile(String),
+	SpriteFile(PathBuf),
 	#[error("failed to find sprite {0} for reason {1}")]
 	SpriteFind(String, String),
 	#[error("failed to find sound {0}")]
@@ -3125,12 +3125,12 @@ pub trait StereoKitMultiThread {
 	}
 
 	/// Finds the Mesh with the matching id, and returns a reference to it. If no Mesh it found, it returns Error
-	fn mesh_find<S: Into<String> + Clone>(&self, name: S) -> SkResult<Mesh> {
-		let c_str = std::ffi::CString::new(name.clone().into())
-			.map_err(|_| StereoKitError::MeshCString(name.clone().into()))?;
+	fn mesh_find<S: AsRef<str>>(&self, name: S) -> SkResult<Mesh> {
+		let c_str = CString::new(name.as_ref())
+			.map_err(|_| StereoKitError::MeshCString(name.as_ref().into()))?;
 		Ok(Mesh(
 			NonNull::new(unsafe { stereokit_sys::mesh_find(c_str.as_ptr()) })
-				.ok_or(StereoKitError::MeshFind(name.into()))?,
+				.ok_or(StereoKitError::MeshFind(name.as_ref().into()))?,
 		))
 	}
 
@@ -3144,8 +3144,8 @@ pub trait StereoKitMultiThread {
 		Mesh(NonNull::new(unsafe { stereokit_sys::mesh_copy(mesh.as_ref().0.as_ptr()) }).unwrap())
 	}
 
-	fn mesh_set_id<Me: AsRef<Mesh>, S: Into<String>>(&self, mesh: Me, id: S) {
-		let c_str = std::ffi::CString::new(id.into()).unwrap();
+	fn mesh_set_id<Me: AsRef<Mesh>, S: AsRef<str>>(&self, mesh: Me, id: S) {
+		let c_str = CString::new(id.as_ref()).unwrap();
 		unsafe { stereokit_sys::mesh_set_id(mesh.as_ref().0.as_ptr(), c_str.as_ptr()) }
 	}
 
@@ -3503,14 +3503,14 @@ pub trait StereoKitMultiThread {
 			.into()
 	}
 
-	fn tex_find<S: Into<String> + Clone>(&self, id: S) -> SkResult<Tex> {
-		let c_str = CString::new(id.clone().into())
-			.map_err(|_| StereoKitError::TexCString(id.clone().into()))?;
+	fn tex_find<S: AsRef<str>>(&self, id: S) -> SkResult<Tex> {
+		let c_str = CString::new(id.as_ref())
+			.map_err(|_| StereoKitError::TexCString(id.as_ref().into()))?;
 
 		Ok(Tex(NonNull::new(unsafe {
 			stereokit_sys::tex_find(c_str.as_ptr())
 		})
-		.ok_or(StereoKitError::TexFind(id.clone().into()))?))
+		.ok_or(StereoKitError::TexFind(id.as_ref().into()))?))
 	}
 
 	/// Sets up an empty texture container! Fill it with data using SetColors next! Creates a default unique asset Id.
@@ -3718,8 +3718,8 @@ pub trait StereoKitMultiThread {
 	}
 
 	/// Allows you to set the Id of the texture to a specific Id.
-	fn tex_set_id<T: AsRef<Tex>, S: Into<String> + Clone>(&self, tex: T, id: S) {
-		let c_str = CString::new(id.into()).unwrap();
+	fn tex_set_id<T: AsRef<Tex>, S: AsRef<str>>(&self, tex: T, id: S) {
+		let c_str = CString::new(id.as_ref()).unwrap();
 		unsafe { stereokit_sys::tex_set_id(tex.as_ref().0.as_ptr(), c_str.as_ptr()) }
 	}
 
@@ -3981,13 +3981,13 @@ pub trait StereoKitMultiThread {
 	}
 
 	/// Searches the asset list for a font with the given Id, returning Err if none is found.
-	fn font_find<S: Into<String> + Clone>(&self, id: S) -> SkResult<Font> {
-		let c_str = CString::new(id.clone().into()).map_err(|_| {
-			StereoKitError::FontFind(id.clone().into(), "CString conversion error".to_string())
+	fn font_find<S: AsRef<str>>(&self, id: S) -> SkResult<Font> {
+		let c_str = CString::new(id.as_ref()).map_err(|_| {
+			StereoKitError::FontFind(id.as_ref().into(), "CString conversion error".to_string())
 		})?;
 		Ok(Font(
 			NonNull::new(unsafe { stereokit_sys::font_find(c_str.as_ptr()) }).ok_or(
-				StereoKitError::FontFind(id.clone().into(), "font_find failed".to_string()),
+				StereoKitError::FontFind(id.as_ref().into(), "font_find failed".to_string()),
 			)?,
 		))
 	}
@@ -4010,8 +4010,8 @@ pub trait StereoKitMultiThread {
 		))
 	}
 
-	fn font_set_id<S: Into<String> + Clone>(&self, font: impl AsRef<Font>, id: S) {
-		let c_str = CString::new(id.into()).unwrap();
+	fn font_set_id<S: AsRef<str>>(&self, font: impl AsRef<Font>, id: S) {
+		let c_str = CString::new(id.as_ref()).unwrap();
 		unsafe { stereokit_sys::font_set_id(font.as_ref().0.as_ptr(), c_str.as_ptr()) }
 	}
 
@@ -4028,13 +4028,13 @@ pub trait StereoKitMultiThread {
 	fn font_release(&self, _font: Font) {}
 
 	/// Looks for a Shader asset that’s already loaded, matching the given id! Unless the id has been set manually, the id will be the same as the shader’s name provided in the metadata.
-	fn shader_find<S: Into<String> + Clone>(&self, id: S) -> SkResult<Shader> {
-		let c_str = CString::new(id.clone().into()).map_err(|_| {
-			StereoKitError::ShaderFind(id.clone().into(), "CString conversion".to_string())
+	fn shader_find<S: AsRef<str>>(&self, id: S) -> SkResult<Shader> {
+		let c_str = CString::new(id.as_ref()).map_err(|_| {
+			StereoKitError::ShaderFind(id.as_ref().into(), "CString conversion".to_string())
 		})?;
 		Ok(Shader(
 			NonNull::new(unsafe { stereokit_sys::shader_find(c_str.as_ptr()) }).ok_or(
-				StereoKitError::ShaderFind(id.clone().into(), "shader_find failed".to_string()),
+				StereoKitError::ShaderFind(id.as_ref().into(), "shader_find failed".to_string()),
 			)?,
 		))
 	}
@@ -4070,8 +4070,8 @@ pub trait StereoKitMultiThread {
 		))
 	}
 
-	fn shader_set_id<S: Into<String> + Clone>(&self, shader: impl AsRef<Shader>, id: S) {
-		let c_str = CString::new(id.into()).unwrap();
+	fn shader_set_id<S: AsRef<str>>(&self, shader: impl AsRef<Shader>, id: S) {
+		let c_str = CString::new(id.as_ref()).unwrap();
 		unsafe { stereokit_sys::shader_set_id(shader.as_ref().0.as_ptr(), c_str.as_ptr()) }
 	}
 
@@ -4095,13 +4095,13 @@ pub trait StereoKitMultiThread {
 	fn shader_release(&self, _shader: Shader) {}
 
 	/// Looks for a Material asset that’s already loaded, matching the given id!
-	fn material_find<S: Into<String> + Clone>(&self, id: S) -> SkResult<Material> {
-		let c_str = CString::new(id.clone().into()).map_err(|_| {
-			StereoKitError::MaterialFind(id.clone().into(), "CString conversion".to_string())
+	fn material_find<S: AsRef<str>>(&self, id: S) -> SkResult<Material> {
+		let c_str = CString::new(id.as_ref()).map_err(|_| {
+			StereoKitError::MaterialFind(id.as_ref().into(), "CString conversion".to_string())
 		})?;
 		Ok(Material(
 			NonNull::new(unsafe { stereokit_sys::material_find(c_str.as_ptr()) }).ok_or(
-				StereoKitError::MaterialFind(id.clone().into(), "material_find failed".to_string()),
+				StereoKitError::MaterialFind(id.as_ref().into(), "material_find failed".to_string()),
 			)?,
 		))
 	}
@@ -4122,13 +4122,13 @@ pub trait StereoKitMultiThread {
 		)
 	}
 
-	fn material_copy_id<S: Into<String> + Clone>(&self, id: S) -> Material {
-		let c_str = CString::new(id.into()).unwrap();
+	fn material_copy_id<S: AsRef<str>>(&self, id: S) -> Material {
+		let c_str = CString::new(id.as_ref()).unwrap();
 		Material(NonNull::new(unsafe { stereokit_sys::material_copy_id(c_str.as_ptr()) }).unwrap())
 	}
 
-	fn material_set_id<M: AsRef<Material>, S: Into<String> + Clone>(&self, material: M, id: S) {
-		let c_str = CString::new(id.into()).unwrap();
+	fn material_set_id<M: AsRef<Material>, S: AsRef<str>>(&self, material: M, id: S) {
+		let c_str = CString::new(id.as_ref()).unwrap();
 		unsafe { stereokit_sys::material_set_id(material.as_ref().0.as_ptr(), c_str.as_ptr()) }
 	}
 
@@ -4915,12 +4915,12 @@ pub trait StereoKitMultiThread {
 	}
 
 	/// Looks for a Model asset that’s already loaded, matching the given id!
-	fn model_find<S: Into<String> + Clone>(&self, id: S) -> SkResult<Model> {
-		let str = std::ffi::CString::new(id.clone().into())
-			.map_err(|_| StereoKitError::ModelFile(id.clone().into()))?;
+	fn model_find<S: AsRef<str>>(&self, id: S) -> SkResult<Model> {
+		let str = CString::new(id.as_ref())
+			.map_err(|_| StereoKitError::ModelFile(id.as_ref().into()))?;
 		Ok(Model::from(
 			NonNull::new(unsafe { stereokit_sys::model_find(str.as_ptr()) })
-				.ok_or(StereoKitError::ModelFile(id.clone().into()))?,
+				.ok_or(StereoKitError::ModelFile(id.as_ref().into()))?,
 		))
 	}
 	/// Creates a shallow copy of a Model asset! Meshes and Materials
@@ -4956,15 +4956,15 @@ pub trait StereoKitMultiThread {
 	/// .gltf, or .glb file stored in memory. Note that this function won’t work
 	/// well on files that reference other files, such as .gltf files with
 	/// references in them.
-	fn model_create_mem<S: Into<String> + Clone>(
+	fn model_create_mem<S: AsRef<str>>(
 		&self,
 		file_name: S,
 		memory: &[u8],
 		shader: Option<impl AsRef<Shader>>,
 	) -> SkResult<Model> {
-		let c_file_name = std::ffi::CString::new(file_name.clone().into()).map_err(|_| {
+		let c_file_name = CString::new(file_name.as_ref()).map_err(|_| {
 			StereoKitError::ModelFromMem(
-				file_name.clone().into(),
+				file_name.as_ref().into(),
 				String::from("file name is not a valid CString"),
 			)
 		})?;
@@ -4978,7 +4978,7 @@ pub trait StereoKitMultiThread {
 				)
 			})
 			.ok_or(StereoKitError::ModelFromMem(
-				file_name.clone().into(),
+				file_name.as_ref().into(),
 				String::from("model_create_mem failed"),
 			))?,
 		))
@@ -5639,24 +5639,31 @@ pub trait StereoKitMultiThread {
 		))
 	}
 
-	fn sprite_create_file<S: AsRef<str>>(
+	fn sprite_create_file<S: AsRef<str>, P: AsRef<Path>>(
 		&self,
-		file: S,
+		file: P,
 		type_: SpriteType,
 		atlas_id: S,
 	) -> SkResult<Sprite> {
 		let atlas_id = CString::new(atlas_id.as_ref()).unwrap();
-		let file = file.as_ref();
-		let cfile = CString::new(file).unwrap();
+		let path = file.as_ref();
+		let path_buf = path.to_path_buf();
+		let c_str = CString::new(path.to_str().ok_or(StereoKitError::TexFile(
+			path_buf.clone(),
+			"CString conversion".to_string(),
+		))?)
+		.map_err(|_| StereoKitError::SpriteFile(path_buf.clone()))?;
+	
+	
 		Ok(Sprite(
 			NonNull::new(unsafe {
 				stereokit_sys::sprite_create_file(
-					cfile.as_ptr(),
+					c_str.as_ptr(),
 					type_ as sprite_type_,
 					atlas_id.as_ptr(),
 				)
 			})
-			.ok_or(StereoKitError::SpriteFile(file.to_string()))?,
+			.ok_or(StereoKitError::SpriteFile(path_buf))?,
 		))
 	}
 
@@ -6925,25 +6932,25 @@ impl WindowContext {
 		}
 	}
 	pub fn label(&self, text: impl AsRef<str>, use_padding: bool) {
-		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+		let c_str = CString::new(text.as_ref()).unwrap();
 		unsafe {
 			stereokit_sys::ui_label(c_str.as_ptr(), use_padding as bool32_t);
 		}
 	}
 	pub fn toggle(&self, text: impl AsRef<str>, pressed: &mut bool) {
-		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+		let c_str = CString::new(text.as_ref()).unwrap();
 		unsafe {
 			stereokit_sys::ui_toggle(c_str.as_ptr(), pressed as &mut _ as *mut _ as *mut i32);
 		}
 	}
 	pub fn button(&self, text: impl AsRef<str>) -> bool {
-		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+		let c_str = CString::new(text.as_ref()).unwrap();
 		unsafe {
 			stereokit_sys::ui_button(c_str.as_ptr()) != 0
 		}
 	}
 	pub fn button_at(&self, text: impl AsRef<str>, window_relative_pos: impl Into<Vec3>, size: impl Into<Vec2>) -> bool {
-		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+		let c_str = CString::new(text.as_ref()).unwrap();
 		unsafe {
 			stereokit_sys::ui_button_at(c_str.as_ptr(), window_relative_pos.into().into(), size.into().into()) != 0
 		}
@@ -6954,7 +6961,7 @@ impl WindowContext {
 		}
 	}
 	pub fn hz_slider(&self, id: impl AsRef<str>, value: &mut f32, min: f32, max: f32, step: f32, width: f32) {
-		let c_str = std::ffi::CString::new(id.as_ref()).unwrap();
+		let c_str = CString::new(id.as_ref()).unwrap();
 		unsafe {
 			stereokit_sys::ui_hslider(c_str.as_ptr(), value as *mut f32, min, max, step, width, 0, 0);
 		}
