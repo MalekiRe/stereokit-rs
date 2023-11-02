@@ -5761,6 +5761,10 @@ pub trait StereoKitMultiThread {
 		unsafe { stereokit_sys::render_set_skytex(sky_texture.as_ref().0.as_ptr()) }
 	}
 
+	fn render_get_skytex(&self) -> Tex {
+		Tex( NonNull::new(unsafe { stereokit_sys::render_get_skytex() } ).unwrap())
+	}
+
 	fn render_set_skylight(&self, sky_light: SphericalHarmonics) {
 		unsafe { stereokit_sys::render_set_skylight(&sky_light.into()) }
 	}
