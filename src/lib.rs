@@ -2515,15 +2515,14 @@ macro_rules! static_shader {
 }
 
 static_shader!("default/shader", DEFAULT);
-static_shader!("default/shader_blit", BLIT);
 static_shader!("default/shader_pbr", PBR);
 static_shader!("default/shader_pbr_clip", PBR_CLIP);
 static_shader!("default/shader_font", FONT);
 static_shader!("default/shader_ui", UI);
 static_shader!("default/shader_ui_box", UI_BOX);
-static_shader!("default/shader_ui_quadrant", UI_QUADRANT);
-static_shader!("default/shader_sky", SKY);
-static_shader!("default/shader_lines", LINES);
+static_shader!("default/shader_unlit", UNLIT);
+static_shader!("default/shader_unlit_clip", UNLIT_CLIP);
+static_shader!("default/shader_equirect", EQUIRECT);
 
 macro_rules! static_sound {
     ($id: literal, $name: ident) => {
