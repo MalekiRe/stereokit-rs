@@ -4009,6 +4009,33 @@ pub trait StereoKitMultiThread {
 		))
 	}
 
+	/// Loads a font and creates a font asset from it.
+	fn font_create_files<P: AsRef<Path>>(&self, in_arr_files: &[P], file_count : usize) -> SkResult<Font> {
+
+		let mut c_files = Vec::new();
+		for i in 0..file_count {
+			let path = in_arr_files[i].as_ref();
+			let path_buf = path.to_path_buf();
+			let c_str = CString::new(path.to_str().ok_or(StereoKitError::FontFile(
+				path_buf.clone(),
+				"CString conversion".to_string(),
+			))?)
+			.map_err(|_| StereoKitError::FontFile(path_buf.clone(), "CString Conversion during font_create_files".to_string()))?;
+			c_files.push(c_str);
+		}
+		let mut c_files_ptr = Vec::new();
+		for str in c_files.iter() {
+			c_files_ptr.push(str.as_ptr());
+		}
+		let in_arr_files_cstr = c_files_ptr.as_mut_slice().as_mut_ptr();
+
+		Ok(Font(
+			NonNull::new(unsafe { stereokit_sys::font_create_files(in_arr_files_cstr, file_count as i32) }).ok_or(
+				StereoKitError::FontFile(PathBuf::from(r"one_of_many_files"), "font_create_files failed".to_string()),
+			)?,
+		))
+	}
+
 	fn font_set_id<S: AsRef<str>>(&self, font: impl AsRef<Font>, id: S) {
 		let c_str = CString::new(id.as_ref()).unwrap();
 		unsafe { stereokit_sys::font_set_id(font.as_ref().0.as_ptr(), c_str.as_ptr()) }
