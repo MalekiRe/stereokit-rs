@@ -5018,11 +5018,11 @@ pub trait StereoKitMultiThread {
 	) -> SkResult<Model> {
 		let path = filename.as_ref();
 		let path_buf = path.to_path_buf();
-		let c_str = CString::new(path.to_str().ok_or(StereoKitError::TexFile(
+		let c_str = CString::new(path.to_str().ok_or(StereoKitError::ModelFromFile(
 			path_buf.clone(),
 			"CString conversion".to_string(),
 		))?)
-		.map_err(|_| StereoKitError::TexFile(path_buf.clone(), "CString Conversion".to_string()))?;
+		.map_err(|_| StereoKitError::ModelFromFile(path_buf.clone(), "CString Conversion".to_string()))?;
 		Ok(Model::from(
 			NonNull::new(unsafe {
 				stereokit_sys::model_create_file(
@@ -5674,9 +5674,8 @@ pub trait StereoKitMultiThread {
 		let atlas_id = CString::new(atlas_id.as_ref()).unwrap();
 		let path = file.as_ref();
 		let path_buf = path.to_path_buf();
-		let c_str = CString::new(path.to_str().ok_or(StereoKitError::TexFile(
+		let c_str = CString::new(path.to_str().ok_or(StereoKitError::SpriteFile(
 			path_buf.clone(),
-			"CString conversion".to_string(),
 		))?)
 		.map_err(|_| StereoKitError::SpriteFile(path_buf.clone()))?;
 	
