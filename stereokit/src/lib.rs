@@ -13,13 +13,14 @@ use bevy_ecs::prelude::ReflectComponent;
 #[cfg(feature = "bevy_reflect")]
 use bevy_reflect::FromReflect;
 #[cfg(feature = "bevy_reflect")]
-use bevy_reflect::{DynamicInfo, Reflect, ReflectMut, ReflectOwned, ReflectRef, TypeInfo, ValueInfo};
+use bevy_reflect::{
+	DynamicInfo, Reflect, ReflectMut, ReflectOwned, ReflectRef, TypeInfo, ValueInfo,
+};
 
 use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use sys::origin_mode_;
 use std::any::Any;
 use std::collections::HashSet;
 use std::ffi::{c_void, CStr, CString};
@@ -29,7 +30,18 @@ use std::marker::PhantomData;
 use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut, slice_from_raw_parts_mut, NonNull};
-use stereokit_sys::{_font_t, _gradient_t, _material_buffer_t, _material_t, _mesh_t, _model_t, _shader_t, _solid_t, _sound_t, _sprite_t, _tex_t, anim_mode_, app_focus_, bool32_t, bounds_t, controller_t, cull_, depth_mode_, depth_test_, device_tracking_, display_, display_blend_, display_mode_, display_type_, fov_info_t, gradient_key_t, hand_joint_t, hand_t, handed_, key_, line_point_t, log_, log_colors_, mesh_t, mouse_t, openxr_handle_t, plane_t, pointer_t, pose_t, projection_, quat, ray_t, rect_t, render_clear_, sh_light_t, sk_init, sk_settings_t, sound_inst_t, sphere_t, spherical_harmonics_t, sprite_type_, system_info_t, tex_address_, tex_format_, tex_sample_, text_align_, text_fit_, track_state_, transparency_, ui_color_, ui_cut_, ui_move_, ui_win_, vert_t, world_refresh_};
+use stereokit_sys::{
+	_font_t, _gradient_t, _material_buffer_t, _material_t, _mesh_t, _model_t, _shader_t, _solid_t,
+	_sound_t, _sprite_t, _tex_t, anim_mode_, app_focus_, bool32_t, bounds_t, controller_t, cull_,
+	depth_mode_, depth_test_, device_tracking_, display_, display_blend_, display_type_,
+	fov_info_t, gradient_key_t, hand_joint_t, hand_t, handed_, key_, line_point_t, log_,
+	log_colors_, mesh_t, mouse_t, openxr_handle_t, plane_t, pointer_t, pose_t, projection_, quat,
+	ray_t, rect_t, render_clear_, sh_light_t, sk_init, sk_settings_t, sound_inst_t, sphere_t,
+	spherical_harmonics_t, sprite_type_, system_info_t, tex_address_, tex_format_, tex_sample_,
+	text_align_, text_fit_, track_state_, transparency_, ui_color_, ui_cut_, ui_move_, ui_win_,
+	vert_t, world_refresh_,
+};
+use sys::{app_mode_, origin_mode_};
 use thiserror::Error;
 
 pub use stereokit_sys as sys;
@@ -270,19 +282,25 @@ pub type Color32 = stereokit_sys::color32;
 pub type Color128 = stereokit_sys::color128;
 pub type ModelNodeId = i32;
 
-/// Specifies a type of display mode StereoKit uses, like Mixed Reality headset display vs. a PC display, or even just rendering to an offscreen surface, or not rendering at all!
+/// Specifies a type of display mode StereoKit uses, like
+/// Mixed Reality headset display vs. a PC display, or even just
+/// rendering to an offscreen surface, or not rendering at all!
 #[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
 #[repr(u32)]
-pub enum DisplayMode {
-	/// Creates an OpenXR instance, and drives display/input through that.
-	MixedReality = 0,
-	/// Creates a flat, Win32 window, and simulates some MR functionality. Great for debugging.
-	Flatscreen = 1,
-	/// Not tested yet, but this is meant to run StereoKit without rendering to any display at all. This would allow for rendering to textures, running a server that can do MR related tasks, etc.
-	None = 2,
+pub enum AppMode {
+	/// No mode has been specified, default behavior will be used. StereoKit will pick XR in this case.
+	None = 0,
+	/// Creates an OpenXR or WebXR instance, and drives display/input through that.
+	XR,
+	/// Creates a flat window, and simulates some XR functionality. Great for development and debugging.
+	Simulator,
+	/// Creates a flat window and displays to that, but doesn't simulate XR at all. You will need to control your own camera here. This can be useful if using StereoKit for non-XR 3D applications.
+	Window,
+	/// No display at all! StereoKit won't even render to a texture unless requested to. This may be good for running tests on a server, or doing graphics related tool or CLI work.
+	Offscreen,
 }
-impl From<display_mode_> for DisplayMode {
-	fn from(value: display_mode_) -> Self {
+impl From<app_mode_> for AppMode {
+	fn from(value: app_mode_) -> Self {
 		unsafe { std::mem::transmute(value) }
 	}
 }
@@ -338,7 +356,7 @@ impl Into<display_blend_> for DisplayBlend {
 #[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
 #[repr(u32)]
 pub enum OriginMode {
-	/// Default value 
+	/// Default value
 	Local = 0,
 	/// Floor
 	Floor = 1,
@@ -444,7 +462,7 @@ pub struct Settings {
 	/// Where to look for assets when loading files! Final path will look like ‘\[assetsFolder\]/\[file\]’, so a trailing ‘/’ is unnecessary.
 	pub assets_folder: PathBuf,
 	/// Which display type should we try to load? Default is DisplayMode.MixedReality.
-	pub display_preference: DisplayMode,
+	pub mode: AppMode,
 	///If the preferred display fails, should we avoid falling back to flatscreen and just crash out? Default is false.
 	pub no_flatscreen_fallback: bool,
 	/// What type of background blend mode do we prefer for this application? Are you trying to build an Opaque/Immersive/VR app, or would you like the display to be AnyTransparent, so the world will show up behind your content, if that’s an option? Note that this is a preference only, and if it’s not available on this device, the app will fall back to the runtime’s preference instead! By default, (DisplayBlend.None) this uses the runtime’s preference.
@@ -472,13 +490,14 @@ pub struct Settings {
 	pub disable_unfocused_sleep: bool,
 	pub render_scaling: f32,
 	pub origin: OriginMode,
+	pub omit_empty_frames: bool,
 }
 impl Default for Settings {
 	fn default() -> Self {
 		Self {
 			app_name: "StereoKit".to_string(),
 			assets_folder: PathBuf::from(""),
-			display_preference: DisplayMode::MixedReality,
+			mode: AppMode::XR,
 			no_flatscreen_fallback: false,
 			blend_preference: DisplayBlend::None,
 			depth_mode: DepthMode::Balanced,
@@ -493,7 +512,8 @@ impl Default for Settings {
 			disable_desktop_input_window: false,
 			disable_unfocused_sleep: false,
 			render_scaling: 1.0,
-			origin : OriginMode::Local,
+			origin: OriginMode::Local,
+			omit_empty_frames: true,
 		}
 	}
 }
@@ -508,7 +528,7 @@ impl From<sk_settings_t> for Settings {
 			sk_settings_t {
 				app_name,
 				assets_folder,
-				display_preference,
+				display_preference: _,
 				blend_preference,
 				no_flatscreen_fallback,
 				depth_mode,
@@ -527,6 +547,8 @@ impl From<sk_settings_t> for Settings {
 				origin,
 				android_java_vm: _,
 				android_activity: _,
+				mode,
+				omit_empty_frames,
 			} => unsafe {
 				Self {
 					app_name: CStr::from_ptr(app_name).to_str().unwrap().to_string(),
@@ -536,7 +558,6 @@ impl From<sk_settings_t> for Settings {
 						.to_string()
 						.parse()
 						.unwrap(),
-					display_preference: std::mem::transmute(display_preference),
 					no_flatscreen_fallback: no_flatscreen_fallback != 0,
 					blend_preference: std::mem::transmute(blend_preference),
 					depth_mode: std::mem::transmute(depth_mode),
@@ -551,7 +572,9 @@ impl From<sk_settings_t> for Settings {
 					disable_desktop_input_window: disable_desktop_input_window != 0,
 					disable_unfocused_sleep: disable_unfocused_sleep != 0,
 					render_scaling,
-					origin:std::mem::transmute(origin),
+					origin: std::mem::transmute(origin),
+					mode: std::mem::transmute(mode),
+					omit_empty_frames: omit_empty_frames != 0,
 				}
 			},
 		}
@@ -563,7 +586,6 @@ impl Into<sk_settings_t> for Settings {
 			Settings {
 				app_name,
 				assets_folder,
-				display_preference,
 				no_flatscreen_fallback,
 				blend_preference,
 				depth_mode,
@@ -579,13 +601,15 @@ impl Into<sk_settings_t> for Settings {
 				disable_unfocused_sleep,
 				render_scaling,
 				origin,
+				mode,
+				omit_empty_frames,
 			} => {
 				let app_name = CString::new(app_name).unwrap();
 				let assets_folder = CString::new(assets_folder.to_str().unwrap()).unwrap();
 				let s = sk_settings_t {
 					app_name: app_name.into_raw(),
 					assets_folder: assets_folder.into_raw(),
-					display_preference: display_preference as display_mode_,
+					display_preference: 0,
 					blend_preference: blend_preference as display_blend_,
 					no_flatscreen_fallback: no_flatscreen_fallback as bool32_t,
 					depth_mode: depth_mode as depth_mode_,
@@ -601,9 +625,11 @@ impl Into<sk_settings_t> for Settings {
 					disable_unfocused_sleep: disable_unfocused_sleep as bool32_t,
 					render_scaling,
 					render_multisample: 1,
-        			origin: origin as origin_mode_,
+					origin: origin as origin_mode_,
 					android_java_vm: null_mut(),
 					android_activity: null_mut(),
+					mode: mode as app_mode_,
+					omit_empty_frames: omit_empty_frames as bool32_t,
 				};
 				//Box::leak(Box::new(app_name));
 				//Box::leak(Box::new(assets_folder));
@@ -654,8 +680,8 @@ impl SettingsBuilder {
 		self.settings.assets_folder = assets_folder.as_ref().to_path_buf();
 		self
 	}
-	pub fn display_preference(&mut self, display_preference: DisplayMode) -> &mut Self {
-		self.settings.display_preference = display_preference;
+	pub fn app_mode(&mut self, app_mode: AppMode) -> &mut Self {
+		self.settings.mode = app_mode;
 		self
 	}
 	pub fn blend_preference(&mut self, blend_preference: DisplayBlend) -> &mut Self {
@@ -723,7 +749,7 @@ impl SettingsBuilder {
 		self.settings.render_scaling = render_scaling;
 		self
 	}
-	pub fn origin (&mut self, origin_mode : OriginMode) -> &mut Self {
+	pub fn origin(&mut self, origin_mode: OriginMode) -> &mut Self {
 		self.settings.origin = origin_mode;
 		self
 	}
@@ -863,7 +889,10 @@ pub type FovInfo = fov_info_t;
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 #[repr(C)]
 #[cfg_attr(feature = "bevy_ecs", derive(bevy_ecs::prelude::Component))]
-#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::prelude::Reflect, bevy_reflect::prelude::FromReflect))]
+#[cfg_attr(
+	feature = "bevy_reflect",
+	derive(bevy_reflect::prelude::Reflect, bevy_reflect::prelude::FromReflect)
+)]
 #[cfg_attr(feature = "bevy_reflect", reflect(Component))]
 pub struct Ray {
 	/// The position or origin point of the Ray.
@@ -898,7 +927,10 @@ impl Into<ray_t> for Ray {
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 #[repr(C)]
 #[cfg_attr(feature = "bevy_ecs", derive(bevy_ecs::prelude::Component))]
-#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::prelude::Reflect, bevy_reflect::prelude::FromReflect))]
+#[cfg_attr(
+	feature = "bevy_reflect",
+	derive(bevy_reflect::prelude::Reflect, bevy_reflect::prelude::FromReflect)
+)]
 #[cfg_attr(feature = "bevy_reflect", reflect(Component))]
 pub struct Bounds {
 	/// The exact center of the Bounds!
@@ -927,7 +959,10 @@ impl Into<bounds_t> for Bounds {
 #[derive(Debug, Copy, Clone, Default, Deserialize, Serialize)]
 #[repr(C)]
 #[cfg_attr(feature = "bevy_ecs", derive(bevy_ecs::prelude::Component))]
-#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::prelude::Reflect, bevy_reflect::prelude::FromReflect))]
+#[cfg_attr(
+	feature = "bevy_reflect",
+	derive(bevy_reflect::prelude::Reflect, bevy_reflect::prelude::FromReflect)
+)]
 #[cfg_attr(feature = "bevy_reflect", reflect(Component))]
 pub struct Plane {
 	/// The direction the plane is facing.
@@ -954,7 +989,10 @@ impl Into<plane_t> for Plane {
 #[derive(Debug, Copy, Clone, Default, Deserialize, Serialize)]
 #[repr(C)]
 #[cfg_attr(feature = "bevy_ecs", derive(bevy_ecs::prelude::Component))]
-#[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::prelude::Reflect, bevy_reflect::prelude::FromReflect))]
+#[cfg_attr(
+	feature = "bevy_reflect",
+	derive(bevy_reflect::prelude::Reflect, bevy_reflect::prelude::FromReflect)
+)]
 #[cfg_attr(feature = "bevy_reflect", reflect(Component))]
 pub struct Sphere {
 	/// Center of the sphere.
@@ -986,7 +1024,6 @@ impl Into<sphere_t> for Sphere {
 /// high accuracy blend!
 ///
 
-
 pub struct Gradient(pub NonNull<_gradient_t>);
 impl Drop for Gradient {
 	fn drop(&mut self) {
@@ -1000,7 +1037,6 @@ impl AsRef<Gradient> for Gradient {
 }
 unsafe impl Send for Gradient {}
 unsafe impl Sync for Gradient {}
-
 
 /// A Mesh is a single collection of triangular faces with extra surface
 /// information to enhance rendering! StereoKit meshes are composed of a
@@ -1138,10 +1174,7 @@ impl AsRef<MaterialBuffer> for MaterialBuffer {
 #[cfg_attr(feature = "bevy_ecs", derive(bevy_ecs::prelude::Component))]
 #[cfg_attr(feature = "bevy_reflect", derive(bevy_reflect::prelude::Reflect))]
 #[cfg_attr(feature = "bevy_reflect", reflect(Component))]
-pub struct Model(
-	#[cfg_attr(feature = "bevy_reflect", reflect(ignore))]
-	pub _Model
-);
+pub struct Model(#[cfg_attr(feature = "bevy_reflect", reflect(ignore))] pub _Model);
 impl AsRef<Model> for Model {
 	fn as_ref(&self) -> &Model {
 		&self
@@ -1179,7 +1212,7 @@ impl Default for Model {
 #[cfg(feature = "bevy_reflect")]
 impl FromReflect for Model {
 	fn from_reflect(reflect: &dyn Reflect) -> Option<Self> {
-		let sk = unsafe { Sk::create_unsafe()};
+		let sk = unsafe { Sk::create_unsafe() };
 		Some(sk.model_copy(reflect.downcast_ref::<Model>()?))
 	}
 }
@@ -1268,13 +1301,13 @@ impl AsRef<Asset> for Asset {
 
 impl From<Model> for Asset {
 	fn from(value: Model) -> Self {
-		unsafe { std::mem::transmute(value)}
+		unsafe { std::mem::transmute(value) }
 	}
 }
 
 impl AsRef<Asset> for Model {
 	fn as_ref(&self) -> &Asset {
-		unsafe {std::mem::transmute(self)}
+		unsafe { std::mem::transmute(self) }
 	}
 }
 
@@ -2903,7 +2936,7 @@ pub trait StereoKitMultiThread {
 		}
 	}
 	/// Since we can fallback to a different DisplayMode, this lets you check to see which Runtime was successfully initialized.
-	fn active_display_mode(&self) -> DisplayMode {
+	fn active_display_mode(&self) -> AppMode {
 		unsafe { stereokit_sys::sk_active_display_mode() }.into()
 	}
 	/// This is a copy of the settings that StereoKit was initialized with, so you can refer back to them a little easier.
@@ -3306,15 +3339,18 @@ pub trait StereoKitMultiThread {
 		model_space_ray: Ray,
 		cull_mode: CullMode,
 	) -> Option<(Ray, u32)> {
-		let mut out_ray = Box::new(ray_t { pos: stereokit_sys::vec3 {
-			x: 0.0,
-			y: 0.0,
-			z: 0.0,
-		}, dir: stereokit_sys::vec3 {
-			x: 0.0,
-			y: 0.0,
-			z: 0.0,
-		} });
+		let mut out_ray = Box::new(ray_t {
+			pos: stereokit_sys::vec3 {
+				x: 0.0,
+				y: 0.0,
+				z: 0.0,
+			},
+			dir: stereokit_sys::vec3 {
+				x: 0.0,
+				y: 0.0,
+				z: 0.0,
+			},
+		});
 
 		let mut out_inds = 0;
 		match unsafe {
@@ -3326,7 +3362,7 @@ pub trait StereoKitMultiThread {
 				cull_mode as cull_,
 			) != 0
 		} {
-			true => Some(( (*out_ray).into() , out_inds)),
+			true => Some(((*out_ray).into(), out_inds)),
 			false => None,
 		}
 	}
@@ -3612,7 +3648,14 @@ pub trait StereoKitMultiThread {
 
 	//TODO: tex_set_color_arr
 
-	fn tex_set_mem<T: AsRef<Tex>>(&self, tex: T, data: &[u8], srgb_data: bool, blocking: i32, priority: i32) {
+	fn tex_set_mem<T: AsRef<Tex>>(
+		&self,
+		tex: T,
+		data: &[u8],
+		srgb_data: bool,
+		blocking: i32,
+		priority: i32,
+	) {
 		unsafe {
 			stereokit_sys::tex_set_mem(
 				tex.as_ref().0.as_ptr(),
@@ -4766,7 +4809,9 @@ pub trait StereoKitMultiThread {
 					c_file_name.as_ptr(),
 					memory.as_ptr() as *mut c_void,
 					memory.len(),
-					shader.map(|shader| shader.as_ref().0.as_ptr()).unwrap_or(null_mut()),
+					shader
+						.map(|shader| shader.as_ref().0.as_ptr())
+						.unwrap_or(null_mut()),
 				)
 			})
 			.ok_or(StereoKitError::ModelFromMem(
@@ -4841,9 +4886,7 @@ pub trait StereoKitMultiThread {
 	}
 
 	fn model_get_bounds<M: AsRef<Model>>(&self, model: M) -> Bounds {
-		unsafe {
-			std::mem::transmute(stereokit_sys::model_get_bounds(model.as_ref().0.as_ptr()))
-		}
+		unsafe { std::mem::transmute(stereokit_sys::model_get_bounds(model.as_ref().0.as_ptr())) }
 	}
 
 	/// Calling Draw will automatically step the Model’s animation, but if you don’t draw the Model, or need access to the animated nodes before drawing, then you can step the animation early manually via this method. Animation will only ever be stepped once per frame, so it’s okay to call this multiple times, or in addition to Draw.
@@ -5158,7 +5201,11 @@ pub trait StereoKitMultiThread {
 		unsafe { stereokit_sys::model_node_visual_count(model.as_ref().0.as_ptr()) }
 	}
 
-	fn model_node_visual_index<M: AsRef<Model>>(&self, model: M, index: i32) -> Option<ModelNodeId> {
+	fn model_node_visual_index<M: AsRef<Model>>(
+		&self,
+		model: M,
+		index: i32,
+	) -> Option<ModelNodeId> {
 		match unsafe { stereokit_sys::model_node_visual_index(model.as_ref().0.as_ptr(), index) } {
 			-1 => None,
 			otherwise => Some(otherwise),
@@ -5240,11 +5287,7 @@ pub trait StereoKitMultiThread {
 
 	fn model_node_set_solid<M: AsRef<Model>>(&self, model: M, node: ModelNodeId, solid: bool) {
 		unsafe {
-			stereokit_sys::model_node_set_solid(
-				model.as_ref().0.as_ptr(),
-				node,
-				solid as bool32_t,
-			)
+			stereokit_sys::model_node_set_solid(model.as_ref().0.as_ptr(), node, solid as bool32_t)
 		}
 	}
 
@@ -5325,17 +5368,16 @@ pub trait StereoKitMultiThread {
 		info_key_utf8: S,
 	) -> Option<&str> {
 		let info_key_utf8_c = CString::new(info_key_utf8.as_ref()).unwrap();
-		match NonNull::new (unsafe {
+		match NonNull::new(unsafe {
 			stereokit_sys::model_node_info_get(
-				model.as_ref().0.as_ptr(), 
+				model.as_ref().0.as_ptr(),
 				node,
 				info_key_utf8_c.as_ptr(),
-			) 
-		})  {
-		    Some(non_null) => return unsafe{CStr::from_ptr(non_null.as_ref()).to_str().ok()},
-    		None => None,
+			)
+		}) {
+			Some(non_null) => return unsafe { CStr::from_ptr(non_null.as_ref()).to_str().ok() },
+			None => None,
 		}
-
 	}
 
 	fn model_node_info_set<M: AsRef<Model>, S: AsRef<str>>(
@@ -5381,20 +5423,38 @@ pub trait StereoKitMultiThread {
 		unsafe { stereokit_sys::model_node_info_count(model.as_ref().0.as_ptr(), node) }
 	}
 
-	fn model_node_info_iterate<M: AsRef<Model>>(&self, model: M, mut iterator : i32,node: ModelNodeId) -> Option<(&str, &str, i32)> {
+	fn model_node_info_iterate<M: AsRef<Model>>(
+		&self,
+		model: M,
+		mut iterator: i32,
+		node: ModelNodeId,
+	) -> Option<(&str, &str, i32)> {
+		let out_key_utf8 =
+			CString::new("H").unwrap().into_raw() as *mut *const std::os::raw::c_char;
+		let out_value_utf8 =
+			CString::new("H").unwrap().into_raw() as *mut *const std::os::raw::c_char;
 
-		let out_key_utf8 = CString::new("H").unwrap().into_raw() as *mut *const std::os::raw::c_char;
-		let out_value_utf8 = CString::new("H").unwrap().into_raw() as *mut *const std::os::raw::c_char;
-
-		let ref_iterator  = &mut iterator as *mut i32;
+		let ref_iterator = &mut iterator as *mut i32;
 
 		unsafe {
-			let res = stereokit_sys::model_node_info_iterate(model.as_ref().0.as_ptr(), node, ref_iterator,  out_key_utf8,  out_value_utf8);
+			let res = stereokit_sys::model_node_info_iterate(
+				model.as_ref().0.as_ptr(),
+				node,
+				ref_iterator,
+				out_key_utf8,
+				out_value_utf8,
+			);
 			if res != 0 {
 				let key = CStr::from_ptr(*out_key_utf8);
 				let value = CStr::from_ptr(*out_value_utf8);
-				Some((key.to_str().unwrap(),value.to_str().unwrap(), *ref_iterator as i32))
-			} else {None}
+				Some((
+					key.to_str().unwrap(),
+					value.to_str().unwrap(),
+					*ref_iterator as i32,
+				))
+			} else {
+				None
+			}
 		}
 	}
 
@@ -5661,7 +5721,7 @@ pub trait StereoKitMultiThread {
 			stereokit_sys::sound_write_samples(
 				sound.as_ref().0.as_ptr(),
 				samples.as_ptr(),
-				samples.len() as u64
+				samples.len() as u64,
 			)
 		}
 	}
@@ -6560,13 +6620,14 @@ fn sound_release(sound: &mut Sound) {
 
 pub struct WindowContext(PhantomData<*const ()>);
 
-
 #[cfg(feature = "auto-hash-id-location")]
 static mut LOCATIONS: Option<HashSet<u64>> = None;
 
 impl WindowContext {
 	pub unsafe fn create_unsafe() -> Self {
-		Self { 0: Default::default() }
+		Self {
+			0: Default::default(),
+		}
 	}
 
 	#[cfg(feature = "auto-hash-id-location")]
@@ -6666,26 +6727,21 @@ impl WindowContext {
 		content_closure(self);
 		self.pop_surface();
 	}
-	pub fn push_cut_layout(
+	pub fn push_cut_layout(&self, ui_cut: UiCut, size: f32, add_margin: bool) {
+		unsafe {
+			stereokit_sys::ui_layout_push_cut(ui_cut as ui_cut_, size, add_margin as bool32_t)
+		}
+	}
+	pub fn pop_layout(&self) {
+		unsafe { stereokit_sys::ui_layout_pop() }
+	}
+	pub fn cut_layout(
 		&self,
 		ui_cut: UiCut,
 		size: f32,
 		add_margin: bool,
+		content_closure: impl FnOnce(&WindowContext),
 	) {
-		unsafe {
-			stereokit_sys::ui_layout_push_cut(
-				ui_cut as ui_cut_,
-				size,
-				add_margin as bool32_t
-			)
-		}
-	}
-	pub fn pop_layout(&self) {
-		unsafe {
-			stereokit_sys::ui_layout_pop()
-		}
-	}
-	pub fn cut_layout(&self, ui_cut: UiCut, size: f32, add_margin: bool, content_closure: impl FnOnce(&WindowContext)) {
 		self.push_cut_layout(ui_cut, size, add_margin);
 		content_closure(self);
 		self.pop_layout();
@@ -6712,9 +6768,7 @@ impl WindowContext {
 	}
 	pub fn stack_hash(&self, id: impl AsRef<str>) -> u64 {
 		let id = CString::new(id.as_ref()).unwrap();
-		unsafe {
-			stereokit_sys::ui_stack_hash(id.as_ptr())
-		}
+		unsafe { stereokit_sys::ui_stack_hash(id.as_ptr()) }
 	}
 	pub fn label(&self, text: impl AsRef<str>, use_padding: bool) {
 		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
@@ -6730,31 +6784,51 @@ impl WindowContext {
 	}
 	pub fn button(&self, text: impl AsRef<str>) -> bool {
 		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
-		unsafe {
-			stereokit_sys::ui_button(c_str.as_ptr()) != 0
-		}
+		unsafe { stereokit_sys::ui_button(c_str.as_ptr()) != 0 }
 	}
-	pub fn button_at(&self, text: impl AsRef<str>, window_relative_pos: impl Into<Vec3>, size: impl Into<Vec2>) -> bool {
+	pub fn button_at(
+		&self,
+		text: impl AsRef<str>,
+		window_relative_pos: impl Into<Vec3>,
+		size: impl Into<Vec2>,
+	) -> bool {
 		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
 		unsafe {
-			stereokit_sys::ui_button_at(c_str.as_ptr(), window_relative_pos.into().into(), size.into().into()) != 0
+			stereokit_sys::ui_button_at(
+				c_str.as_ptr(),
+				window_relative_pos.into().into(),
+				size.into().into(),
+			) != 0
 		}
 	}
 	pub fn same_line(&self) {
-		unsafe {
-			stereokit_sys::ui_sameline()
-		}
+		unsafe { stereokit_sys::ui_sameline() }
 	}
-	pub fn hz_slider(&self, id: impl AsRef<str>, value: &mut f32, min: f32, max: f32, step: f32, width: f32) {
+	pub fn hz_slider(
+		&self,
+		id: impl AsRef<str>,
+		value: &mut f32,
+		min: f32,
+		max: f32,
+		step: f32,
+		width: f32,
+	) {
 		let c_str = std::ffi::CString::new(id.as_ref()).unwrap();
 		unsafe {
-			stereokit_sys::ui_hslider(c_str.as_ptr(), value as *mut f32, min, max, step, width, 0, 0);
+			stereokit_sys::ui_hslider(
+				c_str.as_ptr(),
+				value as *mut f32,
+				min,
+				max,
+				step,
+				width,
+				0,
+				0,
+			);
 		}
 	}
 	pub fn set_color(&self, color: Color128) {
-		unsafe {
-			stereokit_sys::ui_set_color(color)
-		}
+		unsafe { stereokit_sys::ui_set_color(color) }
 	}
 	pub fn set_theme_color(&self, color_type: UiColor, color_gamma: Color128) {
 		unsafe {
@@ -6762,13 +6836,9 @@ impl WindowContext {
 		}
 	}
 	pub fn area_remaining(&self) -> Vec2 {
-		unsafe {
-			stereokit_sys::ui_area_remaining()
-		}.into()
+		unsafe { stereokit_sys::ui_area_remaining() }.into()
 	}
 	pub fn layout_at(&self) -> Vec3 {
-		unsafe {
-			stereokit_sys::ui_layout_at()
-		}.into()
+		unsafe { stereokit_sys::ui_layout_at() }.into()
 	}
 }

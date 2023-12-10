@@ -1,4 +1,4 @@
-	use std::ptr;
+use std::ptr;
 
 use stereokit_sys::*;
 fn main() {
@@ -24,7 +24,9 @@ fn main() {
 			render_multisample: 0,
 			android_java_vm: ptr::null_mut(),
 			android_activity: ptr::null_mut(),
-    		origin: origin_mode__origin_mode_floor,
+			origin: origin_mode__origin_mode_floor,
+			mode: app_mode__app_mode_xr,
+			omit_empty_frames: 1,
 		}) == 0
 		{
 			panic!("Unable to initialize StereoKit");
