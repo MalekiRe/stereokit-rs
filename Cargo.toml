@@ -11,7 +11,6 @@ repository = "https://github.com/MalekiRe/stereokit-rs"
 [features]
 default = ["auto-hash-id-location", "serde"]
 physics = ["stereokit-sys/physics"]
-linux-egl = ["stereokit-sys/linux-egl"]
 bevy_ecs = ["stereokit-sys/bevy_ecs", "dep:bevy_ecs"]
 bevy_reflect = ["stereokit-sys/bevy_reflect", "dep:bevy_reflect"]
 serde = ["stereokit-sys/serde", "glam/serde"]

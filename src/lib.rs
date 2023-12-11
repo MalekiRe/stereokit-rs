@@ -347,6 +347,23 @@ pub enum OriginMode {
 	Stage = 2,
 }
 
+/// Which operation mode should we use for this app? Default is XR, and by default the app will fall back to Simulator if XR fails or is unavailable.
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
+pub enum AppMode {
+	/// No mode has been specified, default behavior will be used. StereoKit will pick XR in this case.
+	None  = 0,
+	/// Creates an OpenXR or WebXR instance, and drives display/input through that.
+	XR = 1,
+	/// Creates a flat window, and simulates some XR functionality. Great for development and debugging.
+	Simulator = 2,
+	/// Creates a flat window and displays to that, but doesn't simulate XR at all. You will need to control your own 
+	/// camera here. This can be useful if using StereoKit for non-XR 3D applications.
+	Window = 3,
+	/// No display at all! StereoKit won't even render to a texture unless requested to. This may be good for running 
+	/// tests on a server, or doing graphics related tool or CLI work.
+	Offscreen = 4,
+}
 /// This is used to determine what kind of depth buffer StereoKit uses!
 #[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
 #[repr(u32)]
@@ -446,6 +463,8 @@ pub struct Settings {
 	pub assets_folder: PathBuf,
 	/// Which display type should we try to load? Default is DisplayMode.MixedReality.
 	pub display_preference: DisplayMode,
+	/// Which operation mode should we use for this app? Default is XR, and by default the app will fall back to Simulator if XR fails or is unavailable.
+	pub mode : AppMode,
 	///If the preferred display fails, should we avoid falling back to flatscreen and just crash out? Default is false.
 	pub no_flatscreen_fallback: bool,
 	/// What type of background blend mode do we prefer for this application? Are you trying to build an Opaque/Immersive/VR app, or would you like the display to be AnyTransparent, so the world will show up behind your content, if that’s an option? Note that this is a preference only, and if it’s not available on this device, the app will fall back to the runtime’s preference instead! By default, (DisplayBlend.None) this uses the runtime’s preference.
@@ -471,7 +490,11 @@ pub struct Settings {
 	pub disable_desktop_input_window: bool,
 	/// By default, StereoKit will slow down when the application is out of focus. This is useful for saving processing power while the app is out-of-focus, but may not always be desired. In particular, running multiple copies of a SK app for testing networking code may benefit from this setting.
 	pub disable_unfocused_sleep: bool,
+	/// If you know in advance that you need this feature, this setting allows you to set `Renderer.Scaling` before initialization. This avoids creating and discarding a large and unnecessary swapchain object. Default value is 1.
 	pub render_scaling: f32,
+	/// If you know in advance that you need this feature, this setting allows you to set `Renderer.Multisample` before initialization. This avoids creating and discarding a large and unnecessary swapchain object. Default value is 1.
+	pub render_multisample: i32,
+	/// Set the behavior of StereoKit's initial origin. Default behavior is OriginMode.Local, which is the most universally supported origin mode. Different origin modes have varying levels of support on different XR runtimes, and StereoKit will provide reasonable fallbacks for each. NOTE that when falling back, StereoKit will use a different root origin mode plus an offset. You can check World.OriginMode and World.OriginOffset to inspect what StereoKit actually landed on.
 	pub origin: OriginMode,
 	///If there's nothing to draw, add an option to skip submitting projection layers to OpenXR. This can be a nice optimization for overlay applications that may want to idle without showing anything until they're needed.
 	pub omit_empty_frames: bool,
@@ -482,6 +505,7 @@ impl Default for Settings {
 			app_name: "StereoKit".to_string(),
 			assets_folder: PathBuf::from(""),
 			display_preference: DisplayMode::MixedReality,
+			mode : AppMode::XR,
 			no_flatscreen_fallback: false,
 			blend_preference: DisplayBlend::None,
 			depth_mode: DepthMode::Balanced,
@@ -496,6 +520,7 @@ impl Default for Settings {
 			disable_desktop_input_window: false,
 			disable_unfocused_sleep: false,
 			render_scaling: 1.0,
+			render_multisample: 1,
 			origin : OriginMode::Local,
 			omit_empty_frames : true,
 		}
@@ -513,6 +538,7 @@ impl From<sk_settings_t> for Settings {
 				app_name,
 				assets_folder,
 				display_preference,
+				mode ,
 				blend_preference,
 				no_flatscreen_fallback,
 				depth_mode,
@@ -527,11 +553,11 @@ impl From<sk_settings_t> for Settings {
 				disable_desktop_input_window,
 				disable_unfocused_sleep,
 				render_scaling,
-				render_multisample: _,
+				render_multisample,
 				origin,
 				omit_empty_frames,
 				android_java_vm: _,
-				android_activity: _,
+				android_activity: _, 
 			} => unsafe {
 				Self {
 					app_name: CStr::from_ptr(app_name).to_str().unwrap().to_string(),
@@ -542,6 +568,7 @@ impl From<sk_settings_t> for Settings {
 						.parse()
 						.unwrap(),
 					display_preference: std::mem::transmute(display_preference),
+					mode : std::mem::transmute(mode),
 					no_flatscreen_fallback: no_flatscreen_fallback != 0,
 					blend_preference: std::mem::transmute(blend_preference),
 					depth_mode: std::mem::transmute(depth_mode),
@@ -556,6 +583,7 @@ impl From<sk_settings_t> for Settings {
 					disable_desktop_input_window: disable_desktop_input_window != 0,
 					disable_unfocused_sleep: disable_unfocused_sleep != 0,
 					render_scaling,
+					render_multisample,
 					origin:std::mem::transmute(origin),
 					omit_empty_frames: omit_empty_frames !=0,
 				}
@@ -570,6 +598,7 @@ impl Into<sk_settings_t> for Settings {
 				app_name,
 				assets_folder,
 				display_preference,
+				mode ,
 				no_flatscreen_fallback,
 				blend_preference,
 				depth_mode,
@@ -584,6 +613,7 @@ impl Into<sk_settings_t> for Settings {
 				disable_desktop_input_window,
 				disable_unfocused_sleep,
 				render_scaling,
+				render_multisample,
 				origin,
 				omit_empty_frames,
 			} => {
@@ -593,6 +623,7 @@ impl Into<sk_settings_t> for Settings {
 					app_name: app_name.into_raw(),
 					assets_folder: assets_folder.into_raw(),
 					display_preference: display_preference as display_mode_,
+					mode : mode as sys::app_mode_,
 					blend_preference: blend_preference as display_blend_,
 					no_flatscreen_fallback: no_flatscreen_fallback as bool32_t,
 					depth_mode: depth_mode as depth_mode_,
@@ -607,7 +638,7 @@ impl Into<sk_settings_t> for Settings {
 					disable_desktop_input_window: disable_desktop_input_window as bool32_t,
 					disable_unfocused_sleep: disable_unfocused_sleep as bool32_t,
 					render_scaling,
-					render_multisample: 1,
+					render_multisample,
         			origin: origin as stereokit_sys::origin_mode_,
 					omit_empty_frames: omit_empty_frames as bool32_t,
 					android_java_vm: null_mut(),
