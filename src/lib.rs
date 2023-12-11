@@ -19,7 +19,6 @@ use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use sys::origin_mode_;
 use std::any::Any;
 use std::collections::HashSet;
 use std::ffi::{c_void, CStr, CString};
@@ -240,6 +239,8 @@ pub enum StereoKitError {
 	TexMemory,
 	#[error("failed to create a tex from file {0} for reason {1}")]
 	TexFile(PathBuf, String),
+	#[error("failed to create a tex from color {0} for reason {1}")]
+	TexColor(String, String),	
 	#[error("failed to find font {0} for reason {1}")]
 	FontFind(String, String),
 	#[error("failed to create font from file {0} for reason {1}")]
@@ -255,7 +256,7 @@ pub enum StereoKitError {
 	#[error("failed to create sprite from texture")]
 	SpriteCreate,
 	#[error("failed to create sprite from file {0}")]
-	SpriteFile(String),
+	SpriteFile(PathBuf),
 	#[error("failed to find sprite {0} for reason {1}")]
 	SpriteFind(String, String),
 	#[error("failed to find sound {0}")]
@@ -346,6 +347,23 @@ pub enum OriginMode {
 	Stage = 2,
 }
 
+/// Which operation mode should we use for this app? Default is XR, and by default the app will fall back to Simulator if XR fails or is unavailable.
+#[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
+#[repr(u32)]
+pub enum AppMode {
+	/// No mode has been specified, default behavior will be used. StereoKit will pick XR in this case.
+	None  = 0,
+	/// Creates an OpenXR or WebXR instance, and drives display/input through that.
+	XR = 1,
+	/// Creates a flat window, and simulates some XR functionality. Great for development and debugging.
+	Simulator = 2,
+	/// Creates a flat window and displays to that, but doesn't simulate XR at all. You will need to control your own 
+	/// camera here. This can be useful if using StereoKit for non-XR 3D applications.
+	Window = 3,
+	/// No display at all! StereoKit won't even render to a texture unless requested to. This may be good for running 
+	/// tests on a server, or doing graphics related tool or CLI work.
+	Offscreen = 4,
+}
 /// This is used to determine what kind of depth buffer StereoKit uses!
 #[derive(Debug, Copy, Clone, Deserialize_repr, Serialize_repr, PartialEq, Eq)]
 #[repr(u32)]
@@ -445,6 +463,8 @@ pub struct Settings {
 	pub assets_folder: PathBuf,
 	/// Which display type should we try to load? Default is DisplayMode.MixedReality.
 	pub display_preference: DisplayMode,
+	/// Which operation mode should we use for this app? Default is XR, and by default the app will fall back to Simulator if XR fails or is unavailable.
+	pub mode : AppMode,
 	///If the preferred display fails, should we avoid falling back to flatscreen and just crash out? Default is false.
 	pub no_flatscreen_fallback: bool,
 	/// What type of background blend mode do we prefer for this application? Are you trying to build an Opaque/Immersive/VR app, or would you like the display to be AnyTransparent, so the world will show up behind your content, if that’s an option? Note that this is a preference only, and if it’s not available on this device, the app will fall back to the runtime’s preference instead! By default, (DisplayBlend.None) this uses the runtime’s preference.
@@ -470,8 +490,14 @@ pub struct Settings {
 	pub disable_desktop_input_window: bool,
 	/// By default, StereoKit will slow down when the application is out of focus. This is useful for saving processing power while the app is out-of-focus, but may not always be desired. In particular, running multiple copies of a SK app for testing networking code may benefit from this setting.
 	pub disable_unfocused_sleep: bool,
+	/// If you know in advance that you need this feature, this setting allows you to set `Renderer.Scaling` before initialization. This avoids creating and discarding a large and unnecessary swapchain object. Default value is 1.
 	pub render_scaling: f32,
+	/// If you know in advance that you need this feature, this setting allows you to set `Renderer.Multisample` before initialization. This avoids creating and discarding a large and unnecessary swapchain object. Default value is 1.
+	pub render_multisample: i32,
+	/// Set the behavior of StereoKit's initial origin. Default behavior is OriginMode.Local, which is the most universally supported origin mode. Different origin modes have varying levels of support on different XR runtimes, and StereoKit will provide reasonable fallbacks for each. NOTE that when falling back, StereoKit will use a different root origin mode plus an offset. You can check World.OriginMode and World.OriginOffset to inspect what StereoKit actually landed on.
 	pub origin: OriginMode,
+	///If there's nothing to draw, add an option to skip submitting projection layers to OpenXR. This can be a nice optimization for overlay applications that may want to idle without showing anything until they're needed.
+	pub omit_empty_frames: bool,
 }
 impl Default for Settings {
 	fn default() -> Self {
@@ -479,6 +505,7 @@ impl Default for Settings {
 			app_name: "StereoKit".to_string(),
 			assets_folder: PathBuf::from(""),
 			display_preference: DisplayMode::MixedReality,
+			mode : AppMode::XR,
 			no_flatscreen_fallback: false,
 			blend_preference: DisplayBlend::None,
 			depth_mode: DepthMode::Balanced,
@@ -493,7 +520,9 @@ impl Default for Settings {
 			disable_desktop_input_window: false,
 			disable_unfocused_sleep: false,
 			render_scaling: 1.0,
+			render_multisample: 1,
 			origin : OriginMode::Local,
+			omit_empty_frames : true,
 		}
 	}
 }
@@ -509,6 +538,7 @@ impl From<sk_settings_t> for Settings {
 				app_name,
 				assets_folder,
 				display_preference,
+				mode ,
 				blend_preference,
 				no_flatscreen_fallback,
 				depth_mode,
@@ -523,10 +553,11 @@ impl From<sk_settings_t> for Settings {
 				disable_desktop_input_window,
 				disable_unfocused_sleep,
 				render_scaling,
-				render_multisample: _,
+				render_multisample,
 				origin,
+				omit_empty_frames,
 				android_java_vm: _,
-				android_activity: _,
+				android_activity: _, 
 			} => unsafe {
 				Self {
 					app_name: CStr::from_ptr(app_name).to_str().unwrap().to_string(),
@@ -537,6 +568,7 @@ impl From<sk_settings_t> for Settings {
 						.parse()
 						.unwrap(),
 					display_preference: std::mem::transmute(display_preference),
+					mode : std::mem::transmute(mode),
 					no_flatscreen_fallback: no_flatscreen_fallback != 0,
 					blend_preference: std::mem::transmute(blend_preference),
 					depth_mode: std::mem::transmute(depth_mode),
@@ -551,7 +583,9 @@ impl From<sk_settings_t> for Settings {
 					disable_desktop_input_window: disable_desktop_input_window != 0,
 					disable_unfocused_sleep: disable_unfocused_sleep != 0,
 					render_scaling,
+					render_multisample,
 					origin:std::mem::transmute(origin),
+					omit_empty_frames: omit_empty_frames !=0,
 				}
 			},
 		}
@@ -564,6 +598,7 @@ impl Into<sk_settings_t> for Settings {
 				app_name,
 				assets_folder,
 				display_preference,
+				mode ,
 				no_flatscreen_fallback,
 				blend_preference,
 				depth_mode,
@@ -578,7 +613,9 @@ impl Into<sk_settings_t> for Settings {
 				disable_desktop_input_window,
 				disable_unfocused_sleep,
 				render_scaling,
+				render_multisample,
 				origin,
+				omit_empty_frames,
 			} => {
 				let app_name = CString::new(app_name).unwrap();
 				let assets_folder = CString::new(assets_folder.to_str().unwrap()).unwrap();
@@ -586,6 +623,7 @@ impl Into<sk_settings_t> for Settings {
 					app_name: app_name.into_raw(),
 					assets_folder: assets_folder.into_raw(),
 					display_preference: display_preference as display_mode_,
+					mode : mode as sys::app_mode_,
 					blend_preference: blend_preference as display_blend_,
 					no_flatscreen_fallback: no_flatscreen_fallback as bool32_t,
 					depth_mode: depth_mode as depth_mode_,
@@ -600,8 +638,9 @@ impl Into<sk_settings_t> for Settings {
 					disable_desktop_input_window: disable_desktop_input_window as bool32_t,
 					disable_unfocused_sleep: disable_unfocused_sleep as bool32_t,
 					render_scaling,
-					render_multisample: 1,
-        			origin: origin as origin_mode_,
+					render_multisample,
+        			origin: origin as stereokit_sys::origin_mode_,
+					omit_empty_frames: omit_empty_frames as bool32_t,
 					android_java_vm: null_mut(),
 					android_activity: null_mut(),
 				};
@@ -725,6 +764,10 @@ impl SettingsBuilder {
 	}
 	pub fn origin (&mut self, origin_mode : OriginMode) -> &mut Self {
 		self.settings.origin = origin_mode;
+		self
+	}
+	pub fn omit_empty_frames (&mut self, origin_mode : bool) -> &mut Self {
+		self.settings.omit_empty_frames = origin_mode;
 		self
 	}
 	fn build(&mut self) -> Settings {
@@ -1385,7 +1428,7 @@ impl Into<spherical_harmonics_t> for SphericalHarmonics {
 }
 
 /// This represents a single vertex in a Mesh, all StereoKit Meshes currently use this exact layout!
-#[derive(Debug, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Vert {
 	/// Position of the vertex, in model space coordinates.
@@ -2503,15 +2546,14 @@ macro_rules! static_shader {
 }
 
 static_shader!("default/shader", DEFAULT);
-static_shader!("default/shader_blit", BLIT);
 static_shader!("default/shader_pbr", PBR);
-static_shader!("default/shader_pbr_clip", PRB_CLIP);
+static_shader!("default/shader_pbr_clip", PBR_CLIP);
 static_shader!("default/shader_font", FONT);
 static_shader!("default/shader_ui", UI);
 static_shader!("default/shader_ui_box", UI_BOX);
-static_shader!("default/shader_ui_quadrant", UI_QUADRANT);
-static_shader!("default/shader_sky", SKY);
-static_shader!("default/shader_lines", LINES);
+static_shader!("default/shader_unlit", UNLIT);
+static_shader!("default/shader_unlit_clip", UNLIT_CLIP);
+static_shader!("default/shader_equirect", EQUIRECT);
 
 macro_rules! static_sound {
     ($id: literal, $name: ident) => {
@@ -2612,6 +2654,26 @@ pub trait StereoKitDraw: StereoKitSingleThread {
 		unsafe {
 			stereokit_sys::model_draw(
 				model.as_ref().0.as_ptr(),
+				transform.into().into(),
+				color_linear,
+				layer.bits as IntegerType,
+			)
+		}
+	}
+
+	/// Adds this Model to the render queue for this frame! If the Hierarchy has a transform on it, that transform is combined with the Matrix provided here.
+	fn model_draw_mat(
+		&self,
+		model: impl AsRef<Model>,
+		material_override: impl AsRef<Material>,
+		transform: impl Into<Mat4>,
+		color_linear: Color128,
+		layer: RenderLayer,
+	) {
+		unsafe {
+			stereokit_sys::model_draw_mat(
+				model.as_ref().0.as_ptr(),
+				material_override.as_ref().0.as_ptr(),
 				transform.into().into(),
 				color_linear,
 				layer.bits as IntegerType,
@@ -3093,12 +3155,12 @@ pub trait StereoKitMultiThread {
 	}
 
 	/// Finds the Mesh with the matching id, and returns a reference to it. If no Mesh it found, it returns Error
-	fn mesh_find<S: Into<String> + Clone>(&self, name: S) -> SkResult<Mesh> {
-		let c_str = std::ffi::CString::new(name.clone().into())
-			.map_err(|_| StereoKitError::MeshCString(name.clone().into()))?;
+	fn mesh_find<S: AsRef<str>>(&self, name: S) -> SkResult<Mesh> {
+		let c_str = CString::new(name.as_ref())
+			.map_err(|_| StereoKitError::MeshCString(name.as_ref().into()))?;
 		Ok(Mesh(
 			NonNull::new(unsafe { stereokit_sys::mesh_find(c_str.as_ptr()) })
-				.ok_or(StereoKitError::MeshFind(name.into()))?,
+				.ok_or(StereoKitError::MeshFind(name.as_ref().into()))?,
 		))
 	}
 
@@ -3112,8 +3174,8 @@ pub trait StereoKitMultiThread {
 		Mesh(NonNull::new(unsafe { stereokit_sys::mesh_copy(mesh.as_ref().0.as_ptr()) }).unwrap())
 	}
 
-	fn mesh_set_id<Me: AsRef<Mesh>, S: Into<String>>(&self, mesh: Me, id: S) {
-		let c_str = std::ffi::CString::new(id.into()).unwrap();
+	fn mesh_set_id<Me: AsRef<Mesh>, S: AsRef<str>>(&self, mesh: Me, id: S) {
+		let c_str = CString::new(id.as_ref()).unwrap();
 		unsafe { stereokit_sys::mesh_set_id(mesh.as_ref().0.as_ptr(), c_str.as_ptr()) }
 	}
 
@@ -3177,34 +3239,43 @@ pub trait StereoKitMultiThread {
 	/// GetVerts	This marshalls the Mesh’s vertex data into an array. If KeepData is false, then the Mesh is not storing verts on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
 	fn mesh_get_verts_ref(&self, mesh: &Mesh) -> &mut [Vert] {
 		unsafe {
-			let mut verts_pointer = null_mut();
+			let verts_pointer = CString::new("H").unwrap().into_raw() as *mut *mut vert_t;
 			let mut verts_len = 0;
-			stereokit_sys::mesh_get_verts(mesh.0.as_ptr(), &mut verts_pointer, &mut verts_len, 0);
-			&mut *slice_from_raw_parts_mut(std::mem::transmute(verts_pointer), verts_len as usize)
+			stereokit_sys::mesh_get_verts(mesh.0.as_ptr(), verts_pointer, &mut verts_len, 0);
+			&mut *slice_from_raw_parts_mut(std::mem::transmute(*verts_pointer), verts_len as usize)
 		}
 	}
 
-	/// GetVerts	This marshalls the Mesh’s vertex data into an array. If KeepData is false, then the Mesh is not storing verts on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
+	/// GetVerts	This marshalls the Mesh’s vertex data and copy it into an Vec. If KeepData is false, then the Mesh is not storing verts on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
 	fn mesh_get_verts_copy<Me: AsRef<Mesh>>(&self, mesh: Me) -> Vec<Vert> {
-		unsafe {
-			let mut verts_pointer = null_mut();
-			let mut verts_len = 0;
-			stereokit_sys::mesh_get_verts(
-				mesh.as_ref().0.as_ptr(),
-				&mut verts_pointer,
-				&mut verts_len,
-				0,
-			);
-			Vec::from_raw_parts(
-				std::mem::transmute(verts_pointer),
-				verts_len as usize,
-				verts_len as usize,
-			)
-		}
+		self.mesh_get_verts_ref(mesh.as_ref()).to_vec()
+		// Don't use the binding function has you'll have do deallocate the returned structure
+		// unsafe {
+		// 	let verts_pointer = CString::new("H").unwrap().into_raw() as *mut *mut vert_t;
+		// 	let mut verts_len = 0;
+		// 	stereokit_sys::mesh_get_verts(
+		// 		mesh.as_ref().0.as_ptr(),
+		// 		verts_pointer,
+		// 		&mut verts_len,
+		// 		0,
+		// 	);
+		// 	let slice = std::slice::from_raw_parts(
+		// 		std::mem::transmute(*verts_pointer),
+		// 		verts_len as usize ,
+		// 	);
+		// 	let vec = slice.to_vec();
+		// 	std::ptr::drop_in_place(verts_pointer);
+		// 	vec
+		// }
 	}
 
+	/// The number of vertices stored in this Mesh! This is available to you regardless of whether or not KeepData is set.
+	fn mesh_get_vert_count<Me: AsRef<Mesh>>(&self, mesh: Me) -> i32 {
+		unsafe { stereokit_sys::mesh_get_vert_count(mesh.as_ref().0.as_ptr()) }
+	}
+		
 	/// Assigns the face indices for this Mesh! Faces are always triangles, there are only ever three indices per face. This function will create a index buffer object on the graphics card right away. If you’re calling this a second time, the buffer will be marked as dynamic and re-allocated. If you’re calling this a third time, the buffer will only re-allocate if the buffer is too small, otherwise it just copies in the data!
-	fn mesh_set_inds(&self, mesh: &Mesh, inds: &[i32]) {
+	fn mesh_set_inds(&self, mesh: &Mesh, inds: &[u32]) {
 		unsafe {
 			stereokit_sys::mesh_set_inds(
 				mesh.0.as_ptr(),
@@ -3215,30 +3286,32 @@ pub trait StereoKitMultiThread {
 	}
 
 	/// This marshalls the Mesh’s index data into an array. If KeepData is false, then the Mesh is not storing indices on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
-	fn mesh_get_inds_ref(&self, mesh: &Mesh) -> &mut [i32] {
+	fn mesh_get_inds_ref(&self, mesh: &Mesh) -> &mut [u32] {
 		unsafe {
-			let mut inds_ptr = null_mut();
-			let mut inds_len = 0;
-			stereokit_sys::mesh_get_inds(mesh.0.as_ptr(), &mut inds_ptr, &mut inds_len, 0);
-			&mut *slice_from_raw_parts_mut(std::mem::transmute(inds_ptr), inds_len as usize)
+			let inds_ptr = CString::new("H").unwrap().into_raw() as *mut *mut u32;
+			let mut inds_len = 0 as i32;
+			stereokit_sys::mesh_get_inds(mesh.0.as_ptr(), inds_ptr, &mut inds_len, 0);
+			&mut *slice_from_raw_parts_mut(std::mem::transmute(*inds_ptr), inds_len as usize)
 		}
 	}
 
-	/// This marshalls the Mesh’s index data into an array. If KeepData is false, then the Mesh is not storing indices on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
-	fn mesh_get_inds_copy<Me: AsRef<Mesh>>(&self, mesh: Me) -> Vec<i32> {
-		unsafe {
-			let mut inds_ptr = null_mut();
-			let mut inds_len = 0;
-			stereokit_sys::mesh_get_inds(mesh.as_ref().0.as_ptr(), &mut inds_ptr, &mut inds_len, 1);
-			Vec::from_raw_parts(
-				std::mem::transmute(inds_ptr),
-				inds_len as usize,
-				inds_len as usize,
-			)
-		}
+	/// This marshalls the Mesh’s index data and copy it into an Vec. If KeepData is false, then the Mesh is not storing indices on the CPU, and this information will not be available. Due to the way marshalling works, this is not a cheap function!
+	fn mesh_get_inds_copy<Me: AsRef<Mesh>>(&self, mesh: Me) -> Vec<u32> {
+		self.mesh_get_inds_ref(mesh.as_ref()).to_vec()
+		// Don't use the binding function has you'll have do deallocate the returned structure
+		// unsafe {
+		// 	let inds_ptr = CString::new("H").unwrap().into_raw() as *mut *mut u32;
+		// 	let mut inds_len = 0;
+		// 	stereokit_sys::mesh_get_inds(mesh.as_ref().0.as_ptr(), inds_ptr, &mut inds_len, 1);
+		// 	Vec::from_raw_parts(
+		// 		std::mem::transmute(*inds_ptr),
+		// 		inds_len as usize,
+		// 		inds_len as usize,
+		// 	)
+		// }
 	}
 
-	/// The number of vertices stored in this Mesh! This is available to you regardless of whether or not KeepData is set.
+	/// The number of indices stored in this Mesh! This is available to you regardless of whether or not KeepData is set.
 	fn mesh_get_ind_count<Me: AsRef<Mesh>>(&self, mesh: Me) -> i32 {
 		unsafe { stereokit_sys::mesh_get_ind_count(mesh.as_ref().0.as_ptr()) }
 	}
@@ -3359,19 +3432,26 @@ pub trait StereoKitMultiThread {
 		mesh: Me,
 		triangle_index: u32,
 	) -> Option<[Vert; 3]> {
-		let out_a = null_mut();
-		let out_b = null_mut();
-		let out_c = null_mut();
+		let v_a = Vert::default();
+		let v_b = Vert::default();
+		let v_c = Vert::default();
+		let out_a: *const Vert = &v_a ;
+		let out_b: *const Vert = &v_b ;
+		let out_c: *const Vert = &v_c ;
+		let ptr_a = out_a as *const c_void;
+		let ptr_b = out_b as *const c_void;
+		let ptr_c = out_c as *const c_void;
+
 		unsafe {
 			match stereokit_sys::mesh_get_triangle(
 				mesh.as_ref().0.as_ptr(),
 				triangle_index,
-				out_a,
-				out_b,
-				out_c,
+				ptr_a as *mut vert_t,
+				ptr_b as *mut vert_t,
+				ptr_c as *mut vert_t,
 			) != 0
 			{
-				true => Some([(*out_a).into(), (*out_b).into(), (*out_c).into()]),
+				true => Some([v_a, v_b, v_c]),
 				false => None,
 			}
 		}
@@ -3453,14 +3533,14 @@ pub trait StereoKitMultiThread {
 			.into()
 	}
 
-	fn tex_find<S: Into<String> + Clone>(&self, id: S) -> SkResult<Tex> {
-		let c_str = CString::new(id.clone().into())
-			.map_err(|_| StereoKitError::TexCString(id.clone().into()))?;
+	fn tex_find<S: AsRef<str>>(&self, id: S) -> SkResult<Tex> {
+		let c_str = CString::new(id.as_ref())
+			.map_err(|_| StereoKitError::TexCString(id.as_ref().into()))?;
 
 		Ok(Tex(NonNull::new(unsafe {
 			stereokit_sys::tex_find(c_str.as_ptr())
 		})
-		.ok_or(StereoKitError::TexFind(id.clone().into()))?))
+		.ok_or(StereoKitError::TexFind(id.as_ref().into()))?))
 	}
 
 	/// Sets up an empty texture container! Fill it with data using SetColors next! Creates a default unique asset Id.
@@ -3471,9 +3551,53 @@ pub trait StereoKitMultiThread {
 		.unwrap())
 	}
 
-	//TODO: fn tex_create_color32()
-	//TODO: fn tex_create_color128()
+	/// Creates a texture and sets the texture’s pixels using a color array! This will be an image of type TexType.Image, and a format of TexFormat.Rgba32 or TexFormat.Rgba32Linear depending on the value of the sRGBData parameter.
+	/// 
+	/// [StereoKiError::TexColor] is thrown if the data do not contains width*height color32
+	fn tex_create_color32(
+		&self,
+		in_arr_data: &[Color32],
+		width: usize,
+		height: usize,
+		srgb_data: bool,
+	) -> SkResult<Tex> {
+		if width * height != {in_arr_data}.len() {
+			return Err(StereoKitError::TexColor(
+				format!("{}x{} differ from {}",height,width,{in_arr_data}.len()),
+				"tex_create_color32 failed".to_string(),));
+		}
+		let tex = Tex(NonNull::new(unsafe { sys::tex_create_color32(in_arr_data.as_ptr() as *mut sys::color32, width as i32, height as i32, srgb_data as i32)})
+		.ok_or(StereoKitError::TexColor(
+			format!("{}x{}",height,width),
+			"tex_create_color32 failed".to_string(),
+		))?);
 
+		Ok(tex)
+	}
+
+	/// Creates a texture and sets the texture’s pixels using a color array! Color values are converted to 32 bit colors, so this means a memory allocation and conversion. Prefer the Color32 overload for performance, or create an empty Texture and use SetColors for more flexibility. This will be an image of type TexType.Image, and a format of TexFormat.Rgba32 or TexFormat.Rgba32Linear depending on the value of the sRGBData parameter.
+	/// 
+	/// [StereoKiError::TexColor] is thrown if the data do not contains width*height color128.
+	fn tex_create_color128 (
+		&self,
+		in_arr_data: &[Color128],
+		width: usize,
+		height: usize,
+		srgb_data: bool,
+	) -> SkResult<Tex> {
+		if width * height != in_arr_data.len()  {
+			return Err(StereoKitError::TexColor(
+				format!("{}x{} differ from {}",height,width,in_arr_data.len()),
+				"tex_create_color128 failed".to_string(),));
+		}
+		let tex = Tex(NonNull::new(unsafe { sys::tex_create_color128(in_arr_data.as_ptr() as *mut sys::color128, width as i32, height as i32, srgb_data as i32)})
+		.ok_or(StereoKitError::TexColor(
+			format!("{}x{}",height,width),
+			"tex_create_color128 failed".to_string(),
+		))?);
+
+		Ok(tex)
+	}
 	/// Loads an image file stored in memory directly into a texture! Supported formats are: jpg, png, tga, bmp, psd, gif, hdr, pic. Asset Id will be the same as the filename.
 	fn tex_create_mem(&self, data: &[u8], srgb_data: bool, priority: i32) -> SkResult<Tex> {
 		Ok(Tex(NonNull::new(unsafe {
@@ -3510,7 +3634,47 @@ pub trait StereoKitMultiThread {
 		))?))
 	}
 
-	//TODO: tex_create_file_arr
+	/// Loads an array of image files directly into a single array texture! Array textures are often useful for shader effects,
+    /// layering, material merging, weird stuff, and will generally need a specific shader to support it. Supported formats 
+    /// are: jpg, png, tga, bmp, psd, gif, hdr, pic. Asset Id will be the hash of all the filenames merged consecutively.
+	/// 
+	/// file_count must be equal to in_arr_file length
+	fn tex_create_file_arr<P: AsRef<Path>>(
+		&self,
+		in_arr_files: &[P],
+		file_count: usize,
+		srgb_data: bool,
+		priority: i32,
+	) -> SkResult<Tex> {
+		let mut c_files = Vec::new();
+		for i in 0..file_count {
+			let path = in_arr_files[i].as_ref();
+			let path_buf = path.to_path_buf();
+			let c_str = CString::new(path.to_str().ok_or(StereoKitError::TexFile(
+				path_buf.clone(),
+				"CString conversion".to_string(),
+			))?)
+			.map_err(|_| StereoKitError::TexFile(path_buf.clone(), "CString Conversion during tex_create_file_arr".to_string()))?;
+			c_files.push(c_str);
+		}
+		let mut c_files_ptr = Vec::new();
+		for str in c_files.iter() {
+			c_files_ptr.push(str.as_ptr());
+		}
+		let in_arr_files_cstr = c_files_ptr.as_mut_slice().as_mut_ptr();
+		let tex = Tex(NonNull::new(
+			unsafe {stereokit_sys::tex_create_file_arr(
+				in_arr_files_cstr, 
+				file_count as i32,
+				srgb_data as bool32_t, 
+				priority)
+			})
+			.ok_or(StereoKitError::TexFile(
+				PathBuf::from(r"one_of_many_files"),
+				"tex_create_file_arr failed".to_string(),
+			))?);
+		Ok(tex)
+	}
 
 	/// Creates a cubemap texture from a single equirectangular image! You know, the ones that look like an unwrapped globe with the poles all stretched out. It uses some fancy shaders and texture blitting to create 6 faces from the equirectangular image.
 	fn tex_create_cubemap_file(
@@ -3526,7 +3690,7 @@ pub trait StereoKitMultiThread {
 			path_buf.clone(),
 			"CString conversion".to_string(),
 		))?)
-		.map_err(|_| StereoKitError::TexFile(path_buf.clone(), "CString Conversion".to_string()))?;
+		.map_err(|_| StereoKitError::TexFile(path_buf.clone(), "CString Conversion during tex_create_cubemap_file".to_string()))?;
 		let tex = Tex(NonNull::new(unsafe {
 			stereokit_sys::tex_create_cubemap_file(
 				c_str.as_ptr(),
@@ -3537,17 +3701,55 @@ pub trait StereoKitMultiThread {
 		})
 		.ok_or(StereoKitError::TexFile(
 			path_buf.clone(),
-			"tex_create_file failed".to_string(),
+			"tex_create_cubemap_file failed".to_string(),
 		))?);
 
 		Ok((sh.into(), tex))
 	}
 
-	//TODO: tex_create_cubemap_files
+	/// Creates a cubemap texture from 6 different image files! If you have a single equirectangular image, use tex_create_cubemap_file instead. Asset Id will be the first filename.
+    ///
+	/// order of the file names is +X -X +Y -Y +Z -Z
+	fn tex_create_cubemap_files<P: AsRef<Path>>(
+		&self,
+		equirectangular_files_utf8: &[P;6] ,
+		srgb_data: bool,
+		priority: i32,
+	) -> SkResult<(SphericalHarmonics, Tex)>  {
+		let mut sh: spherical_harmonics_t = sh_create(&[]).into();
+		let mut c_files = Vec::new();
+		for i in 0..6 {
+			let path = equirectangular_files_utf8[i].as_ref();
+			let path_buf = path.to_path_buf();
+			let c_str = CString::new(path.to_str().ok_or(StereoKitError::TexFile(
+				path_buf.clone(),
+				"CString conversion".to_string(),
+			))?)
+			.map_err(|_| StereoKitError::TexFile(path_buf.clone(), "CString Conversion during tex_create_cubemap_files".to_string()))?;
+			c_files.push(c_str);
+		}
+		let mut c_files_ptr = Vec::new();
+		for str in c_files.iter() {
+			c_files_ptr.push(str.as_ptr());
+		}
+		let in_arr_cube_face_file_xxyyzz = c_files_ptr.as_mut_slice().as_mut_ptr();
+		let tex = Tex(NonNull::new(
+			unsafe {stereokit_sys::tex_create_cubemap_files(
+				in_arr_cube_face_file_xxyyzz, 
+				srgb_data as bool32_t, 
+				&mut sh, 
+				priority)
+			})
+			.ok_or(StereoKitError::TexFile(
+				PathBuf::from(r"one_of_6_files"),
+				"tex_create_cubemap_files failed".to_string(),
+			))?);
+		Ok((sh.into(), tex))
+	}
 
 	/// Allows you to set the Id of the texture to a specific Id.
-	fn tex_set_id<T: AsRef<Tex>, S: Into<String> + Clone>(&self, tex: T, id: S) {
-		let c_str = CString::new(id.into()).unwrap();
+	fn tex_set_id<T: AsRef<Tex>, S: AsRef<str>>(&self, tex: T, id: S) {
+		let c_str = CString::new(id.as_ref()).unwrap();
 		unsafe { stereokit_sys::tex_set_id(tex.as_ref().0.as_ptr(), c_str.as_ptr()) }
 	}
 
@@ -3608,7 +3810,15 @@ pub trait StereoKitMultiThread {
 
 	//TODO: tex_on_load_remove
 
-	//TODO: tex_set_colors, need to use width*height checking
+	/// Set the texture’s pixels using a pointer to a chunk of memory! This is great if you’re pulling in some color data from native code, and don’t want to pay the cost of trying to marshal that data around.
+	/// Warning The check width*height*(TextureFormat size) upon the size of the data values must be done before calling tex_set_colors.
+	fn tex_set_colors<T: AsRef<Tex>>(&self, tex: T, width: usize, height: usize, data: *mut std::os::raw::c_void) {
+		unsafe {
+			stereokit_sys::tex_set_colors(
+				tex.as_ref().0.as_ptr(),
+				width as i32, height as i32, data)
+		}
+	}
 
 	//TODO: tex_set_color_arr
 
@@ -3633,18 +3843,24 @@ pub trait StereoKitMultiThread {
 		.unwrap())
 	}
 
-	//TODO: this is wrong, we need to allocate a buffer and insert it
-	// it is width * height * sizeof<color_format>
-	// fn tex_get_data<T: AsRef<Tex>>(&self, tex: T) -> &mut [u8] {
-	//     let ptr = null_mut();
-	//     let mut size = 0;
-	//     unsafe {
-	//         stereokit_sys::tex_get_data(tex.as_ref().0.as_ptr(), ptr, size);
-	//         &mut *slice_from_raw_parts_mut(std::mem::transmute(ptr), size)
-	//     }
-	// }
+	/// Retrieve the color data of the texture from the GPU. This can be a very slow operation, 
+	/// so use it cautiously. The out_data pointer must correspond to an array with the correct size.
+	/// 
+	/// Lenght of the array must be texture width * height of the unique mip
+	unsafe fn tex_get_data<'a, T: AsRef<Tex>>(&self, tex: T, out_data: *const c_void, size: usize) {
 
-	//TODO: tex_get_data_mip
+        stereokit_sys::tex_get_data(tex.as_ref().0.as_ptr(), out_data as *mut c_void, size);
+
+	}
+
+	/// Retrieve the color data of the texture from the GPU. This can be a very slow operation, 
+	/// so use it cautiously. The out_data pointer must correspond to an array with the correct size.
+	/// 
+	/// Lenght of the array must be texture width * height of the chosen mip
+	unsafe fn tex_get_data_mip<'a, T: AsRef<Tex>>(&self, tex: T, out_data: *const c_void, size: usize, mip: i32) {
+        stereokit_sys::tex_get_data_mip(tex.as_ref().0.as_ptr(), out_data as *mut c_void, size, mip);
+	}
+
 
 	/// This generates a solid color texture of the given dimensions. Can be quite nice for creating placeholder textures! Make sure to match linear/gamma colors with the correct format.
 	fn tex_gen_color(
@@ -3795,13 +4011,13 @@ pub trait StereoKitMultiThread {
 	}
 
 	/// Searches the asset list for a font with the given Id, returning Err if none is found.
-	fn font_find<S: Into<String> + Clone>(&self, id: S) -> SkResult<Font> {
-		let c_str = CString::new(id.clone().into()).map_err(|_| {
-			StereoKitError::FontFind(id.clone().into(), "CString conversion error".to_string())
+	fn font_find<S: AsRef<str>>(&self, id: S) -> SkResult<Font> {
+		let c_str = CString::new(id.as_ref()).map_err(|_| {
+			StereoKitError::FontFind(id.as_ref().into(), "CString conversion error".to_string())
 		})?;
 		Ok(Font(
 			NonNull::new(unsafe { stereokit_sys::font_find(c_str.as_ptr()) }).ok_or(
-				StereoKitError::FontFind(id.clone().into(), "font_find failed".to_string()),
+				StereoKitError::FontFind(id.as_ref().into(), "font_find failed".to_string()),
 			)?,
 		))
 	}
@@ -3824,8 +4040,35 @@ pub trait StereoKitMultiThread {
 		))
 	}
 
-	fn font_set_id<S: Into<String> + Clone>(&self, font: impl AsRef<Font>, id: S) {
-		let c_str = CString::new(id.into()).unwrap();
+	/// Loads a font and creates a font asset from it.
+	fn font_create_files<P: AsRef<Path>>(&self, in_arr_files: &[P], file_count : usize) -> SkResult<Font> {
+
+		let mut c_files = Vec::new();
+		for i in 0..file_count {
+			let path = in_arr_files[i].as_ref();
+			let path_buf = path.to_path_buf();
+			let c_str = CString::new(path.to_str().ok_or(StereoKitError::FontFile(
+				path_buf.clone(),
+				"CString conversion".to_string(),
+			))?)
+			.map_err(|_| StereoKitError::FontFile(path_buf.clone(), "CString Conversion during font_create_files".to_string()))?;
+			c_files.push(c_str);
+		}
+		let mut c_files_ptr = Vec::new();
+		for str in c_files.iter() {
+			c_files_ptr.push(str.as_ptr());
+		}
+		let in_arr_files_cstr = c_files_ptr.as_mut_slice().as_mut_ptr();
+
+		Ok(Font(
+			NonNull::new(unsafe { stereokit_sys::font_create_files(in_arr_files_cstr, file_count as i32) }).ok_or(
+				StereoKitError::FontFile(PathBuf::from(r"one_of_many_files"), "font_create_files failed".to_string()),
+			)?,
+		))
+	}
+
+	fn font_set_id<S: AsRef<str>>(&self, font: impl AsRef<Font>, id: S) {
+		let c_str = CString::new(id.as_ref()).unwrap();
 		unsafe { stereokit_sys::font_set_id(font.as_ref().0.as_ptr(), c_str.as_ptr()) }
 	}
 
@@ -3842,13 +4085,13 @@ pub trait StereoKitMultiThread {
 	fn font_release(&self, _font: Font) {}
 
 	/// Looks for a Shader asset that’s already loaded, matching the given id! Unless the id has been set manually, the id will be the same as the shader’s name provided in the metadata.
-	fn shader_find<S: Into<String> + Clone>(&self, id: S) -> SkResult<Shader> {
-		let c_str = CString::new(id.clone().into()).map_err(|_| {
-			StereoKitError::ShaderFind(id.clone().into(), "CString conversion".to_string())
+	fn shader_find<S: AsRef<str>>(&self, id: S) -> SkResult<Shader> {
+		let c_str = CString::new(id.as_ref()).map_err(|_| {
+			StereoKitError::ShaderFind(id.as_ref().into(), "CString conversion".to_string())
 		})?;
 		Ok(Shader(
 			NonNull::new(unsafe { stereokit_sys::shader_find(c_str.as_ptr()) }).ok_or(
-				StereoKitError::ShaderFind(id.clone().into(), "shader_find failed".to_string()),
+				StereoKitError::ShaderFind(id.as_ref().into(), "shader_find failed".to_string()),
 			)?,
 		))
 	}
@@ -3884,8 +4127,8 @@ pub trait StereoKitMultiThread {
 		))
 	}
 
-	fn shader_set_id<S: Into<String> + Clone>(&self, shader: impl AsRef<Shader>, id: S) {
-		let c_str = CString::new(id.into()).unwrap();
+	fn shader_set_id<S: AsRef<str>>(&self, shader: impl AsRef<Shader>, id: S) {
+		let c_str = CString::new(id.as_ref()).unwrap();
 		unsafe { stereokit_sys::shader_set_id(shader.as_ref().0.as_ptr(), c_str.as_ptr()) }
 	}
 
@@ -3909,13 +4152,13 @@ pub trait StereoKitMultiThread {
 	fn shader_release(&self, _shader: Shader) {}
 
 	/// Looks for a Material asset that’s already loaded, matching the given id!
-	fn material_find<S: Into<String> + Clone>(&self, id: S) -> SkResult<Material> {
-		let c_str = CString::new(id.clone().into()).map_err(|_| {
-			StereoKitError::MaterialFind(id.clone().into(), "CString conversion".to_string())
+	fn material_find<S: AsRef<str>>(&self, id: S) -> SkResult<Material> {
+		let c_str = CString::new(id.as_ref()).map_err(|_| {
+			StereoKitError::MaterialFind(id.as_ref().into(), "CString conversion".to_string())
 		})?;
 		Ok(Material(
 			NonNull::new(unsafe { stereokit_sys::material_find(c_str.as_ptr()) }).ok_or(
-				StereoKitError::MaterialFind(id.clone().into(), "material_find failed".to_string()),
+				StereoKitError::MaterialFind(id.as_ref().into(), "material_find failed".to_string()),
 			)?,
 		))
 	}
@@ -3936,13 +4179,13 @@ pub trait StereoKitMultiThread {
 		)
 	}
 
-	fn material_copy_id<S: Into<String> + Clone>(&self, id: S) -> Material {
-		let c_str = CString::new(id.into()).unwrap();
+	fn material_copy_id<S: AsRef<str>>(&self, id: S) -> Material {
+		let c_str = CString::new(id.as_ref()).unwrap();
 		Material(NonNull::new(unsafe { stereokit_sys::material_copy_id(c_str.as_ptr()) }).unwrap())
 	}
 
-	fn material_set_id<M: AsRef<Material>, S: Into<String> + Clone>(&self, material: M, id: S) {
-		let c_str = CString::new(id.into()).unwrap();
+	fn material_set_id<M: AsRef<Material>, S: AsRef<str>>(&self, material: M, id: S) {
+		let c_str = CString::new(id.as_ref()).unwrap();
 		unsafe { stereokit_sys::material_set_id(material.as_ref().0.as_ptr(), c_str.as_ptr()) }
 	}
 
@@ -4495,14 +4738,14 @@ pub trait StereoKitMultiThread {
 		}
 	}
 
-	unsafe fn material_get_param<M: AsRef<Material>, S: AsRef<str>>(
+	fn material_get_param<M: AsRef<Material>, S: AsRef<str>>(
 		&self,
 		material: M,
 		name: S,
 		type_: MaterialParameter,
 	) -> Option<*mut std::os::raw::c_void> {
 		let c_str = CString::new(name.as_ref()).unwrap();
-		let value = null_mut();
+		let value = CString::new("H").unwrap().into_raw() as *mut c_void;
 		match unsafe {
 			stereokit_sys::material_get_param(
 				material.as_ref().0.as_ptr(),
@@ -4516,13 +4759,13 @@ pub trait StereoKitMultiThread {
 		}
 	}
 
-	unsafe fn material_get_param_id<M: AsRef<Material>>(
+	fn material_get_param_id<M: AsRef<Material>>(
 		&self,
 		material: M,
 		id: u64,
 		type_: MaterialParameter,
 	) -> Option<*mut std::os::raw::c_void> {
-		let value = null_mut();
+		let value =  CString::new("H").unwrap().into_raw() as *mut c_void;
 		match unsafe {
 			stereokit_sys::material_get_param_id(
 				material.as_ref().0.as_ptr(),
@@ -4536,7 +4779,29 @@ pub trait StereoKitMultiThread {
 		}
 	}
 
-	//TODO: material_get_param_info need to figure out how to do this one
+	//Get the name and type of the info at index id
+	fn material_get_param_info <M: AsRef<Material>>(
+		&self,
+		material: M,
+		id: i32,
+	) -> Option<(&str,MaterialParameter)> {
+		
+		let name_info = CString::new("H").unwrap().into_raw() as *mut *mut std::os::raw::c_char;
+		let mut type_info: u32 = 0;
+		unsafe {
+			stereokit_sys::material_get_param_info(
+				material.as_ref().0.as_ptr(), 
+				id,
+				name_info,
+				&mut type_info as *mut u32,
+			) 
+		}
+		let name_info = unsafe {CStr::from_ptr(*name_info).to_str().unwrap()};
+		let type_info = unsafe { ::std::mem::transmute(type_info)};
+
+		
+		Some((name_info, type_info))
+	}
 
 	fn material_get_param_count<M: AsRef<Material>>(&self, material: M) -> i32 {
 		unsafe { stereokit_sys::material_get_param_count(material.as_ref().0.as_ptr()) }
@@ -4707,12 +4972,12 @@ pub trait StereoKitMultiThread {
 	}
 
 	/// Looks for a Model asset that’s already loaded, matching the given id!
-	fn model_find<S: Into<String> + Clone>(&self, id: S) -> SkResult<Model> {
-		let str = std::ffi::CString::new(id.clone().into())
-			.map_err(|_| StereoKitError::ModelFile(id.clone().into()))?;
+	fn model_find<S: AsRef<str>>(&self, id: S) -> SkResult<Model> {
+		let str = CString::new(id.as_ref())
+			.map_err(|_| StereoKitError::ModelFile(id.as_ref().into()))?;
 		Ok(Model::from(
 			NonNull::new(unsafe { stereokit_sys::model_find(str.as_ptr()) })
-				.ok_or(StereoKitError::ModelFile(id.clone().into()))?,
+				.ok_or(StereoKitError::ModelFile(id.as_ref().into()))?,
 		))
 	}
 	/// Creates a shallow copy of a Model asset! Meshes and Materials
@@ -4748,15 +5013,15 @@ pub trait StereoKitMultiThread {
 	/// .gltf, or .glb file stored in memory. Note that this function won’t work
 	/// well on files that reference other files, such as .gltf files with
 	/// references in them.
-	fn model_create_mem<S: Into<String> + Clone>(
+	fn model_create_mem<S: AsRef<str>>(
 		&self,
 		file_name: S,
 		memory: &[u8],
 		shader: Option<impl AsRef<Shader>>,
 	) -> SkResult<Model> {
-		let c_file_name = std::ffi::CString::new(file_name.clone().into()).map_err(|_| {
+		let c_file_name = CString::new(file_name.as_ref()).map_err(|_| {
 			StereoKitError::ModelFromMem(
-				file_name.clone().into(),
+				file_name.as_ref().into(),
 				String::from("file name is not a valid CString"),
 			)
 		})?;
@@ -4770,7 +5035,7 @@ pub trait StereoKitMultiThread {
 				)
 			})
 			.ok_or(StereoKitError::ModelFromMem(
-				file_name.clone().into(),
+				file_name.as_ref().into(),
 				String::from("model_create_mem failed"),
 			))?,
 		))
@@ -4784,11 +5049,11 @@ pub trait StereoKitMultiThread {
 	) -> SkResult<Model> {
 		let path = filename.as_ref();
 		let path_buf = path.to_path_buf();
-		let c_str = CString::new(path.to_str().ok_or(StereoKitError::TexFile(
+		let c_str = CString::new(path.to_str().ok_or(StereoKitError::ModelFromFile(
 			path_buf.clone(),
 			"CString conversion".to_string(),
 		))?)
-		.map_err(|_| StereoKitError::TexFile(path_buf.clone(), "CString Conversion".to_string()))?;
+		.map_err(|_| StereoKitError::ModelFromFile(path_buf.clone(), "CString Conversion".to_string()))?;
 		Ok(Model::from(
 			NonNull::new(unsafe {
 				stereokit_sys::model_create_file(
@@ -5431,24 +5696,30 @@ pub trait StereoKitMultiThread {
 		))
 	}
 
-	fn sprite_create_file<S: AsRef<str>>(
+	fn sprite_create_file<S: AsRef<str>, P: AsRef<Path>>(
 		&self,
-		file: S,
+		file: P,
 		type_: SpriteType,
 		atlas_id: S,
 	) -> SkResult<Sprite> {
 		let atlas_id = CString::new(atlas_id.as_ref()).unwrap();
-		let file = file.as_ref();
-		let cfile = CString::new(file).unwrap();
+		let path = file.as_ref();
+		let path_buf = path.to_path_buf();
+		let c_str = CString::new(path.to_str().ok_or(StereoKitError::SpriteFile(
+			path_buf.clone(),
+		))?)
+		.map_err(|_| StereoKitError::SpriteFile(path_buf.clone()))?;
+	
+	
 		Ok(Sprite(
 			NonNull::new(unsafe {
 				stereokit_sys::sprite_create_file(
-					cfile.as_ptr(),
+					c_str.as_ptr(),
 					type_ as sprite_type_,
 					atlas_id.as_ptr(),
 				)
 			})
-			.ok_or(StereoKitError::SpriteFile(file.to_string()))?,
+			.ok_or(StereoKitError::SpriteFile(path_buf))?,
 		))
 	}
 
@@ -5544,6 +5815,10 @@ pub trait StereoKitMultiThread {
 
 	fn render_set_skytex(&self, sky_texture: impl AsRef<Tex>) {
 		unsafe { stereokit_sys::render_set_skytex(sky_texture.as_ref().0.as_ptr()) }
+	}
+
+	fn render_get_skytex(&self) -> Tex {
+		Tex( NonNull::new(unsafe { stereokit_sys::render_get_skytex() } ).unwrap())
 	}
 
 	fn render_set_skylight(&self, sky_light: SphericalHarmonics) {
@@ -6717,25 +6992,25 @@ impl WindowContext {
 		}
 	}
 	pub fn label(&self, text: impl AsRef<str>, use_padding: bool) {
-		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+		let c_str = CString::new(text.as_ref()).unwrap();
 		unsafe {
 			stereokit_sys::ui_label(c_str.as_ptr(), use_padding as bool32_t);
 		}
 	}
 	pub fn toggle(&self, text: impl AsRef<str>, pressed: &mut bool) {
-		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+		let c_str = CString::new(text.as_ref()).unwrap();
 		unsafe {
 			stereokit_sys::ui_toggle(c_str.as_ptr(), pressed as &mut _ as *mut _ as *mut i32);
 		}
 	}
 	pub fn button(&self, text: impl AsRef<str>) -> bool {
-		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+		let c_str = CString::new(text.as_ref()).unwrap();
 		unsafe {
 			stereokit_sys::ui_button(c_str.as_ptr()) != 0
 		}
 	}
 	pub fn button_at(&self, text: impl AsRef<str>, window_relative_pos: impl Into<Vec3>, size: impl Into<Vec2>) -> bool {
-		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+		let c_str = CString::new(text.as_ref()).unwrap();
 		unsafe {
 			stereokit_sys::ui_button_at(c_str.as_ptr(), window_relative_pos.into().into(), size.into().into()) != 0
 		}
@@ -6746,7 +7021,7 @@ impl WindowContext {
 		}
 	}
 	pub fn hz_slider(&self, id: impl AsRef<str>, value: &mut f32, min: f32, max: f32, step: f32, width: f32) {
-		let c_str = std::ffi::CString::new(id.as_ref()).unwrap();
+		let c_str = CString::new(id.as_ref()).unwrap();
 		unsafe {
 			stereokit_sys::ui_hslider(c_str.as_ptr(), value as *mut f32, min, max, step, width, 0, 0);
 		}
