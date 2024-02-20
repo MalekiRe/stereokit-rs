@@ -29,7 +29,7 @@ use std::marker::PhantomData;
 use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut, slice_from_raw_parts_mut, NonNull};
-use stereokit_sys::{_font_t, _gradient_t, _material_buffer_t, _material_t, _mesh_t, _model_t, _shader_t, _solid_t, _sound_t, _sprite_t, _tex_t, anim_mode_, app_focus_, bool32_t, bounds_t, controller_t, cull_, depth_mode_, depth_test_, device_tracking_, display_, display_blend_, display_mode_, display_type_, fov_info_t, gradient_key_t, hand_joint_t, hand_t, handed_, key_, line_point_t, log_, log_colors_, mesh_t, mouse_t, openxr_handle_t, plane_t, pointer_t, pose_t, projection_, quat, ray_t, rect_t, render_clear_, sh_light_t, sk_init, sk_settings_t, sound_inst_t, sphere_t, spherical_harmonics_t, sprite_type_, system_info_t, tex_address_, tex_format_, tex_sample_, text_align_, text_fit_, track_state_, transparency_, ui_color_, ui_cut_, ui_move_, ui_win_, vert_t, world_refresh_};
+use stereokit_sys::{_font_t, _gradient_t, _material_buffer_t, _material_t, _mesh_t, _model_t, _shader_t, _solid_t, _sound_t, _sprite_t, _tex_t, anim_mode_, app_focus_, bool32_t, bounds_t, controller_t, cull_, depth_mode_, depth_test_, device_tracking_, display_, display_blend_, display_mode_, display_type_, fov_info_t, gradient_key_t, hand_joint_t, hand_t, handed_, key_, line_point_t, log_, log_colors_, mesh_t, mouse_t, openxr_handle_t, plane_t, pointer_t, pose_t, projection_, quat, ray_t, rect_t, render_clear_, sh_light_t, sk_init, sk_settings_t, sound_inst_t, sphere_t, spherical_harmonics_t, sprite_type_, system_info_t, tex_address_, tex_format_, tex_sample_, text_align_, text_fit_, track_state_, transparency_, ui_color_, ui_cut_, ui_move_, ui_win_, ui_btn_layout_, vert_t, world_refresh_};
 use thiserror::Error;
 
 pub use stereokit_sys as sys;
@@ -2577,6 +2577,15 @@ pub enum UiColor {
 	Complement = 3,
 	Text = 4,
 	Max = 5,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiBtnLayout {
+	None = 0,
+	Left = 1,
+	Right = 2,
+	Centre = 3,
+	CentreNoText = 4,
 }
 
 /// All stereokit functions that *must* only be done in the render loop
@@ -6740,6 +6749,27 @@ impl WindowContext {
 			stereokit_sys::ui_button_at(c_str.as_ptr(), window_relative_pos.into().into(), size.into().into()) != 0
 		}
 	}
+	pub fn button_img(&self,text: impl AsRef<str>, sprite: &mut Sprite, image_layout: UiBtnLayout) -> bool {
+		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+
+		unsafe {
+			stereokit_sys::ui_button_img(c_str.as_ptr() as *const i8, sprite.0.as_mut(), image_layout as ui_btn_layout_) != 0
+		}
+	}
+	pub fn button_img_size(&self,text: impl AsRef<str>, sprite: &mut Sprite, image_layout: UiBtnLayout, size: impl Into<Vec2>) -> bool {
+		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+
+		unsafe {
+			stereokit_sys::ui_button_img_sz(c_str.as_ptr() as *const i8, sprite.0.as_mut(), image_layout as ui_btn_layout_, size.into().into()) != 0
+		}
+	}
+	pub fn button_img_at(&self,text: impl AsRef<str>, sprite: &mut Sprite, image_layout: UiBtnLayout, window_relative_pos: impl Into<Vec3>, size: impl Into<Vec2>) -> bool {
+		let c_str = std::ffi::CString::new(text.as_ref()).unwrap();
+
+		unsafe {
+			stereokit_sys::ui_button_img_at(c_str.as_ptr() as *const i8, sprite.0.as_mut(), image_layout as ui_btn_layout_,window_relative_pos.into().into(), size.into().into()) != 0
+		}
+	}
 	pub fn same_line(&self) {
 		unsafe {
 			stereokit_sys::ui_sameline()
@@ -6770,5 +6800,10 @@ impl WindowContext {
 		unsafe {
 			stereokit_sys::ui_layout_at()
 		}.into()
+	}
+	pub fn image(&self, image: &mut Sprite, size: impl Into<Vec2>) {
+		unsafe {
+			stereokit_sys::ui_image(image.0.as_mut(), size.into().into());
+		}
 	}
 }
