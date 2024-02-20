@@ -5796,10 +5796,6 @@ pub trait StereoKitMultiThread {
 		unsafe { ButtonState::from_bits_unchecked(stereokit_sys::input_controller_menu() as u32) }
 	}
 
-	fn input_controller_system(&self) -> ButtonState {
-		unsafe { ButtonState::from_bits_unchecked(stereokit_sys::input_controller_system() as u32) }
-	}
-
 	fn input_head(&self) -> Pose {
 		unsafe { *stereokit_sys::input_head() }.into()
 	}
